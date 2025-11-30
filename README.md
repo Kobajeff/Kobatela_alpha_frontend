@@ -72,3 +72,27 @@ Production:
 ```
 NEXT_PUBLIC_API_BASE_URL=https://app.kobatela.com
 ```
+
+## Demo mode
+
+You can run the app with static mock data instead of the real backend by enabling demo mode.
+
+Normal mode:
+
+```
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_DEMO_MODE=false
+```
+
+Demo mode:
+
+```
+NEXT_PUBLIC_DEMO_MODE=true
+# API base URL can be left as default or set, but it won't be used
+```
+
+When demo mode is on:
+
+- No real API calls are made for the main flows.
+- Sample data lives in `src/lib/demoData.ts`.
+- You can switch between demo sender and demo admin views from the header.

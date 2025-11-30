@@ -6,18 +6,37 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearAuthToken } from '@/lib/auth';
 import { useAuthMe } from '@/lib/queries/sender';
+import { getDemoRole, isDemoMode, setDemoRole } from '@/lib/config';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export function Header() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const { data: user } = useAuthMe();
   const isAdmin = user?.role === 'admin';
   const displayName = user?.full_name ?? user?.email ?? 'Chargement...';
+  const demoMode = isDemoMode();
+  const currentDemoRole = demoMode ? getDemoRole() : null;
 
   const handleLogout = () => {
     clearAuthToken();
     queryClient.clear();
     router.push('/login');
+  };
+
+  const handleSwitchToSender = () => {
+    setDemoRole('sender');
+    queryClient.invalidateQueries({ queryKey: ['authMe'] });
+    router.replace('/sender/dashboard');
+    showToast?.('Switched to demo sender view', 'info');
+  };
+
+  const handleSwitchToAdmin = () => {
+    setDemoRole('admin');
+    queryClient.invalidateQueries({ queryKey: ['authMe'] });
+    router.replace('/admin/dashboard');
+    showToast?.('Switched to demo admin view', 'info');
   };
 
   return (
@@ -27,6 +46,32 @@ export function Header() {
         <span>Kobatela</span>
       </Link>
       <div className="flex items-center gap-3 text-sm text-slate-600">
+        {demoMode && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSwitchToSender}
+              className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
+                currentDemoRole === 'sender'
+                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              View as Sender
+            </button>
+            <button
+              type="button"
+              onClick={handleSwitchToAdmin}
+              className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
+                currentDemoRole === 'admin'
+                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              View as Admin
+            </button>
+          </div>
+        )}
         {isAdmin && (
           <Link
             href="/admin/dashboard"
