@@ -4,6 +4,8 @@
 import { useParams } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminEscrowSummary } from '@/lib/queries/admin';
+import { StatusBadge } from '@/components/common/StatusBadge';
+import { formatDateTime } from '@/lib/format';
 
 export default function AdminEscrowDetailPage() {
   const params = useParams<{ id: string }>();
@@ -36,9 +38,12 @@ export default function AdminEscrowDetailPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">Escrow {data.escrow.id}</h2>
-            <p className="text-slate-600">Statut: {data.escrow.status}</p>
+            <div className="mt-1 flex items-center gap-2 text-sm text-slate-600">
+              <span>Statut :</span>
+              <StatusBadge type="escrow" status={data.escrow.status} />
+            </div>
           </div>
-          <p className="text-sm text-slate-500">Créé le {new Date(data.escrow.created_at).toLocaleString()}</p>
+          <p className="text-sm text-slate-500">Créé le {formatDateTime(data.escrow.created_at)}</p>
         </div>
         <p className="mt-2 text-slate-700">
           Montant : {data.escrow.amount} {data.escrow.currency}
@@ -68,9 +73,9 @@ export default function AdminEscrowDetailPage() {
             <div key={proof.id} className="rounded-md border border-slate-100 p-3">
               <div className="flex items-center justify-between">
                 <p className="font-medium">{proof.description ?? 'Preuve fournie'}</p>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{proof.status}</span>
+                <StatusBadge type="proof" status={proof.status} />
               </div>
-              <p className="text-xs text-slate-500">{new Date(proof.created_at).toLocaleString()}</p>
+              <p className="text-xs text-slate-500">{formatDateTime(proof.created_at)}</p>
               {proof.attachment_url && (
                 <a
                   href={proof.attachment_url}
@@ -94,9 +99,9 @@ export default function AdminEscrowDetailPage() {
             <div key={payment.id} className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2">
               <div>
                 <p className="font-medium">{payment.amount} {payment.currency}</p>
-                <p className="text-xs text-slate-500">{new Date(payment.created_at).toLocaleString()}</p>
+                <p className="text-xs text-slate-500">{formatDateTime(payment.created_at)}</p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{payment.status}</span>
+              <StatusBadge type="payment" status={payment.status} />
             </div>
           ))}
         </div>

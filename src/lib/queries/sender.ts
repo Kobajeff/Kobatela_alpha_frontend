@@ -58,7 +58,7 @@ export function useSenderDashboard() {
 export function useSenderEscrows(params: { status?: string; limit?: number; offset?: number } = {}) {
   const { status, limit = 20, offset = 0 } = params;
   return useQuery<EscrowListItem[]>({
-    queryKey: ['senderEscrows', status, limit, offset],
+    queryKey: ['senderEscrows', { status, limit, offset }],
     queryFn: async () => {
       const searchParams = new URLSearchParams({ mine: 'true', limit: String(limit), offset: String(offset) });
       if (status) searchParams.append('status', status);

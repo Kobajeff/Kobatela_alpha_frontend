@@ -4,6 +4,9 @@
 import { FormEvent, useState } from 'react';
 import { useCreateProof } from '@/lib/queries/sender';
 import { extractErrorMessage } from '@/lib/apiClient';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface ProofFormProps {
   escrowId: string;
@@ -13,14 +16,13 @@ interface ProofFormProps {
 export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
   const [description, setDescription] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const createProof = useCreateProof();
+  const { showToast } = useToast();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage('');
-    setSuccessMessage('');
 
     try {
       await createProof.mutateAsync({
@@ -31,9 +33,11 @@ export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
       });
       setDescription('');
       setAttachmentUrl('');
-      setSuccessMessage('Preuve ajoutée avec succès.');
+      showToast('Proof created successfully', 'success');
     } catch (error) {
-      setErrorMessage(extractErrorMessage(error));
+      const message = extractErrorMessage(error);
+      setErrorMessage(message);
+      showToast(message, 'error');
     }
   };
 
@@ -42,7 +46,7 @@ export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
       <div>
         <label className="block text-sm font-medium text-slate-700">Description</label>
         <textarea
-          className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
+          className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           rows={3}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
@@ -51,8 +55,7 @@ export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">Lien de pièce jointe</label>
-        <input
-          className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
+        <Input
           value={attachmentUrl}
           onChange={(event) => setAttachmentUrl(event.target.value)}
           placeholder="https://exemple.com/preuve"
@@ -61,15 +64,10 @@ export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
       <div className="flex items-center justify-between">
         <div className="text-sm">
           {errorMessage && <p className="text-rose-600">{errorMessage}</p>}
-          {successMessage && <p className="text-emerald-600">{successMessage}</p>}
         </div>
-        <button
-          type="submit"
-          disabled={createProof.isPending}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={createProof.isPending}>
           Ajouter une preuve
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -13,6 +13,7 @@ import {
   useMarkDelivered,
   useSenderEscrowSummary
 } from '@/lib/queries/sender';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -20,19 +21,38 @@ export default function SenderEscrowDetailsPage() {
   const query = useSenderEscrowSummary(escrowId);
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('');
+  const { showToast } = useToast();
 
   const markDelivered = useMarkDelivered(escrowId);
   const approve = useClientApprove(escrowId);
   const reject = useClientReject(escrowId);
   const checkDeadline = useCheckDeadline(escrowId);
 
-  const handleAction = async (action: () => Promise<unknown>) => {
+  const handleAction = async (action: () => Promise<unknown>, successMessage: string) => {
     setActionError(null);
     try {
       await action();
+      showToast(successMessage, 'success');
     } catch (err) {
-      setActionError(extractErrorMessage(err));
+      const message = extractErrorMessage(err);
+      setActionError(message);
+      showToast(message, 'error');
     }
+  };
+
+  const handleMarkDelivered = () => {
+    if (!window.confirm('Are you sure you want to mark this escrow as delivered?')) return;
+    return handleAction(() => markDelivered.mutateAsync(), 'Escrow updated successfully');
+  };
+
+  const handleApprove = () => {
+    if (!window.confirm('Are you sure you want to approve this escrow?')) return;
+    return handleAction(() => approve.mutateAsync(), 'Escrow updated successfully');
+  };
+
+  const handleReject = () => {
+    if (!window.confirm('Are you sure you want to reject this escrow?')) return;
+    return handleAction(() => reject.mutateAsync(), 'Escrow updated successfully');
   };
 
   if (query.isLoading) {
@@ -87,10 +107,10 @@ export default function SenderEscrowDetailsPage() {
       <SenderEscrowDetails
         summary={data}
         loading={loading}
-        onMarkDelivered={() => handleAction(() => markDelivered.mutateAsync())}
-        onApprove={() => handleAction(() => approve.mutateAsync())}
-        onReject={() => handleAction(() => reject.mutateAsync())}
-        onCheckDeadline={() => handleAction(() => checkDeadline.mutateAsync())}
+        onMarkDelivered={handleMarkDelivered}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onCheckDeadline={() => handleAction(() => checkDeadline.mutateAsync(), 'Escrow updated successfully')}
         proofForm={proofForm}
       />
     </div>

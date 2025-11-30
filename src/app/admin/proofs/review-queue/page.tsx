@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { AdminProofReviewTable } from '@/components/admin/AdminProofReviewTable';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminApproveProof, useAdminProofReviewQueue, useAdminRejectProof } from '@/lib/queries/admin';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function AdminProofReviewQueuePage() {
   const query = useAdminProofReviewQueue();
@@ -12,14 +13,18 @@ export default function AdminProofReviewQueuePage() {
   const reject = useAdminRejectProof();
   const [processingId, setProcessingId] = useState<string | undefined>();
   const [actionError, setActionError] = useState('');
+  const { showToast } = useToast();
 
   const handleApprove = async (proofId: string) => {
     setProcessingId(proofId);
     setActionError('');
     try {
       await approve.mutateAsync(proofId);
+      showToast('Proof updated successfully', 'success');
     } catch (err) {
-      setActionError(extractErrorMessage(err));
+      const message = extractErrorMessage(err);
+      setActionError(message);
+      showToast(message, 'error');
     } finally {
       setProcessingId(undefined);
     }
@@ -30,8 +35,11 @@ export default function AdminProofReviewQueuePage() {
     setActionError('');
     try {
       await reject.mutateAsync(proofId);
+      showToast('Proof updated successfully', 'success');
     } catch (err) {
-      setActionError(extractErrorMessage(err));
+      const message = extractErrorMessage(err);
+      setActionError(message);
+      showToast(message, 'error');
     } finally {
       setProcessingId(undefined);
     }

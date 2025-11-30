@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ReactQueryProvider } from './providers';
+import { ToastProvider } from '@/components/ui/ToastProvider';
 
 export const metadata: Metadata = {
   title: 'Kobatela KCT – MVP',
@@ -13,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen bg-slate-50 text-slate-900">
         <ReactQueryProvider>
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </ReactQueryProvider>
       </body>
     </html>
