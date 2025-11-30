@@ -1,11 +1,38 @@
-// Landing page placeholder for the Kobatela MVP frontend.
+'use client';
+
+// Landing page redirects users to the correct dashboard based on authentication.
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { getAuthToken } from '@/lib/auth';
+import { useAuthMe } from '@/lib/queries/sender';
+
 export default function HomePage() {
+  const router = useRouter();
+  const { data, isLoading, isError } = useAuthMe();
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      router.replace('/login');
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    if (data?.role === 'admin') {
+      router.replace('/admin/dashboard');
+    } else if (data?.role) {
+      router.replace('/sender/dashboard');
+    } else if (isError) {
+      router.replace('/login');
+    }
+  }, [data, isError, router]);
+
   return (
-    <main>
-      <div className="container text-center py-10">
-        <h1 className="text-3xl font-bold mb-4">Kobatela KCT – MVP Frontend</h1>
-        <p className="text-slate-600">Bienvenue dans le portail expéditeur de Kobatela.</p>
-      </div>
-    </main>
+    <div className="flex h-full items-center justify-center">
+      {isLoading ? 'Loading...' : 'Redirection...'}
+    </div>
   );
 }

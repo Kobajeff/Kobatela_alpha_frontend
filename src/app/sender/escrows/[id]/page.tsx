@@ -17,7 +17,7 @@ import {
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
   const escrowId = params?.id ?? '';
-  const { data, isLoading, error } = useSenderEscrowSummary(escrowId);
+  const query = useSenderEscrowSummary(escrowId);
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('');
 
@@ -35,18 +35,30 @@ export default function SenderEscrowDetailsPage() {
     }
   };
 
-  if (isLoading) {
-    return <div className="text-slate-600">Chargement de l'escrow...</div>;
+  if (query.isLoading) {
+    return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (error || !data) {
-    return <div className="text-rose-600">Impossible de charger cet escrow.</div>;
+  if (query.isError) {
+    return (
+      <div className="p-4">
+        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
+          {extractErrorMessage(query.error)}
+        </div>
+      </div>
+    );
+  }
+
+  const data = query.data;
+
+  if (!data) {
+    return null;
   }
 
   const loading =
     markDelivered.isPending || approve.isPending || reject.isPending || checkDeadline.isPending;
 
-  const proofForm = data ? (
+  const proofForm = (
     <div className="space-y-3 rounded-md border border-slate-100 bg-slate-50 p-4">
       {data.milestones.length > 0 && (
         <div>
@@ -67,7 +79,7 @@ export default function SenderEscrowDetailsPage() {
       )}
       <ProofForm escrowId={escrowId} milestoneId={selectedMilestoneId || undefined} />
     </div>
-  ) : null;
+  );
 
   return (
     <div className="space-y-4">

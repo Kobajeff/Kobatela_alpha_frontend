@@ -1,18 +1,31 @@
 'use client';
 
 // Sender dashboard page summarizing key metrics and activity.
+import { extractErrorMessage } from '@/lib/apiClient';
 import { useSenderDashboard } from '@/lib/queries/sender';
 import { SenderEscrowList } from '@/components/sender/SenderEscrowList';
 
 export default function SenderDashboardPage() {
-  const { data, isLoading, error } = useSenderDashboard();
+  const query = useSenderDashboard();
 
-  if (isLoading) {
-    return <div className="text-slate-600">Chargement du tableau de bord...</div>;
+  if (query.isLoading) {
+    return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (error || !data) {
-    return <div className="text-rose-600">Impossible de charger le tableau de bord.</div>;
+  if (query.isError) {
+    return (
+      <div className="h-full p-4">
+        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
+          {extractErrorMessage(query.error)}
+        </div>
+      </div>
+    );
+  }
+
+  const data = query.data;
+
+  if (!data) {
+    return null;
   }
 
   return (

@@ -2,7 +2,8 @@
 import axios from 'axios';
 import { getAuthToken } from './auth';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL
@@ -23,4 +24,8 @@ export function extractErrorMessage(error: unknown): string {
     if (message) return message;
   }
   return 'Une erreur est survenue';
+}
+
+export function isUnauthorizedError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 401;
 }
