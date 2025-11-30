@@ -8,9 +8,17 @@ export type UserMe = {
   role: UserRole;
 };
 
+export type EscrowStatus =
+  | 'draft'
+  | 'active'
+  | 'completed'
+  | 'cancelled'
+  | 'disputed'
+  | 'expired';
+
 export type EscrowListItem = {
   id: string;
-  status: string;
+  status: EscrowStatus;
   amount: number;
   currency: string;
   created_at: string;
@@ -36,12 +44,14 @@ export type Proof = {
   created_at: string;
 };
 
+export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+
 export type Payment = {
   id: string;
   escrow_id: string;
   amount: number;
   currency: string;
-  status: string;
+  status: PaymentStatus;
   created_at: string;
 };
 
