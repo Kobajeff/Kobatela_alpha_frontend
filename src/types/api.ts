@@ -1,0 +1,87 @@
+// TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
+export type UserRole = 'sender' | 'admin' | 'advisor';
+
+export type UserMe = {
+  id: string;
+  email: string;
+  full_name?: string;
+  role: UserRole;
+};
+
+export type EscrowListItem = {
+  id: string;
+  status: string;
+  amount: number;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateProofPayload = {
+  escrow_id: string;
+  milestone_id?: string;
+  description?: string;
+  attachment_url?: string;
+};
+
+export type ProofStatus = 'pending' | 'approved' | 'rejected';
+
+export type Proof = {
+  id: string;
+  escrow_id: string;
+  milestone_id?: string;
+  description?: string;
+  attachment_url?: string;
+  status: ProofStatus;
+  created_at: string;
+};
+
+export type Payment = {
+  id: string;
+  escrow_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
+};
+
+export type SenderEscrowSummary = {
+  escrow: EscrowListItem;
+  milestones: Array<{
+    id: string;
+    name: string;
+    status: string;
+    due_date?: string;
+  }>;
+  proofs: Proof[];
+  payments: Payment[];
+};
+
+export type SenderDashboard = {
+  recentEscrows: EscrowListItem[];
+  pendingProofs: Proof[];
+  recentPayments: Payment[];
+};
+
+export type LoginResponse = {
+  token: string;
+};
+
+export type AdminDashboardStats = {
+  total_escrows: number;
+  pending_proofs: number;
+  approved_proofs: number;
+  rejected_proofs: number;
+  total_payments: number;
+};
+
+export type AdminProofReviewItem = {
+  id: string;
+  escrow_id: string;
+  milestone_name?: string;
+  sender_email?: string;
+  description?: string;
+  attachment_url?: string;
+  status: ProofStatus;
+  created_at: string;
+};
