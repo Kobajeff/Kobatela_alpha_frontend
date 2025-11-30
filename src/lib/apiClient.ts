@@ -25,3 +25,7 @@ export function extractErrorMessage(error: unknown): string {
   }
   return 'Une erreur est survenue';
 }
+
+export function isUnauthorizedError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 401;
+}

@@ -5,22 +5,16 @@ import { useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
+import { isUnauthorizedError } from '@/lib/apiClient';
 import { useAuthMe } from '@/lib/queries/sender';
 
 export default function SenderLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data, isLoading, error, isError } = useAuthMe();
-
-  const isUnauthorized = isError && axios.isAxiosError(error) && error.response?.status === 401;
-
-  useEffect(() => {
-    if (isUnauthorized) {
-      router.replace('/login');
-    }
-  }, [isUnauthorized, router]);
+  const isUnauthorized = isError && isUnauthorizedError(error);
 
   useEffect(() => {
-    if (isError && !isUnauthorized) {
+    if (isUnauthorized || (isError && !isUnauthorized)) {
       router.replace('/login');
     }
   }, [isError, isUnauthorized, router]);
