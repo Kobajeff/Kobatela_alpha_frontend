@@ -2,39 +2,40 @@
 
 // Layout guarding sender routes and wrapping them in the application shell.
 import { useEffect } from 'react';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { useAuthMe } from '@/lib/queries/sender';
 
 export default function SenderLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { data, isLoading, error } = useAuthMe();
+  const { data, isLoading, error, isError } = useAuthMe();
+
+  const isUnauthorized = isError && axios.isAxiosError(error) && error.response?.status === 401;
 
   useEffect(() => {
-    if (error) {
+    if (isUnauthorized) {
       router.replace('/login');
     }
-  }, [error, router]);
+  }, [isUnauthorized, router]);
 
   useEffect(() => {
-    if (data?.role === 'admin') {
-      // Admins can browse the sender area, but redirect them to the admin console by default.
-      router.replace('/admin/dashboard');
+    if (isError && !isUnauthorized) {
+      router.replace('/login');
     }
-    if (data && data.role !== 'sender' && data.role !== 'admin') {
+  }, [isError, isUnauthorized, router]);
+
+  useEffect(() => {
+    if (data && data.role !== 'sender') {
       router.replace('/login');
     }
   }, [data, router]);
 
   if (isLoading) {
-    return (
-      <main>
-        <div className="container text-center text-slate-600">Chargement...</div>
-      </main>
-    );
+    return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (!data) {
+  if (isUnauthorized || !data || data.role !== 'sender') {
     return null;
   }
 

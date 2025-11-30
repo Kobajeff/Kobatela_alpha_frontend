@@ -1,19 +1,27 @@
 'use client';
 
 // Admin dashboard displaying high-level operational statistics.
-import { useAdminDashboard } from '@/lib/queries/admin';
 import { extractErrorMessage } from '@/lib/apiClient';
+import { useAdminDashboard } from '@/lib/queries/admin';
 
 export default function AdminDashboardPage() {
-  const { data, isLoading, error } = useAdminDashboard();
+  const query = useAdminDashboard();
 
-  if (isLoading) {
-    return <div className="text-slate-600">Chargement du tableau de bord...</div>;
+  if (query.isLoading) {
+    return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (error) {
-    return <div className="text-rose-600">{extractErrorMessage(error)}</div>;
+  if (query.isError) {
+    return (
+      <div className="p-4">
+        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
+          {extractErrorMessage(query.error)}
+        </div>
+      </div>
+    );
   }
+
+  const data = query.data;
 
   if (!data) {
     return null;

@@ -52,3 +52,23 @@ Global error states
 Tailwind UI
 
 Clean error messaging (extractErrorMessage)
+
+## API Base URL
+
+The frontend reads the backend URL from the environment variable:
+
+```
+NEXT_PUBLIC_API_BASE_URL=<URL>
+```
+
+Examples:
+
+Local development:
+```
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+Production:
+```
+NEXT_PUBLIC_API_BASE_URL=https://app.kobatela.com
+```
