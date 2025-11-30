@@ -7,7 +7,7 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminApproveProof, useAdminProofReviewQueue, useAdminRejectProof } from '@/lib/queries/admin';
 
 export default function AdminProofReviewQueuePage() {
-  const { data, isLoading, error } = useAdminProofReviewQueue();
+  const query = useAdminProofReviewQueue();
   const approve = useAdminApproveProof();
   const reject = useAdminRejectProof();
   const [processingId, setProcessingId] = useState<string | undefined>();
@@ -37,13 +37,21 @@ export default function AdminProofReviewQueuePage() {
     }
   };
 
-  if (isLoading) {
-    return <div className="text-slate-600">Chargement de la file de preuves...</div>;
+  if (query.isLoading) {
+    return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (error) {
-    return <div className="text-rose-600">{extractErrorMessage(error)}</div>;
+  if (query.isError) {
+    return (
+      <div className="p-4">
+        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
+          {extractErrorMessage(query.error)}
+        </div>
+      </div>
+    );
   }
+
+  const data = query.data;
 
   return (
     <div className="space-y-4">

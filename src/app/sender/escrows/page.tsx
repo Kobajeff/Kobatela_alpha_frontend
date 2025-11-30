@@ -1,18 +1,31 @@
 'use client';
 
 // Page showing all escrows for the logged-in sender.
+import { extractErrorMessage } from '@/lib/apiClient';
 import { SenderEscrowList } from '@/components/sender/SenderEscrowList';
 import { useSenderEscrows } from '@/lib/queries/sender';
 
 export default function SenderEscrowsPage() {
-  const { data, isLoading, error } = useSenderEscrows();
+  const query = useSenderEscrows();
 
-  if (isLoading) {
-    return <div className="text-slate-600">Chargement des escrows...</div>;
+  if (query.isLoading) {
+    return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (error || !data) {
-    return <div className="text-rose-600">Impossible de charger les escrows.</div>;
+  if (query.isError) {
+    return (
+      <div className="p-4">
+        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
+          {extractErrorMessage(query.error)}
+        </div>
+      </div>
+    );
+  }
+
+  const data = query.data;
+
+  if (!data) {
+    return null;
   }
 
   return (

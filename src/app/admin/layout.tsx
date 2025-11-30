@@ -2,36 +2,44 @@
 
 // Layout guarding admin routes and providing the admin chrome.
 import { useEffect } from 'react';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { useAuthMe } from '@/lib/queries/sender';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { data, isLoading, error } = useAuthMe();
+  const { data, isLoading, error, isError } = useAuthMe();
+
+  const isUnauthorized = isError && axios.isAxiosError(error) && error.response?.status === 401;
 
   useEffect(() => {
-    if (error) {
+    if (isUnauthorized) {
       router.replace('/login');
     }
-  }, [error, router]);
+  }, [isUnauthorized, router]);
 
   useEffect(() => {
-    if (data && data.role !== 'admin') {
-      // Only admins should access these routes; redirect others to the sender area.
-      router.replace('/sender/dashboard');
+    if (isError && !isUnauthorized) {
+      router.replace('/login');
+    }
+  }, [isError, isUnauthorized, router]);
+
+  useEffect(() => {
+    if (data) {
+      if (data.role === 'sender') {
+        router.replace('/sender/dashboard');
+      } else if (data.role !== 'admin') {
+        router.replace('/login');
+      }
     }
   }, [data, router]);
 
   if (isLoading) {
-    return (
-      <main>
-        <div className="container text-center text-slate-600">Chargement...</div>
-      </main>
-    );
+    return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (!data || data.role !== 'admin') {
+  if (isUnauthorized || !data || data.role !== 'admin') {
     return null;
   }
 
