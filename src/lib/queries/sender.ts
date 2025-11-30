@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, extractErrorMessage } from '../apiClient';
 import { clearAuthToken, setAuthToken } from '../auth';
 import type {
+  CreateProofPayload,
   EscrowListItem,
   LoginResponse,
   Payment,
@@ -110,6 +111,22 @@ export function useClientReject(escrowId: string) {
 
 export function useCheckDeadline(escrowId: string) {
   return useEscrowAction(escrowId, 'check-deadline');
+}
+
+export function useCreateProof() {
+  const queryClient = useQueryClient();
+  return useMutation<Proof, Error, CreateProofPayload>({
+    mutationFn: async (payload) => {
+      const response = await apiClient.post<Proof>('/proofs', payload);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['escrowSummary', data.escrow_id] });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
 }
 
 export function useLogout() {

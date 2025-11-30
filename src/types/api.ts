@@ -1,9 +1,11 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
+export type UserRole = 'sender' | 'admin' | 'advisor';
+
 export type UserMe = {
   id: string;
   email: string;
   full_name?: string;
-  role?: 'sender' | 'admin' | 'advisor';
+  role: UserRole;
 };
 
 export type EscrowListItem = {
@@ -15,10 +17,22 @@ export type EscrowListItem = {
   updated_at: string;
 };
 
+export type CreateProofPayload = {
+  escrow_id: string;
+  milestone_id?: string;
+  description?: string;
+  attachment_url?: string;
+};
+
+export type ProofStatus = 'pending' | 'approved' | 'rejected';
+
 export type Proof = {
   id: string;
   escrow_id: string;
+  milestone_id?: string;
   description?: string;
+  attachment_url?: string;
+  status: ProofStatus;
   created_at: string;
 };
 
@@ -51,4 +65,23 @@ export type SenderDashboard = {
 
 export type LoginResponse = {
   token: string;
+};
+
+export type AdminDashboardStats = {
+  total_escrows: number;
+  pending_proofs: number;
+  approved_proofs: number;
+  rejected_proofs: number;
+  total_payments: number;
+};
+
+export type AdminProofReviewItem = {
+  id: string;
+  escrow_id: string;
+  milestone_name?: string;
+  sender_email?: string;
+  description?: string;
+  attachment_url?: string;
+  status: ProofStatus;
+  created_at: string;
 };

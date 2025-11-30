@@ -1,0 +1,54 @@
+'use client';
+
+// Shell for admin routes including header, sidebar, and main content.
+import type { ReactNode } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useAuthMe } from '@/lib/queries/sender';
+
+const adminLinks = [
+  { href: '/admin/dashboard', label: 'Dashboard' },
+  { href: '/admin/proofs/review-queue', label: 'Proof review queue' }
+];
+
+export function AdminShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const { data: user } = useAuthMe();
+
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+        <Link href="/admin/dashboard" className="flex items-center gap-2 text-lg font-semibold">
+          <span className="rounded-md bg-indigo-600 px-2 py-1 text-white">KCT</span>
+          <span>Admin</span>
+        </Link>
+        <div className="text-sm text-slate-600">
+          {user ? `Connecté : ${user.full_name ?? user.email}` : 'Chargement...'}
+        </div>
+      </header>
+      <div className="flex">
+        <aside className="w-60 border-r border-slate-200 bg-white px-4 py-6">
+          <nav className="flex flex-col gap-2">
+            {adminLinks.map((link) => {
+              const active = pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`rounded-md px-3 py-2 text-sm font-medium hover:bg-indigo-50 ${
+                    active ? 'bg-indigo-100 text-indigo-700' : 'text-slate-700'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </aside>
+        <main className="flex-1 p-6">
+          <div className="mx-auto max-w-5xl space-y-6">{children}</div>
+        </main>
+      </div>
+    </div>
+  );
+}

@@ -1,12 +1,12 @@
 'use client';
 
-// Layout guarding sender routes and wrapping them in the application shell.
+// Layout guarding admin routes and providing the admin chrome.
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AppShell } from '@/components/layout/AppShell';
+import { AdminShell } from '@/components/layout/AdminShell';
 import { useAuthMe } from '@/lib/queries/sender';
 
-export default function SenderLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data, isLoading, error } = useAuthMe();
 
@@ -17,12 +17,9 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
   }, [error, router]);
 
   useEffect(() => {
-    if (data?.role === 'admin') {
-      // Admins can browse the sender area, but redirect them to the admin console by default.
-      router.replace('/admin/dashboard');
-    }
-    if (data && data.role !== 'sender' && data.role !== 'admin') {
-      router.replace('/login');
+    if (data && data.role !== 'admin') {
+      // Only admins should access these routes; redirect others to the sender area.
+      router.replace('/sender/dashboard');
     }
   }, [data, router]);
 
@@ -34,9 +31,9 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  if (!data) {
+  if (!data || data.role !== 'admin') {
     return null;
   }
 
-  return <AppShell>{children}</AppShell>;
+  return <AdminShell>{children}</AdminShell>;
 }
