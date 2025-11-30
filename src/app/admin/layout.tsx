@@ -2,6 +2,7 @@
 
 // Layout guarding admin routes and providing the admin chrome.
 import { useEffect } from 'react';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { isUnauthorizedError } from '@/lib/apiClient';

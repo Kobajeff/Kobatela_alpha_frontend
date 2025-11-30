@@ -2,6 +2,7 @@
 
 // Layout guarding sender routes and wrapping them in the application shell.
 import { useEffect } from 'react';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { isUnauthorizedError } from '@/lib/apiClient';
