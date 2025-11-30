@@ -1,0 +1,31 @@
+{
+  "name": "kobatela_alpha_frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kobatela KCT MVP frontend built with Next.js, TypeScript, Tailwind CSS, and React Query.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.59.9",
+    "@tanstack/react-query-devtools": "5.59.9",
+    "axios": "1.7.7",
+    "next": "14.2.13",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.0",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "autoprefixer": "10.4.20",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.13",
+    "postcss": "8.4.47",
+    "tailwindcss": "3.4.14",
+    "typescript": "5.6.3"
+  }
+}
