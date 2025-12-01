@@ -158,6 +158,7 @@ export interface AdvisorProfile {
   first_name: string;
   last_name: string;
   email: string;
+  blocked: boolean;
   sender_managed: number;
   total_number_of_case_managed: number;
   subscribe_date: string;
@@ -180,11 +181,19 @@ export interface AdminAdvisorListItem {
   first_name: string;
   last_name: string;
   email: string;
+  blocked: boolean;
   is_active: boolean;
   sender_managed: number;
   total_number_of_case_managed: number;
   languages?: string[] | null;
   specialties?: string[] | null;
+}
+
+export interface AdvisorSenderItem {
+  sender_id: number;
+  sender_email: string;
+  active: boolean;
+  assigned_at: string;
 }
 
 export interface AiProofSetting {

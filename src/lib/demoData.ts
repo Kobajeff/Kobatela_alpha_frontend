@@ -32,6 +32,7 @@ export const demoAdvisorProfile: AdvisorProfile = {
   first_name: 'Amina',
   last_name: 'Kouadio',
   email: 'advisor.kouadio@kobatela.com',
+  blocked: false,
   sender_managed: 24,
   total_number_of_case_managed: 180,
   subscribe_date: '2024-11-01T00:00:00Z',
