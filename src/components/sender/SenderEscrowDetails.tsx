@@ -95,16 +95,20 @@ export function SenderEscrowDetails({
                 <StatusBadge type="proof" status={proof.status} />
               </div>
               <p className="text-xs text-slate-500">{formatDateTime(proof.created_at)}</p>
-              {proof.attachment_url && (
-                <a
-                  href={proof.attachment_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-indigo-600 hover:underline"
-                >
-                  Consulter la pièce jointe
-                </a>
-              )}
+              {(() => {
+                const attachmentLink = proof.attachment_url ?? proof.storage_url;
+                if (!attachmentLink) return null;
+                return (
+                  <a
+                    href={attachmentLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-indigo-600 hover:underline"
+                  >
+                    Consulter la pièce jointe
+                  </a>
+                );
+              })()}
             </div>
           ))}
           {proofForm && <div className="pt-2">{proofForm}</div>}

@@ -28,6 +28,11 @@ export type EscrowListItem = {
 export type CreateProofPayload = {
   escrow_id: string;
   milestone_id?: string;
+  type?: ProofType;
+  storage_url?: string;
+  sha256?: string;
+  content_type?: string;
+  size_bytes?: number;
   description?: string;
   attachment_url?: string;
 };
@@ -38,6 +43,11 @@ export type Proof = {
   id: string;
   escrow_id: string;
   milestone_id?: string;
+  type?: ProofType;
+  storage_url?: string;
+  sha256?: string;
+  content_type?: string;
+  size_bytes?: number;
   description?: string;
   attachment_url?: string;
   status: ProofStatus;
@@ -91,7 +101,19 @@ export type AdminProofReviewItem = {
   milestone_name?: string;
   sender_email?: string;
   description?: string;
+  type?: ProofType;
+  storage_url?: string;
+  sha256?: string;
   attachment_url?: string;
   status: ProofStatus;
   created_at: string;
 };
+
+export type ProofType = 'PHOTO' | 'DOCUMENT';
+
+export interface ProofFileUploadResponse {
+  storage_url: string;
+  sha256: string;
+  content_type: string;
+  size_bytes: number;
+}
