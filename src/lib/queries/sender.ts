@@ -5,6 +5,7 @@ import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import {
   demoEscrows,
+  demoAdvisorProfile,
   demoPayments,
   demoProofs,
   getDemoEscrowSummary,
@@ -17,6 +18,7 @@ import type {
   Payment,
   Proof,
   ProofType,
+  AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
   UserMe
@@ -35,6 +37,21 @@ export function useLogin() {
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
+    }
+  });
+}
+
+export function useMyAdvisor() {
+  return useQuery<AdvisorProfile>({
+    queryKey: ['myAdvisor'],
+    queryFn: async () => {
+      if (isDemoMode()) {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve(demoAdvisorProfile), 200);
+        });
+      }
+      const response = await apiClient.get<AdvisorProfile>('/me/advisor');
+      return response.data;
     }
   });
 }
@@ -189,7 +206,12 @@ export function useCreateProof() {
           sha256: payload.sha256,
           type,
           status: 'pending',
-          created_at: now
+          created_at: now,
+          ai_risk_level: null,
+          ai_score: null,
+          ai_flags: null,
+          ai_explanation: null,
+          ai_checked_at: null
         };
       }
       const response = await apiClient.post<Proof>('/proofs', payload);
