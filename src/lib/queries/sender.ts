@@ -110,6 +110,11 @@ export function useSenderDashboard() {
       }
       const response = await apiClient.get<SenderDashboard>('/sender/dashboard');
       return response.data;
+    },
+    initialData: {
+      recentEscrows: [],
+      pendingProofs: [],
+      recentPayments: []
     }
   });
 }
