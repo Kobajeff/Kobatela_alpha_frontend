@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { ProofAiStatus } from '@/components/proofs/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 import type { SenderEscrowSummary } from '@/types/api';
 
@@ -109,6 +110,9 @@ export function SenderEscrowDetails({
                   </a>
                 );
               })()}
+              <div className="pt-2">
+                <ProofAiStatus proof={proof} />
+              </div>
             </div>
           ))}
           {proofForm && <div className="pt-2">{proofForm}</div>}

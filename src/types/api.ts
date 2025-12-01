@@ -52,6 +52,13 @@ export type Proof = {
   attachment_url?: string;
   status: ProofStatus;
   created_at: string;
+
+  // AI-related
+  ai_risk_level: string | null;
+  ai_score: string | number | null;
+  ai_flags: string[] | null;
+  ai_explanation: string | null;
+  ai_checked_at: string | null;
 };
 
 export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
@@ -107,6 +114,13 @@ export type AdminProofReviewItem = {
   attachment_url?: string;
   status: ProofStatus;
   created_at: string;
+
+  // AI-related
+  ai_risk_level: string | null;
+  ai_score: string | number | null;
+  ai_flags: string[] | null;
+  ai_explanation: string | null;
+  ai_checked_at: string | null;
 };
 
 export type ProofType = 'PHOTO' | 'DOCUMENT';
@@ -116,4 +130,46 @@ export interface ProofFileUploadResponse {
   sha256: string;
   content_type: string;
   size_bytes: number;
+}
+
+export interface AdvisorProfile {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  sender_managed: number;
+  total_number_of_case_managed: number;
+  subscribe_date: string;
+  is_active: boolean;
+  languages?: string[] | null;
+  specialties?: string[] | null;
+}
+
+export interface AdminAdvisorSummary {
+  advisor_id: string;
+  full_name: string;
+  active_senders: number;
+  open_proofs: number;
+  total_cases: number;
+}
+
+export interface AdminAdvisorListItem {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_active: boolean;
+  sender_managed: number;
+  total_number_of_case_managed: number;
+  languages?: string[] | null;
+  specialties?: string[] | null;
+}
+
+export interface AiProofSetting {
+  key: string;
+  bool_value: boolean;
+  source?: string | null;
+  updated_at?: string | null;
 }

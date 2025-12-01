@@ -8,7 +8,9 @@ import { useAuthMe } from '@/lib/queries/sender';
 
 const adminLinks = [
   { href: '/admin/dashboard', label: 'Dashboard' },
-  { href: '/admin/proofs/review-queue', label: 'Proof review queue' }
+  { href: '/admin/proofs/review-queue', label: 'Proof review queue' },
+  { href: '/admin/advisors', label: 'Advisors' },
+  { href: '/admin/settings/ai-proof', label: 'AI proof settings' }
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {

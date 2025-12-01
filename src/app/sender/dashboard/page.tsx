@@ -7,6 +7,7 @@ import { SenderEscrowList } from '@/components/sender/SenderEscrowList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { formatDateTime } from '@/lib/format';
+import { MyAdvisorCard } from '@/components/sender/MyAdvisorCard';
 
 export default function SenderDashboardPage() {
   const query = useSenderDashboard();
@@ -33,6 +34,8 @@ export default function SenderDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <MyAdvisorCard />
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="space-y-1">

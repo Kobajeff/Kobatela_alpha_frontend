@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminEscrowSummary } from '@/lib/queries/admin';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { ProofAiStatus } from '@/components/proofs/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 
 export default function AdminEscrowDetailPage() {
@@ -90,6 +91,9 @@ export default function AdminEscrowDetailPage() {
                   </a>
                 );
               })()}
+              <div className="pt-2">
+                <ProofAiStatus proof={proof} />
+              </div>
             </div>
           ))}
         </div>
