@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 import type { SenderEscrowSummary } from '@/types/api';
 
@@ -95,16 +96,28 @@ export function SenderEscrowDetails({
                 <StatusBadge type="proof" status={proof.status} />
               </div>
               <p className="text-xs text-slate-500">{formatDateTime(proof.created_at)}</p>
-              {proof.attachment_url && (
-                <a
-                  href={proof.attachment_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-indigo-600 hover:underline"
-                >
-                  Consulter la pièce jointe
-                </a>
-              )}
+              {(() => {
+                const attachmentLink = proof.attachment_url ?? proof.storage_url;
+                if (!attachmentLink) return null;
+                return (
+                  <a
+                    href={attachmentLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-indigo-600 hover:underline"
+                  >
+                    Consulter la pièce jointe
+                  </a>
+                );
+              })()}
+              <div className="mt-2 space-y-2">
+                <ProofAiStatus proof={proof} />
+                {proof.ai_checked_at && (
+                  <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                    This proof was automatically analysed by the AI Proof Advisor to assist the reviewer.
+                  </div>
+                )}
+              </div>
             </div>
           ))}
           {proofForm && <div className="pt-2">{proofForm}</div>}
