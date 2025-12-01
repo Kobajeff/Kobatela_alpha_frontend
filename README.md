@@ -53,6 +53,7 @@ Tailwind UI
 
 Clean error messaging (extractErrorMessage)
 
+
 ## API Base URL
 
 The frontend reads the backend URL from the environment variable:
@@ -131,14 +132,14 @@ npm run dev
 ### 4. Log in as a sender
 
 1. Open `http://localhost:3000/login`.
-2. Enter the sender email address: `sender+concierge@kobatela.dev`.
+2. Enter the sender email address: `sender+concierge@kobatela.dev`or 'sender.demo@kobatela.dev' .
 3. The backend returns a token (API key) that is automatically stored in `localStorage`.
 4. You will be redirected to `/sender/dashboard`.
 
 ### 5. Log in as admin
 
 1. Open `http://localhost:3000/login`.
-2. Enter the admin email address: `admin+console@kobatela.dev`.
+2. Enter the admin email address: `admin+console@kobatela.dev` or 'admin.demo@kobatela.dev'.
 3. You will be redirected to `/admin/dashboard` where you can access the back-office tools.
 
 ### 6. Resolving connection errors (Current debug)
