@@ -5,7 +5,10 @@ import { isDemoMode } from '@/lib/config';
 import { demoAdminProofQueue, demoAdminStats, getDemoEscrowSummary } from '@/lib/demoData';
 import type {
   AdminDashboardStats,
+  AdminAdvisorListItem,
+  AdminAdvisorSummary,
   AdminProofReviewItem,
+  AiProofSetting,
   SenderEscrowSummary
 } from '@/types/api';
 
@@ -37,6 +40,58 @@ export function useAdminProofReviewQueue() {
         '/admin/proofs/review-queue'
       );
       return response.data;
+    }
+  });
+}
+
+export function useAdminAdvisorsOverview() {
+  return useQuery<AdminAdvisorSummary[]>({
+    queryKey: ['admin', 'advisors', 'overview'],
+    queryFn: async () => {
+      const response = await apiClient.get<AdminAdvisorSummary[]>(
+        '/admin/advisors/overview'
+      );
+      return response.data;
+    }
+  });
+}
+
+export function useAdminAdvisorsList() {
+  return useQuery<AdminAdvisorListItem[]>({
+    queryKey: ['admin', 'advisors', 'list'],
+    queryFn: async () => {
+      const response = await apiClient.get<AdminAdvisorListItem[]>(
+        '/admin/advisors'
+      );
+      return response.data;
+    }
+  });
+}
+
+export function useAiProofSetting() {
+  return useQuery<AiProofSetting>({
+    queryKey: ['admin', 'settings', 'ai-proof'],
+    queryFn: async () => {
+      const response = await apiClient.get<AiProofSetting>(
+        '/admin/settings/ai-proof'
+      );
+      return response.data;
+    }
+  });
+}
+
+export function useUpdateAiProofSetting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const response = await apiClient.post<AiProofSetting>(
+        '/admin/settings/ai-proof',
+        { bool_value: enabled }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'ai-proof'] });
     }
   });
 }

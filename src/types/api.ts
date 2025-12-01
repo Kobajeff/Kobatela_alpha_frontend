@@ -145,3 +145,31 @@ export interface AdvisorProfile {
   languages?: string[] | null;
   specialties?: string[] | null;
 }
+
+export interface AdminAdvisorSummary {
+  advisor_id: string;
+  full_name: string;
+  active_senders: number;
+  open_proofs: number;
+  total_cases: number;
+}
+
+export interface AdminAdvisorListItem {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_active: boolean;
+  sender_managed: number;
+  total_number_of_case_managed: number;
+  languages?: string[] | null;
+  specialties?: string[] | null;
+}
+
+export interface AiProofSetting {
+  key: string;
+  bool_value: boolean;
+  source?: string | null;
+  updated_at?: string | null;
+}
