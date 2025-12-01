@@ -9,6 +9,8 @@ import type {
   AdminAdvisorSummary,
   AdminProofReviewItem,
   AiProofSetting,
+  AdvisorProfile,
+  AdvisorSenderItem,
   SenderEscrowSummary
 } from '@/types/api';
 
@@ -131,6 +133,70 @@ export function useAdminApproveProof() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProofReviewQueue'] });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
+}
+
+export function useAdminAdvisorDetail(advisorId: number) {
+  return useQuery<AdvisorProfile>({
+    queryKey: ['admin', 'advisor', advisorId],
+    queryFn: async () => {
+      const response = await apiClient.get<AdvisorProfile>(`/admin/advisors/${advisorId}`);
+      return response.data;
+    },
+    enabled: !!advisorId
+  });
+}
+
+export function useAdminAdvisorSenders(advisorId: number) {
+  return useQuery<AdvisorSenderItem[]>({
+    queryKey: ['admin', 'advisor', advisorId, 'senders'],
+    queryFn: async () => {
+      const response = await apiClient.get<AdvisorSenderItem[]>(
+        `/admin/advisors/${advisorId}/senders`
+      );
+      return response.data;
+    },
+    enabled: !!advisorId
+  });
+}
+
+export function useAdminUpdateAdvisor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { advisorId: number; data: Partial<AdvisorProfile> }) => {
+      const { advisorId, data } = params;
+      const response = await apiClient.patch(`/admin/advisors/${advisorId}`, data);
+      return response.data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'advisors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'advisors', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'advisors', 'overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'advisor', variables.advisorId] });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
+}
+
+export function useAdminAssignSender() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { advisorId: number; sender_email: string }) => {
+      const { advisorId, sender_email } = params;
+      const response = await apiClient.post(`/admin/advisors/${advisorId}/assign-sender`, {
+        sender_email
+      });
+      return response.data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'advisor', variables.advisorId, 'senders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'advisors', 'overview'] });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
