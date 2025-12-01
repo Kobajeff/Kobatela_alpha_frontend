@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation } from '../../useMutation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { adminCreateUser } from '@/lib/services/admin';
 import type { AdminUserCreatePayload, AdminUserCreateResponse } from '@/types/api';
