@@ -1,5 +1,6 @@
 // Axios client configured for the Kobatela backend with auth header support.
 import axios from 'axios';
+import type { ProofFileUploadResponse } from '@/types/api';
 import { getAuthToken } from './auth';
 
 const API_BASE_URL =
@@ -28,4 +29,17 @@ export function extractErrorMessage(error: unknown): string {
 
 export function isUnauthorizedError(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 401;
+}
+
+export async function uploadProofFile(file: File): Promise<ProofFileUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await apiClient.post<ProofFileUploadResponse>('/files/proofs', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+
+  return response.data;
 }

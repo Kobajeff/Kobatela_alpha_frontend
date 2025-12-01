@@ -16,6 +16,7 @@ import type {
   LoginResponse,
   Payment,
   Proof,
+  ProofType,
   SenderDashboard,
   SenderEscrowSummary,
   UserMe
@@ -174,11 +175,29 @@ export function useCreateProof() {
   const queryClient = useQueryClient();
   return useMutation<Proof, Error, CreateProofPayload>({
     mutationFn: async (payload) => {
+      if (isDemoMode()) {
+        const now = new Date().toISOString();
+        const attachment = payload.attachment_url ?? payload.storage_url ?? 'https://example.com/demo-proof';
+        const type: ProofType | undefined = payload.type;
+        return {
+          id: `demo-proof-${Date.now()}`,
+          escrow_id: payload.escrow_id,
+          milestone_id: payload.milestone_id,
+          description: payload.description,
+          attachment_url: attachment,
+          storage_url: payload.storage_url,
+          sha256: payload.sha256,
+          type,
+          status: 'pending',
+          created_at: now
+        };
+      }
       const response = await apiClient.post<Proof>('/proofs', payload);
       return response.data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['escrowSummary', data.escrow_id] });
+      queryClient.invalidateQueries({ queryKey: ['senderDashboard'] });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
