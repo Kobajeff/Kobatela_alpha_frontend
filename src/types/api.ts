@@ -1,12 +1,14 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
-export type UserRole = 'sender' | 'admin' | 'advisor';
+export type UserRole = 'sender' | 'admin' | 'both';
 
-export type UserMe = {
-  id: string;
+export interface AuthUser {
+  id: number;
   email: string;
-  full_name?: string;
+  username: string;
   role: UserRole;
-};
+  full_name?: string;
+  is_active?: boolean;
+}
 
 export type EscrowStatus =
   | 'draft'
@@ -90,9 +92,15 @@ export type SenderDashboard = {
   recentPayments: Payment[];
 };
 
-export type LoginResponse = {
+export interface AuthLoginResponse {
+  access_token: string;
   token: string;
-};
+  user: AuthUser;
+}
+
+export interface AuthMeResponse {
+  user: AuthUser;
+}
 
 export type AdminDashboardStats = {
   total_escrows: number;
@@ -101,6 +109,18 @@ export type AdminDashboardStats = {
   rejected_proofs: number;
   total_payments: number;
 };
+
+export interface AdminUserCreatePayload {
+  email: string;
+  role: UserRole;
+  issue_api_key?: boolean;
+}
+
+export interface AdminUserCreateResponse {
+  user: AuthUser;
+  token: string | null;
+  token_type: 'api_key';
+}
 
 export type AdminProofReviewItem = {
   id: string;

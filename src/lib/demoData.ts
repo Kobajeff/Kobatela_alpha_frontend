@@ -2,25 +2,27 @@ import {
   AdminDashboardStats,
   AdminProofReviewItem,
   AdvisorProfile,
+  AuthUser,
   EscrowListItem,
   Payment,
   Proof,
-  SenderEscrowSummary,
-  UserMe
+  SenderEscrowSummary
 } from '@/types/api';
 import { DemoRole } from './config';
 
-export const demoSenderUser: UserMe = {
-  id: 'demo-sender-1',
+export const demoSenderUser: AuthUser = {
+  id: 1,
   email: 'demo.sender@kobatela.com',
   full_name: 'Demo Sender',
+  username: 'demo.sender',
   role: 'sender'
 };
 
-export const demoAdminUser: UserMe = {
-  id: 'demo-admin-1',
+export const demoAdminUser: AuthUser = {
+  id: 2,
   email: 'demo.admin@kobatela.com',
   full_name: 'Demo Admin',
+  username: 'demo.admin',
   role: 'admin'
 };
 
@@ -135,7 +137,7 @@ export const demoAdminProofQueue: AdminProofReviewItem[] = demoProofs
     ai_checked_at: p.ai_checked_at
   }));
 
-export function getDemoUserByRole(role: DemoRole): UserMe {
+export function getDemoUserByRole(role: DemoRole): AuthUser {
   return role === 'admin' ? demoAdminUser : demoSenderUser;
 }
 
