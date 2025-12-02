@@ -1,64 +1,72 @@
 'use client';
 
-import { ErrorAlert } from '@/components/common/ErrorAlert';
-import { LoadingState } from '@/components/common/LoadingState';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { useMyProfile } from '@/lib/queries/sender';
+import { useAuthMe } from '@/lib/queries/sender';
 
 export default function SenderProfilePage() {
-  const { data, isLoading, isError, error } = useMyProfile();
+  const { data, isLoading, error } = useAuthMe();
 
   if (isLoading) {
-    return <LoadingState label="Chargement de votre profil..." />;
+    return (
+      <div className="flex min-h-[300px] items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+          Chargement de votre profil...
+        </div>
+      </div>
+    );
   }
 
-  if (isError) {
-    return <ErrorAlert message={extractErrorMessage(error)} />;
+  if (error) {
+    return (
+      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        {extractErrorMessage(error)}
+      </div>
+    );
   }
 
   if (!data) {
-    return <ErrorAlert message="Impossible de charger votre profil." />;
+    return null;
   }
 
+  const createdAt = data.created_at ? new Date(data.created_at).toLocaleDateString() : 'N/A';
+  const activationLabel = data.is_active === undefined ? 'N/A' : data.is_active ? 'Actif' : 'Inactif';
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Mon profil</h1>
-        <p className="text-sm text-muted-foreground">Informations liées à votre compte Kobatela.</p>
+        <h1 className="text-2xl font-semibold text-slate-900">Mon profil</h1>
+        <p className="text-sm text-slate-600">Gérez vos informations de compte.</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Coordonnées</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Email</span>
-            <span className="font-medium">{data.email}</span>
+      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Email</dt>
+            <dd className="text-base font-semibold text-slate-900">{data.email ?? 'N/A'}</dd>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Nom d'utilisateur</span>
-            <span className="font-medium">{data.username}</span>
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Nom d'utilisateur</dt>
+            <dd className="text-base font-semibold text-slate-900">{data.username ?? 'N/A'}</dd>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Rôle</span>
-            <span className="font-medium">{data.role}</span>
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Rôle</dt>
+            <dd className="text-base font-semibold capitalize text-slate-900">{data.role}</dd>
           </div>
-          {data.payout_channel && (
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Canal de paiement</span>
-              <span className="font-medium">{data.payout_channel}</span>
-            </div>
-          )}
-          {data.created_at && (
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Créé le</span>
-              <span className="font-medium">{new Date(data.created_at).toLocaleString()}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Canal de paiement</dt>
+            <dd className="text-base font-semibold text-slate-900">{data.payout_channel ?? 'N/A'}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Date de création</dt>
+            <dd className="text-base font-semibold text-slate-900">{createdAt}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Statut</dt>
+            <dd className="text-base font-semibold text-slate-900">{activationLabel}</dd>
+          </div>
+        </dl>
+      </div>
     </div>
   );
 }

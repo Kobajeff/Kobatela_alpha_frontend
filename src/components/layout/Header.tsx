@@ -17,6 +17,7 @@ export function Header() {
   const { data } = useAuthMe();
   const user = data as AuthUser | undefined;
   const isAdmin = user?.role === 'admin' || user?.role === 'both';
+  const isSender = user?.role === 'sender' || user?.role === 'both';
   const displayName = user?.full_name ?? user?.email ?? 'Chargement...';
   const demoMode = isDemoMode();
   const currentDemoRole = demoMode ? getDemoRole() : null;
@@ -76,8 +77,16 @@ export function Header() {
             Admin
           </Link>
         )}
-        <span className="font-medium text-slate-800">{displayName}</span>
-        <LogoutButton />
+        {isSender && (
+          <Link
+            href="/sender/profile"
+            className="rounded-md px-2 py-1 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+          >
+            Mon profil
+          </Link>
+        )}
+        {user && <span className="font-medium text-slate-800">{displayName}</span>}
+        {user && <LogoutButton />}
       </div>
     </header>
   );

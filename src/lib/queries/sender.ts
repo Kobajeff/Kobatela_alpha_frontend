@@ -1,7 +1,10 @@
+"use client";
+
 // React Query hooks encapsulating sender-specific API calls.
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
+import { useRouter } from 'next/navigation';
 import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClient';
 import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
@@ -30,6 +33,18 @@ export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation<AuthLoginResponse, Error, { email: string }>({
     mutationFn: async ({ email }) => {
+      if (isDemoMode()) {
+        const role = getDemoRole();
+        const user = getDemoUserByRole(role);
+        return new Promise((resolve) => {
+          setTimeout(() =>
+            resolve({
+              user,
+              access_token: 'demo-token'
+            } as AuthLoginResponse), 200);
+        });
+      }
+
       const response = await apiClient.post<AuthLoginResponse>('/auth/login', { email });
       return response.data;
     },
@@ -93,7 +108,7 @@ export function useAuthMe() {
   useEffect(() => {
     if (query.error && isUnauthorizedError(query.error)) {
       clearAuthToken();
-      queryClient.removeQueries({ queryKey: ['authMe'] });
+      queryClient.clear();
     }
   }, [query.error, queryClient]);
 
@@ -251,12 +266,14 @@ export function useCreateProof() {
 
 export function useLogout() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   return useMutation({
     mutationFn: async () => {
       clearAuthToken();
     },
     onSuccess: () => {
       queryClient.clear();
+      router.replace('/login');
     }
   });
 }
