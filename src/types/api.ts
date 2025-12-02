@@ -1,12 +1,14 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
-export type UserRole = 'sender' | 'admin' | 'advisor';
+export type UserRole = 'sender' | 'admin' | 'both';
 
-export type UserMe = {
-  id: string;
+export interface AuthUser {
+  id: number;
   email: string;
-  full_name?: string;
+  username: string;
   role: UserRole;
-};
+  full_name?: string;
+  is_active?: boolean;
+}
 
 export type EscrowStatus =
   | 'draft'
@@ -57,6 +59,13 @@ export type Proof = {
   ai_explanation: string | null;
   ai_checked_at: string | null;
   created_at: string;
+
+  // AI-related
+  ai_risk_level: string | null;
+  ai_score: string | number | null;
+  ai_flags: string[] | null;
+  ai_explanation: string | null;
+  ai_checked_at: string | null;
 };
 
 export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
@@ -88,9 +97,15 @@ export type SenderDashboard = {
   recentPayments: Payment[];
 };
 
-export type LoginResponse = {
+export interface AuthLoginResponse {
+  access_token: string;
   token: string;
-};
+  user: AuthUser;
+}
+
+export interface AuthMeResponse {
+  user: AuthUser;
+}
 
 export type AdminDashboardStats = {
   total_escrows: number;
@@ -99,6 +114,18 @@ export type AdminDashboardStats = {
   rejected_proofs: number;
   total_payments: number;
 };
+
+export interface AdminUserCreatePayload {
+  email: string;
+  role: UserRole;
+  issue_api_key?: boolean;
+}
+
+export interface AdminUserCreateResponse {
+  user: AuthUser;
+  token: string | null;
+  token_type: 'api_key';
+}
 
 export type AdminProofReviewItem = {
   id: string;
@@ -117,6 +144,13 @@ export type AdminProofReviewItem = {
   ai_explanation?: string | null;
   ai_checked_at?: string | null;
   created_at: string;
+
+  // AI-related
+  ai_risk_level: string | null;
+  ai_score: string | number | null;
+  ai_flags: string[] | null;
+  ai_explanation: string | null;
+  ai_checked_at: string | null;
 };
 
 export type ProofType = 'PHOTO' | 'DOCUMENT';
@@ -126,4 +160,55 @@ export interface ProofFileUploadResponse {
   sha256: string;
   content_type: string;
   size_bytes: number;
+}
+
+export interface AdvisorProfile {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  blocked: boolean;
+  sender_managed: number;
+  total_number_of_case_managed: number;
+  subscribe_date: string;
+  is_active: boolean;
+  languages?: string[] | null;
+  specialties?: string[] | null;
+}
+
+export interface AdminAdvisorSummary {
+  advisor_id: string;
+  full_name: string;
+  active_senders: number;
+  open_proofs: number;
+  total_cases: number;
+}
+
+export interface AdminAdvisorListItem {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  blocked: boolean;
+  is_active: boolean;
+  sender_managed: number;
+  total_number_of_case_managed: number;
+  languages?: string[] | null;
+  specialties?: string[] | null;
+}
+
+export interface AdvisorSenderItem {
+  sender_id: number;
+  sender_email: string;
+  active: boolean;
+  assigned_at: string;
+}
+
+export interface AiProofSetting {
+  key: string;
+  bool_value: boolean;
+  source?: string | null;
+  updated_at?: string | null;
 }

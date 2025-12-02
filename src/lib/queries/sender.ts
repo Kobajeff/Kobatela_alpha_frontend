@@ -1,10 +1,11 @@
 // React Query hooks encapsulating sender-specific API calls.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient, extractErrorMessage } from '../apiClient';
+import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClient';
 import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import {
   demoEscrows,
+  demoAdvisorProfile,
   demoPayments,
   demoProofs,
   getDemoEscrowSummary,
@@ -13,24 +14,27 @@ import {
 import type {
   CreateProofPayload,
   EscrowListItem,
-  LoginResponse,
+  AuthLoginResponse,
+  AuthUser,
   Payment,
   Proof,
   ProofType,
+  AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
-  UserMe
+  AuthMeResponse
 } from '@/types/api';
 
 export function useLogin() {
   const queryClient = useQueryClient();
-  return useMutation<{ token: string }, Error, { email: string }>({
+  return useMutation<AuthLoginResponse, Error, { email: string }>({
     mutationFn: async ({ email }) => {
-      const response = await apiClient.post<LoginResponse>('/auth/login', { email });
+      const response = await apiClient.post<AuthLoginResponse>('/auth/login', { email });
       return response.data;
     },
     onSuccess: (data) => {
-      setAuthToken(data.token);
+      const token = data.token ?? data.access_token;
+      setAuthToken(token);
       queryClient.invalidateQueries({ queryKey: ['authMe'] });
     },
     onError: (error) => {
@@ -39,8 +43,24 @@ export function useLogin() {
   });
 }
 
+export function useMyAdvisor() {
+  return useQuery<AdvisorProfile>({
+    queryKey: ['myAdvisor'],
+    queryFn: async () => {
+      if (isDemoMode()) {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve(demoAdvisorProfile), 200);
+        });
+      }
+      const response = await apiClient.get<AdvisorProfile>('/me/advisor');
+      return response.data;
+    }
+  });
+}
+
 export function useAuthMe() {
-  return useQuery<UserMe>({
+  const queryClient = useQueryClient();
+  return useQuery<AuthUser>({
     queryKey: ['authMe'],
     queryFn: async () => {
       if (isDemoMode()) {
@@ -50,13 +70,19 @@ export function useAuthMe() {
           setTimeout(() => resolve(user), 200);
         });
       }
-      const response = await apiClient.get<UserMe>('/auth/me');
-      return response.data;
+      const response = await apiClient.get<AuthMeResponse>('/auth/me');
+      return response.data.user;
     },
     retry: (failureCount, error) => {
       const message = extractErrorMessage(error);
       if (message && failureCount > 1) return false;
       return true;
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        clearAuthToken();
+        queryClient.removeQueries({ queryKey: ['authMe'] });
+      }
     }
   });
 }
@@ -84,6 +110,11 @@ export function useSenderDashboard() {
       }
       const response = await apiClient.get<SenderDashboard>('/sender/dashboard');
       return response.data;
+    },
+    initialData: {
+      recentEscrows: [],
+      pendingProofs: [],
+      recentPayments: []
     }
   });
 }
@@ -189,7 +220,12 @@ export function useCreateProof() {
           sha256: payload.sha256,
           type,
           status: 'pending',
-          created_at: now
+          created_at: now,
+          ai_risk_level: null,
+          ai_score: null,
+          ai_flags: null,
+          ai_explanation: null,
+          ai_checked_at: null
         };
       }
       const response = await apiClient.post<Proof>('/proofs', payload);

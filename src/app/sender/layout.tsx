@@ -2,7 +2,6 @@
 
 // Layout guarding sender routes and wrapping them in the application shell.
 import { useEffect } from 'react';
-import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { isUnauthorizedError } from '@/lib/apiClient';
@@ -20,8 +19,12 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
   }, [isError, isUnauthorized, router]);
 
   useEffect(() => {
-    if (data && data.role !== 'sender') {
-      router.replace('/login');
+    if (data) {
+      if (data.role === 'admin') {
+        router.replace('/admin/dashboard');
+      } else if (data.role !== 'sender' && data.role !== 'both') {
+        router.replace('/login');
+      }
     }
   }, [data, router]);
 
@@ -29,7 +32,7 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
     return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (isUnauthorized || !data || data.role !== 'sender') {
+  if (isUnauthorized || !data || (data.role !== 'sender' && data.role !== 'both')) {
     return null;
   }
 

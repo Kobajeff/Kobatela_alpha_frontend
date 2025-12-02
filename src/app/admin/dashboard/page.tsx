@@ -4,6 +4,7 @@
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminDashboard } from '@/lib/queries/admin';
 import { Card, CardContent, CardTitle } from '@/components/ui/Card';
+import { AdminUserCreator } from '@/components/admin/AdminUserCreator';
 
 export default function AdminDashboardPage() {
   const query = useAdminDashboard();
@@ -49,6 +50,7 @@ export default function AdminDashboardPage() {
           </Card>
         ))}
       </div>
+      <AdminUserCreator />
     </div>
   );
 }

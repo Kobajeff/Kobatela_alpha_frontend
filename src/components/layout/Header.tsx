@@ -14,7 +14,7 @@ export function Header() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data: user } = useAuthMe();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'both';
   const displayName = user?.full_name ?? user?.email ?? 'Chargement...';
   const demoMode = isDemoMode();
   const currentDemoRole = demoMode ? getDemoRole() : null;

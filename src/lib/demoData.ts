@@ -1,26 +1,44 @@
 import {
   AdminDashboardStats,
   AdminProofReviewItem,
+  AdvisorProfile,
+  AuthUser,
   EscrowListItem,
   Payment,
   Proof,
-  SenderEscrowSummary,
-  UserMe
+  SenderEscrowSummary
 } from '@/types/api';
 import { DemoRole } from './config';
 
-export const demoSenderUser: UserMe = {
-  id: 'demo-sender-1',
+export const demoSenderUser: AuthUser = {
+  id: 1,
   email: 'demo.sender@kobatela.com',
   full_name: 'Demo Sender',
+  username: 'demo.sender',
   role: 'sender'
 };
 
-export const demoAdminUser: UserMe = {
-  id: 'demo-admin-1',
+export const demoAdminUser: AuthUser = {
+  id: 2,
   email: 'demo.admin@kobatela.com',
   full_name: 'Demo Admin',
+  username: 'demo.admin',
   role: 'admin'
+};
+
+export const demoAdvisorProfile: AdvisorProfile = {
+  id: 'advisor-1',
+  user_id: 'advisor-user-1',
+  first_name: 'Amina',
+  last_name: 'Kouadio',
+  email: 'advisor.kouadio@kobatela.com',
+  blocked: false,
+  sender_managed: 24,
+  total_number_of_case_managed: 180,
+  subscribe_date: '2024-11-01T00:00:00Z',
+  is_active: true,
+  languages: ['English', 'Français'],
+  specialties: ['Construction oversight', 'Payment scheduling']
 };
 
 export const demoEscrows: EscrowListItem[] = [
@@ -58,7 +76,12 @@ export const demoProofs: Proof[] = [
     description: 'Picture of foundation work',
     attachment_url: 'https://example.com/foundation.jpg',
     status: 'pending',
-    created_at: '2025-01-11T08:30:00Z'
+    created_at: '2025-01-11T08:30:00Z',
+    ai_risk_level: 'LOW',
+    ai_score: 0.12,
+    ai_flags: ['High-resolution image'],
+    ai_explanation: 'Image appears authentic with no detected anomalies.',
+    ai_checked_at: '2025-01-11T09:00:00Z'
   },
   {
     id: 'proof-2',
@@ -67,7 +90,12 @@ export const demoProofs: Proof[] = [
     description: 'Invoice for materials',
     attachment_url: 'https://example.com/invoice.pdf',
     status: 'approved',
-    created_at: '2025-01-02T16:00:00Z'
+    created_at: '2025-01-02T16:00:00Z',
+    ai_risk_level: 'MEDIUM',
+    ai_score: 0.52,
+    ai_flags: ['Document metadata mismatch'],
+    ai_explanation: 'Detected minor inconsistency in metadata; manual review advised.',
+    ai_checked_at: '2025-01-02T16:30:00Z'
   }
 ];
 
@@ -102,10 +130,15 @@ export const demoAdminProofQueue: AdminProofReviewItem[] = demoProofs
     description: p.description,
     attachment_url: p.attachment_url,
     status: p.status,
-    created_at: p.created_at
+    created_at: p.created_at,
+    ai_risk_level: p.ai_risk_level,
+    ai_score: p.ai_score,
+    ai_flags: p.ai_flags,
+    ai_explanation: p.ai_explanation,
+    ai_checked_at: p.ai_checked_at
   }));
 
-export function getDemoUserByRole(role: DemoRole): UserMe {
+export function getDemoUserByRole(role: DemoRole): AuthUser {
   return role === 'admin' ? demoAdminUser : demoSenderUser;
 }
 

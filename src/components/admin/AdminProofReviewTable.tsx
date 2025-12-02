@@ -40,6 +40,7 @@ export function AdminProofReviewTable({ items, onApprove, onReject, processingId
                 <th className="px-4 py-3">Créée</th>
                 <th className="px-4 py-3">Analyse IA</th>
                 <th className="px-4 py-3">Statut</th>
+                <th className="px-4 py-3">AI</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -85,6 +86,16 @@ export function AdminProofReviewTable({ items, onApprove, onReject, processingId
                   </td>
                   <td className="px-4 py-3 text-slate-700">
                     <StatusBadge type="proof" status={item.status} />
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">
+                    <ProofAiStatus proof={item} compact />
+                    {item.ai_flags && item.ai_flags.length > 0 && (
+                      <ul className="mt-1 space-y-0.5 text-[10px] text-muted-foreground">
+                        {item.ai_flags.map((flag) => (
+                          <li key={flag}>• {flag}</li>
+                        ))}
+                      </ul>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">

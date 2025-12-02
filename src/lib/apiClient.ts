@@ -28,16 +28,26 @@ export function extractErrorMessage(error: unknown): string {
 }
 
 export function isUnauthorizedError(error: unknown): boolean {
-  return axios.isAxiosError(error) && error.response?.status === 401;
+  if (!axios.isAxiosError(error)) return false;
+  const status = error.response?.status;
+  return status === 401 || status === 403 || status === 404;
 }
 
-export async function uploadProofFile(file: File): Promise<ProofFileUploadResponse> {
+export async function uploadProofFile(
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<ProofFileUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
 
   const response = await apiClient.post<ProofFileUploadResponse>('/files/proofs', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
+    },
+    onUploadProgress: (event) => {
+      if (!onProgress || !event.total) return;
+      const percent = Math.round((event.loaded * 100) / event.total);
+      onProgress(percent);
     }
   });
 

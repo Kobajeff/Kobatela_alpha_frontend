@@ -2,7 +2,6 @@
 
 // Layout guarding admin routes and providing the admin chrome.
 import { useEffect } from 'react';
-import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { isUnauthorizedError } from '@/lib/apiClient';
@@ -23,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (data) {
       if (data.role === 'sender') {
         router.replace('/sender/dashboard');
-      } else if (data.role !== 'admin') {
+      } else if (data.role !== 'admin' && data.role !== 'both') {
         router.replace('/login');
       }
     }
@@ -33,7 +32,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (isUnauthorized || !data || data.role !== 'admin') {
+  if (isUnauthorized || !data || (data.role !== 'admin' && data.role !== 'both')) {
     return null;
   }
 

@@ -16,8 +16,13 @@ export default function LoginPage() {
     event.preventDefault();
     setError(null);
     try {
-      await login.mutateAsync({ email });
-      router.push('/sender/dashboard');
+      const response = await login.mutateAsync({ email });
+      const role = response.user.role;
+      if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/sender/dashboard');
+      }
     } catch (err) {
       setError(extractErrorMessage(err));
     }

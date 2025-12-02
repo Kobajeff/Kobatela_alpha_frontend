@@ -7,49 +7,50 @@ import { SenderEscrowList } from '@/components/sender/SenderEscrowList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { formatDateTime } from '@/lib/format';
+import { MyAdvisorCard } from '@/components/sender/MyAdvisorCard';
 
 export default function SenderDashboardPage() {
-  const query = useSenderDashboard();
+  const { data, isLoading, isError, error } = useSenderDashboard?.() ?? {};
 
-  if (query.isLoading) {
+  const recentEscrows = data?.recentEscrows ?? [];
+  const pendingProofs = data?.pendingProofs ?? [];
+  const recentPayments = data?.recentPayments ?? [];
+
+  if (isLoading) {
     return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  if (query.isError) {
+  if (isError) {
     return (
       <div className="h-full p-4">
         <div className="my-4 rounded bg-red-100 p-4 text-red-700">
-          {extractErrorMessage(query.error)}
+          {extractErrorMessage(error)}
         </div>
       </div>
     );
   }
 
-  const data = query.data;
-
-  if (!data) {
-    return null;
-  }
-
   return (
     <div className="space-y-6">
+      <MyAdvisorCard />
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="space-y-1">
             <CardTitle className="text-sm font-medium text-slate-500">Escrows récents</CardTitle>
-            <p className="text-2xl font-semibold">{data.recentEscrows.length}</p>
+            <p className="text-2xl font-semibold">{recentEscrows.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="space-y-1">
             <CardTitle className="text-sm font-medium text-slate-500">Preuves en attente</CardTitle>
-            <p className="text-2xl font-semibold">{data.pendingProofs.length}</p>
+            <p className="text-2xl font-semibold">{pendingProofs.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="space-y-1">
             <CardTitle className="text-sm font-medium text-slate-500">Paiements récents</CardTitle>
-            <p className="text-2xl font-semibold">{data.recentPayments.length}</p>
+            <p className="text-2xl font-semibold">{recentPayments.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -59,7 +60,7 @@ export default function SenderDashboardPage() {
           <CardTitle className="text-lg">Escrows récents</CardTitle>
         </CardHeader>
         <CardContent>
-          <SenderEscrowList escrows={data.recentEscrows} />
+          <SenderEscrowList escrows={recentEscrows} />
         </CardContent>
       </Card>
 
@@ -68,8 +69,8 @@ export default function SenderDashboardPage() {
           <CardTitle className="text-lg">Preuves en attente</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {data.pendingProofs.length === 0 && <p className="text-slate-600">Aucune preuve en attente.</p>}
-          {data.pendingProofs.map((proof) => (
+          {pendingProofs.length === 0 && <p className="text-slate-600">Aucune preuve en attente.</p>}
+          {pendingProofs.map((proof) => (
             <div key={proof.id} className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2">
               <div>
                 <p className="font-medium">Preuve {proof.id}</p>
@@ -89,8 +90,8 @@ export default function SenderDashboardPage() {
           <CardTitle className="text-lg">Paiements récents</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {data.recentPayments.length === 0 && <p className="text-slate-600">Aucun paiement récent.</p>}
-          {data.recentPayments.map((payment) => (
+          {recentPayments.length === 0 && <p className="text-slate-600">Aucun paiement récent.</p>}
+          {recentPayments.map((payment) => (
             <div key={payment.id} className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2">
               <div>
                 <p className="font-medium">{payment.amount} {payment.currency}</p>
