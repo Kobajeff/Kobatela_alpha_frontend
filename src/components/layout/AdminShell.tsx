@@ -3,8 +3,10 @@
 // Shell for admin routes including header, sidebar, and main content.
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
 import { useAuthMe } from '@/lib/queries/sender';
+import { AuthUser } from '@/types/api';
 
 const adminLinks = [
   { href: '/admin/dashboard', label: 'Dashboard' },
@@ -15,7 +17,8 @@ const adminLinks = [
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { data: user } = useAuthMe();
+  const { data } = useAuthMe();
+  const user = data as AuthUser | undefined;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -36,7 +39,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               return (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={link.href as Route}
                   className={`rounded-md px-3 py-2 text-sm font-medium hover:bg-indigo-50 ${
                     active ? 'bg-indigo-100 text-indigo-700' : 'text-slate-700'
                   }`}

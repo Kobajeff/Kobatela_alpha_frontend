@@ -5,20 +5,20 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminDashboard } from '@/lib/queries/admin';
 import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 import { AdminUserCreator } from '@/components/admin/AdminUserCreator';
+import { LoadingState } from '@/components/common/LoadingState';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 export default function AdminDashboardPage() {
   const query = useAdminDashboard();
 
   if (query.isLoading) {
-    return <div className="flex h-full items-center justify-center">Loading...</div>;
+    return <LoadingState label="Chargement du tableau de bord admin..." />;
   }
 
   if (query.isError) {
     return (
       <div className="p-4">
-        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
-          {extractErrorMessage(query.error)}
-        </div>
+        <ErrorAlert message={extractErrorMessage(query.error)} />
       </div>
     );
   }

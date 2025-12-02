@@ -8,14 +8,32 @@ import {
   useAdminAdvisorsOverview,
   useAdminUpdateAdvisor
 } from '@/lib/queries/admin';
+import { LoadingState } from '@/components/common/LoadingState';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { extractErrorMessage } from '@/lib/apiClient';
 
 export default function AdminAdvisorsPage() {
   const router = useRouter();
-  const { data: overview, isLoading: loadingOverview } = useAdminAdvisorsOverview();
-  const { data: advisors, isLoading: loadingAdvisors } = useAdminAdvisorsList();
+  const {
+    data: overview,
+    isLoading: loadingOverview,
+    isError: overviewError,
+    error: overviewErrorData
+  } = useAdminAdvisorsOverview();
+  const {
+    data: advisors,
+    isLoading: loadingAdvisors,
+    isError: advisorsError,
+    error: advisorsErrorData
+  } = useAdminAdvisorsList();
   const updateAdvisor = useAdminUpdateAdvisor();
 
   const isLoading = loadingOverview || loadingAdvisors;
+  const errorMessage = overviewError
+    ? extractErrorMessage(overviewErrorData)
+    : advisorsError
+      ? extractErrorMessage(advisorsErrorData)
+      : null;
 
   const handleToggleActive = (advisorId: string, isActive: boolean) => {
     const id = Number(advisorId);
@@ -38,9 +56,9 @@ export default function AdminAdvisorsPage() {
         </p>
       </div>
 
-      {isLoading && (
-        <p className="text-sm text-muted-foreground">Loading advisors...</p>
-      )}
+      {isLoading && <LoadingState label="Chargement des conseillers..." />}
+
+      {errorMessage && <ErrorAlert message={errorMessage} />}
 
       {!isLoading && overview && overview.length > 0 && (
         <div className="overflow-x-auto rounded-md border">

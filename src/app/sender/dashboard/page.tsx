@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { formatDateTime } from '@/lib/format';
 import { MyAdvisorCard } from '@/components/sender/MyAdvisorCard';
+import { LoadingState } from '@/components/common/LoadingState';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 export default function SenderDashboardPage() {
   const { data, isLoading, isError, error } = useSenderDashboard?.() ?? {};
@@ -17,15 +19,13 @@ export default function SenderDashboardPage() {
   const recentPayments = data?.recentPayments ?? [];
 
   if (isLoading) {
-    return <div className="flex h-full items-center justify-center">Loading...</div>;
+    return <LoadingState label="Chargement du tableau de bord..." />;
   }
 
   if (isError) {
     return (
       <div className="h-full p-4">
-        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
-          {extractErrorMessage(error)}
-        </div>
+        <ErrorAlert message={extractErrorMessage(error)} />
       </div>
     );
   }
