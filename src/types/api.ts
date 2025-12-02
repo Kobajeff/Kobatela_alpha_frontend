@@ -1,5 +1,5 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
-export type UserRole = 'sender' | 'admin' | 'both' | 'support';
+export type UserRole = 'sender' | 'admin' | 'both' | 'advisor' | 'support';
 
 export interface User {
   id: string;
