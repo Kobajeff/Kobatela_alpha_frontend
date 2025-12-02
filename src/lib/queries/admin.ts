@@ -1,6 +1,6 @@
 // React Query hooks encapsulating admin-specific API calls.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient, extractErrorMessage } from '../apiClient';
+import { apiClient, extractErrorMessage, logApiError } from '../apiClient';
 import { isDemoMode } from '@/lib/config';
 import { demoAdminProofQueue, demoAdminStats, getDemoEscrowSummary } from '@/lib/demoData';
 import type {
@@ -14,8 +14,26 @@ import type {
   AdminEscrowSummary,
   ApiKey,
   SenderAccountRow,
-  User
+  User,
+  UserRole
 } from '@/types/api';
+
+function mapApiKeyToSenderRow(apiKey: ApiKey): SenderAccountRow | null {
+  const user = apiKey.user;
+  const userId = user?.id ?? apiKey.user_id;
+  if (!userId || !user?.email) return null;
+
+  return {
+    user_id: String(userId),
+    email: user.email,
+    username: user.username,
+    role: (user.role ?? 'sender') as UserRole,
+    api_key_id: String(apiKey.id),
+    api_key_name: apiKey.name,
+    is_active: apiKey.is_active,
+    created_at: apiKey.created_at
+  };
+}
 
 export function useAdminDashboard() {
   return useQuery<AdminDashboardStats>({
@@ -32,42 +50,47 @@ export function useAdminDashboard() {
   });
 }
 
-export function useAdminSendersList(params: { limit?: number; offset?: number; search?: string } = {}) {
-  const { limit = 50, offset = 0, search } = params;
+export function useAdminSendersList(params?: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}) {
+  const { limit = 100, offset = 0, search } = params ?? {};
+
   return useQuery<SenderAccountRow[]>({
-    queryKey: ['admin', 'senders', { limit, offset, search }],
+    queryKey: ['admin-senders', { limit, offset }],
     queryFn: async () => {
-      const response = await apiClient.get<ApiKey[]>(`/apikeys`, {
-        params: { scope: 'sender', active: true, limit, offset }
-      });
+      try {
+        const res = await apiClient.get('/apikeys', {
+          params: { scope: 'sender', active: true, limit, offset }
+        });
 
-      const rows = response.data
-        .map((apiKey) => {
-          const userId = apiKey.user?.id ?? apiKey.user_id ?? '';
+        const raw = res.data as any;
 
-          return {
-            user_id: userId,
-            email: apiKey.user?.email ?? '',
-            username: apiKey.user?.username,
-            role: apiKey.user?.role ?? 'sender',
-            api_key_id: apiKey.id,
-            api_key_name: apiKey.name,
-            is_active: apiKey.is_active,
-            created_at: apiKey.created_at
-          } satisfies SenderAccountRow;
-        })
-        .filter((row) => row.user_id && row.email);
+        const apiKeys: ApiKey[] = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.items)
+          ? raw.items
+          : [];
 
-      if (search) {
-        const term = search.toLowerCase();
-        return rows.filter(
-          (row) =>
-            row.email.toLowerCase().includes(term) ||
-            (row.username && row.username.toLowerCase().includes(term))
-        );
+        const rows = apiKeys
+          .map(mapApiKeyToSenderRow)
+          .filter((x): x is SenderAccountRow => x !== null);
+
+        if (search && search.trim()) {
+          const s = search.trim().toLowerCase();
+          return rows.filter(
+            (row) =>
+              row.email.toLowerCase().includes(s) ||
+              (row.username && row.username.toLowerCase().includes(s))
+          );
+        }
+
+        return rows;
+      } catch (err) {
+        logApiError(err, 'GET /apikeys (admin senders)');
+        throw err;
       }
-
-      return rows;
     }
   });
 }
