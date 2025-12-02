@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminBlockSender, useAdminSenderProfile, useAdminSendersList } from '@/lib/queries/admin';
 import { useToast } from '@/components/ui/ToastProvider';
+import Link from 'next/link';
 
 export default function AdminSenderProfilePage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -31,12 +32,12 @@ export default function AdminSenderProfilePage({ params }: { params: { id: strin
     [keys, id]
   );
 
-  const handleBlock = (api_key_id: string | number) => {
+  const handleBlock = (apiKeyId: string) => {
     if (!window.confirm("Bloquer cette clé API ? L'expéditeur ne pourra plus l'utiliser.")) {
       return;
     }
     blockSender.mutate(
-      { api_key_id },
+      { apiKeyId },
       {
         onSuccess: () => {
           showToast?.('Clé API bloquée avec succès', 'success');
@@ -60,8 +61,18 @@ export default function AdminSenderProfilePage({ params }: { params: { id: strin
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold">Profil expéditeur</h1>
-        <p className="text-sm text-muted-foreground">Détails du compte et clés API associées.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Profil expéditeur</h1>
+            <p className="text-sm text-muted-foreground">Détails du compte et clés API associées.</p>
+          </div>
+          <Link
+            href="/admin/senders"
+            className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            ← Retour aux expéditeurs
+          </Link>
+        </div>
       </div>
 
       <Card>
