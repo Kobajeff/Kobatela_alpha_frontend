@@ -14,12 +14,12 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 const STATUS_OPTIONS: { label: string; value: '' | EscrowStatus }[] = [
   { label: 'Tous les statuts', value: '' },
-  { label: 'Actif', value: 'active' },
-  { label: 'Terminé', value: 'completed' },
-  { label: 'Annulé', value: 'cancelled' },
-  { label: 'En litige', value: 'disputed' },
-  { label: 'Brouillon', value: 'draft' },
-  { label: 'Expiré', value: 'expired' }
+  { label: 'Brouillon', value: 'DRAFT' },
+  { label: 'Financé', value: 'FUNDED' },
+  { label: 'Prêt à libérer', value: 'RELEASABLE' },
+  { label: 'Libéré', value: 'RELEASED' },
+  { label: 'Remboursé', value: 'REFUNDED' },
+  { label: 'Annulé', value: 'CANCELLED' }
 ];
 
 export default function SenderEscrowsPage() {

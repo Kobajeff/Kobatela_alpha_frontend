@@ -44,7 +44,7 @@ export const demoAdvisorProfile: AdvisorProfile = {
 export const demoEscrows: EscrowListItem[] = [
   {
     id: 'escrow-1',
-    status: 'active',
+    status: 'FUNDED',
     amount: 1500,
     currency: 'EUR',
     created_at: '2025-01-10T10:00:00Z',
@@ -52,7 +52,7 @@ export const demoEscrows: EscrowListItem[] = [
   },
   {
     id: 'escrow-2',
-    status: 'completed',
+    status: 'RELEASED',
     amount: 800,
     currency: 'EUR',
     created_at: '2025-01-01T09:00:00Z',
@@ -60,7 +60,7 @@ export const demoEscrows: EscrowListItem[] = [
   },
   {
     id: 'escrow-3',
-    status: 'disputed',
+    status: 'CANCELLED',
     amount: 2200,
     currency: 'EUR',
     created_at: '2025-01-05T12:00:00Z',
@@ -75,9 +75,9 @@ export const demoProofs: Proof[] = [
     milestone_id: 'm1',
     description: 'Picture of foundation work',
     attachment_url: 'https://example.com/foundation.jpg',
-    status: 'pending',
+    status: 'PENDING',
     created_at: '2025-01-11T08:30:00Z',
-    ai_risk_level: 'LOW',
+    ai_risk_level: null,
     ai_score: 0.12,
     ai_explanation: 'Image appears authentic with no detected anomalies.',
     ai_checked_at: '2025-01-11T09:00:00Z'
@@ -88,9 +88,9 @@ export const demoProofs: Proof[] = [
     milestone_id: 'm1',
     description: 'Invoice for materials',
     attachment_url: 'https://example.com/invoice.pdf',
-    status: 'approved',
+    status: 'APPROVED',
     created_at: '2025-01-02T16:00:00Z',
-    ai_risk_level: 'MEDIUM',
+    ai_risk_level: 'warning',
     ai_score: 0.52,
     ai_explanation: 'Detected minor inconsistency in metadata; manual review advised.',
     ai_checked_at: '2025-01-02T16:30:00Z'
@@ -103,7 +103,7 @@ export const demoPayments: Payment[] = [
     escrow_id: 'escrow-2',
     amount: 800,
     currency: 'EUR',
-    status: 'paid',
+    status: 'SETTLED',
     created_at: '2025-01-05T18:00:00Z'
   }
 ];
@@ -112,14 +112,14 @@ export const demoSenderDashboard: SenderEscrowSummary[] = [];
 
 export const demoAdminStats: AdminDashboardStats = {
   total_escrows: demoEscrows.length,
-  pending_proofs: demoProofs.filter((p) => p.status === 'pending').length,
-  approved_proofs: demoProofs.filter((p) => p.status === 'approved').length,
-  rejected_proofs: demoProofs.filter((p) => p.status === 'rejected').length,
+  pending_proofs: demoProofs.filter((p) => p.status === 'PENDING').length,
+  approved_proofs: demoProofs.filter((p) => p.status === 'APPROVED').length,
+  rejected_proofs: demoProofs.filter((p) => p.status === 'REJECTED').length,
   total_payments: demoPayments.length
 };
 
 export const demoAdminProofQueue: AdminProofReviewItem[] = demoProofs
-  .filter((p) => p.status === 'pending')
+  .filter((p) => p.status === 'PENDING')
   .map((p) => ({
     id: p.id,
     escrow_id: p.escrow_id,
@@ -152,13 +152,13 @@ export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummary | nu
       {
         id: 'm1',
         name: 'Foundation',
-        status: 'completed',
+        status: 'PAID',
         due_date: '2025-01-10T00:00:00Z'
       },
       {
         id: 'm2',
         name: 'Walls',
-        status: 'active',
+        status: 'PENDING_REVIEW',
         due_date: '2025-02-01T00:00:00Z'
       }
     ],

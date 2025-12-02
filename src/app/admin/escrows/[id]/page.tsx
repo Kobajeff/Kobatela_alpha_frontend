@@ -4,11 +4,18 @@
 import { useParams } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminEscrowSummary } from '@/lib/queries/admin';
-import { StatusBadge } from '@/components/common/StatusBadge';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { Badge } from '@/components/ui/Badge';
+import {
+  mapAiRiskToBadge,
+  mapEscrowStatusToBadge,
+  mapMilestoneStatusToBadge,
+  mapPaymentStatusToBadge,
+  mapProofStatusToBadge
+} from '@/lib/uiMappings';
 
 export default function AdminEscrowDetailPage() {
   const params = useParams<{ id: string }>();
@@ -41,7 +48,10 @@ export default function AdminEscrowDetailPage() {
             <h2 className="text-xl font-semibold">Escrow {data.escrow.id}</h2>
             <div className="mt-1 flex items-center gap-2 text-sm text-slate-600">
               <span>Statut :</span>
-              <StatusBadge type="escrow" status={data.escrow.status} />
+              {(() => {
+                const badge = mapEscrowStatusToBadge(data.escrow.status);
+                return <Badge variant={badge.variant}>{badge.label}</Badge>;
+              })()}
             </div>
           </div>
           <p className="text-sm text-slate-500">Créé le {formatDateTime(data.escrow.created_at)}</p>
@@ -50,6 +60,24 @@ export default function AdminEscrowDetailPage() {
           Montant : {data.escrow.amount} {data.escrow.currency}
         </p>
       </section>
+
+      {data.advisor && (
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-2 text-lg font-semibold">Conseiller assigné</h3>
+          <p className="text-sm text-muted-foreground">
+            Ce conseiller accompagne cet escrow pour les revues et la conformité.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 text-sm text-slate-700 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-semibold">
+                {data.advisor.first_name} {data.advisor.last_name}
+              </p>
+              <p className="text-xs text-slate-500">{data.advisor.email}</p>
+            </div>
+            <Badge variant="neutral">Conseiller assigné</Badge>
+          </div>
+        </section>
+      )}
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-3 text-lg font-semibold">Jalons</h3>
@@ -60,7 +88,10 @@ export default function AdminEscrowDetailPage() {
                 <p className="font-medium">{milestone.name}</p>
                 <p className="text-xs text-slate-500">Échéance : {milestone.due_date ?? 'N/A'}</p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{milestone.status}</span>
+              {(() => {
+                const badge = mapMilestoneStatusToBadge(milestone.status);
+                return <Badge variant={badge.variant}>{badge.label}</Badge>;
+              })()}
             </div>
           ))}
         </div>
@@ -74,7 +105,16 @@ export default function AdminEscrowDetailPage() {
             <div key={proof.id} className="rounded-md border border-slate-100 p-3">
               <div className="flex items-center justify-between">
                 <p className="font-medium">{proof.description ?? 'Preuve fournie'}</p>
-                <StatusBadge type="proof" status={proof.status} />
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const badge = mapProofStatusToBadge(proof.status);
+                    return <Badge variant={badge.variant}>{badge.label}</Badge>;
+                  })()}
+                  {proof.ai_checked_at && (() => {
+                    const aiBadge = mapAiRiskToBadge(proof.ai_risk_level);
+                    return <Badge variant={aiBadge.variant}>{aiBadge.label}</Badge>;
+                  })()}
+                </div>
               </div>
               <p className="text-xs text-slate-500">{formatDateTime(proof.created_at)}</p>
               {(() => {
@@ -109,7 +149,10 @@ export default function AdminEscrowDetailPage() {
                 <p className="font-medium">{payment.amount} {payment.currency}</p>
                 <p className="text-xs text-slate-500">{formatDateTime(payment.created_at)}</p>
               </div>
-              <StatusBadge type="payment" status={payment.status} />
+              {(() => {
+                const badge = mapPaymentStatusToBadge(payment.status);
+                return <Badge variant={badge.variant}>{badge.label}</Badge>;
+              })()}
             </div>
           ))}
         </div>

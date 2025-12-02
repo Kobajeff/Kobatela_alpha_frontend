@@ -4,11 +4,17 @@
 import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { StatusBadge } from '@/components/common/StatusBadge';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 import type { SenderEscrowSummary } from '@/types/api';
+import { Badge } from '@/components/ui/Badge';
+import {
+  mapAiRiskToBadge,
+  mapEscrowStatusToBadge,
+  mapMilestoneStatusToBadge,
+  mapPaymentStatusToBadge,
+  mapProofStatusToBadge
+} from '@/lib/uiMappings';
 
 interface SenderEscrowDetailsProps {
   summary: SenderEscrowSummary;
@@ -37,7 +43,10 @@ export function SenderEscrowDetails({
             <CardTitle>Escrow {summary.escrow.id}</CardTitle>
             <div className="mt-1 flex items-center gap-2 text-sm text-slate-600">
               <span>Statut :</span>
-              <StatusBadge type="escrow" status={summary.escrow.status} />
+              {(() => {
+                const badge = mapEscrowStatusToBadge(summary.escrow.status);
+                return <Badge variant={badge.variant}>{badge.label}</Badge>;
+              })()}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -77,7 +86,10 @@ export function SenderEscrowDetails({
                 <p className="font-medium">{milestone.name}</p>
                 <p className="text-sm text-slate-500">Échéance : {milestone.due_date ?? 'N/A'}</p>
               </div>
-              <Badge variant="default">{milestone.status}</Badge>
+              {(() => {
+                const badge = mapMilestoneStatusToBadge(milestone.status);
+                return <Badge variant={badge.variant}>{badge.label}</Badge>;
+              })()}
             </div>
           ))}
         </CardContent>
@@ -93,7 +105,16 @@ export function SenderEscrowDetails({
             <div key={proof.id} className="rounded-md border border-slate-100 px-3 py-2">
               <div className="flex items-center justify-between">
                 <p className="font-medium">{proof.description ?? 'Preuve fournie'}</p>
-                <StatusBadge type="proof" status={proof.status} />
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const badge = mapProofStatusToBadge(proof.status);
+                    return <Badge variant={badge.variant}>{badge.label}</Badge>;
+                  })()}
+                  {proof.ai_checked_at && (() => {
+                    const aiBadge = mapAiRiskToBadge(proof.ai_risk_level);
+                    return <Badge variant={aiBadge.variant}>{aiBadge.label}</Badge>;
+                  })()}
+                </div>
               </div>
               <p className="text-xs text-slate-500">{formatDateTime(proof.created_at)}</p>
               {(() => {
@@ -136,7 +157,10 @@ export function SenderEscrowDetails({
                 </p>
                 <p className="text-xs text-slate-500">{formatDateTime(payment.created_at)}</p>
               </div>
-              <StatusBadge type="payment" status={payment.status} />
+              {(() => {
+                const badge = mapPaymentStatusToBadge(payment.status);
+                return <Badge variant={badge.variant}>{badge.label}</Badge>;
+              })()}
             </div>
           ))}
         </CardContent>

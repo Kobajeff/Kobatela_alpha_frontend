@@ -17,12 +17,12 @@ export interface AuthUser extends Omit<User, 'id'> {
 }
 
 export type EscrowStatus =
-  | 'draft'
-  | 'active'
-  | 'completed'
-  | 'cancelled'
-  | 'disputed'
-  | 'expired';
+  | 'DRAFT'
+  | 'FUNDED'
+  | 'RELEASABLE'
+  | 'RELEASED'
+  | 'REFUNDED'
+  | 'CANCELLED';
 
 export type EscrowListItem = {
   id: string;
@@ -47,13 +47,13 @@ export type CreateProofPayload = {
 };
 
 export type AiAnalysis = {
-  ai_risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | null;
+  ai_risk_level: 'warning' | 'suspect' | null;
   ai_score: number | null;
   ai_explanation: string | null;
   ai_checked_at: string | null;
 };
 
-export type ProofStatus = 'pending' | 'approved' | 'rejected';
+export type ProofStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type Proof = {
   id: string;
@@ -68,7 +68,15 @@ export type Proof = {
   created_at: string;
 } & AiAnalysis;
 
-export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
+export type PaymentStatus = 'PENDING' | 'SENT' | 'SETTLED' | 'ERROR' | 'REFUNDED';
+
+export type MilestoneStatus =
+  | 'WAITING'
+  | 'PENDING_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'PAYING'
+  | 'PAID';
 
 export type Payment = {
   id: string;
@@ -84,7 +92,7 @@ export type SenderEscrowSummary = {
   milestones: Array<{
     id: string;
     name: string;
-    status: string;
+    status: MilestoneStatus;
     due_date?: string;
   }>;
   proofs: Proof[];
