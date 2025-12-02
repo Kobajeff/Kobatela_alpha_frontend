@@ -11,7 +11,7 @@ import type {
   AiProofSetting,
   AdvisorProfile,
   AdvisorSenderItem,
-  SenderEscrowSummary
+  AdminEscrowSummary
 } from '@/types/api';
 
 export function useAdminDashboard() {
@@ -29,17 +29,29 @@ export function useAdminDashboard() {
   });
 }
 
-export function useAdminProofReviewQueue() {
+export function useAdminProofReviewQueue(params: {
+  limit?: number;
+  offset?: number;
+  advisor_id?: string;
+  unassigned_only?: boolean;
+} = {}) {
+  const { limit = 20, offset = 0, advisor_id, unassigned_only } = params;
   return useQuery<AdminProofReviewItem[]>({
-    queryKey: ['adminProofReviewQueue'],
+    queryKey: ['adminProofReviewQueue', { limit, offset, advisor_id, unassigned_only }],
     queryFn: async () => {
       if (isDemoMode()) {
         return new Promise<AdminProofReviewItem[]>((resolve) => {
           setTimeout(() => resolve(demoAdminProofQueue), 200);
         });
       }
+      const searchParams = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset)
+      });
+      if (advisor_id) searchParams.set('advisor_id', advisor_id);
+      if (unassigned_only !== undefined) searchParams.set('unassigned_only', String(unassigned_only));
       const response = await apiClient.get<AdminProofReviewItem[]>(
-        '/admin/proofs/review-queue'
+        `/admin/proofs/review-queue?${searchParams.toString()}`
       );
       return response.data;
     }
@@ -58,12 +70,17 @@ export function useAdminAdvisorsOverview() {
   });
 }
 
-export function useAdminAdvisorsList() {
+export function useAdminAdvisorsList(active?: boolean) {
   return useQuery<AdminAdvisorListItem[]>({
-    queryKey: ['admin', 'advisors', 'list'],
+    queryKey: ['admin', 'advisors', 'list', { active }],
     queryFn: async () => {
+      const searchParams = new URLSearchParams();
+      if (active !== undefined) {
+        searchParams.set('active', String(active));
+      }
+      const suffix = searchParams.toString();
       const response = await apiClient.get<AdminAdvisorListItem[]>(
-        '/admin/advisors'
+        suffix ? `/admin/advisors?${suffix}` : '/admin/advisors'
       );
       return response.data;
     }
@@ -99,7 +116,7 @@ export function useUpdateAiProofSetting() {
 }
 
 export function useAdminEscrowSummary(escrowId: string) {
-  return useQuery<SenderEscrowSummary>({
+  return useQuery<AdminEscrowSummary>({
     queryKey: ['adminEscrowSummary', escrowId],
     queryFn: async () => {
       if (isDemoMode()) {
@@ -111,7 +128,7 @@ export function useAdminEscrowSummary(escrowId: string) {
           setTimeout(() => resolve(summary), 200);
         });
       }
-      const response = await apiClient.get<SenderEscrowSummary>(
+      const response = await apiClient.get<AdminEscrowSummary>(
         `/admin/escrows/${escrowId}/summary`
       );
       return response.data;
@@ -133,6 +150,7 @@ export function useAdminApproveProof() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProofReviewQueue'] });
+      queryClient.invalidateQueries({ queryKey: ['adminEscrowSummary'] });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
@@ -217,6 +235,7 @@ export function useAdminRejectProof() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProofReviewQueue'] });
+      queryClient.invalidateQueries({ queryKey: ['adminEscrowSummary'] });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));

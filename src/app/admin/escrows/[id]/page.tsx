@@ -78,7 +78,7 @@ export default function AdminEscrowDetailPage() {
               </div>
               <p className="text-xs text-slate-500">{formatDateTime(proof.created_at)}</p>
               {(() => {
-                const attachmentLink = proof.attachment_url ?? proof.storage_url;
+                const attachmentLink = proof.attachment_url ?? proof.file_url;
                 if (!attachmentLink) return null;
                 return (
                   <a

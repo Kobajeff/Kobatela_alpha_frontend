@@ -14,9 +14,9 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 export default function SenderDashboardPage() {
   const { data, isLoading, isError, error } = useSenderDashboard?.() ?? {};
 
-  const recentEscrows = data?.recentEscrows ?? [];
-  const pendingProofs = data?.pendingProofs ?? [];
-  const recentPayments = data?.recentPayments ?? [];
+  const recentEscrows = data?.recent_escrows ?? [];
+  const pendingProofs = data?.pending_proofs ?? [];
+  const recentPayments = data?.recent_payments ?? [];
 
   if (isLoading) {
     return <LoadingState label="Chargement du tableau de bord..." />;

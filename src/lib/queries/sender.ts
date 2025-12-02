@@ -19,7 +19,6 @@ import type {
   AuthUser,
   Payment,
   Proof,
-  ProofType,
   AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
@@ -35,7 +34,9 @@ export function useLogin() {
     },
     onSuccess: (data) => {
       const token = data.token ?? data.access_token;
-      setAuthToken(token);
+      if (token) {
+        setAuthToken(token);
+      }
       queryClient.invalidateQueries({ queryKey: ['authMe'] });
     },
     onError: (error) => {
@@ -104,9 +105,9 @@ export function useSenderDashboard() {
           setTimeout(
             () =>
               resolve({
-                recentEscrows,
-                pendingProofs,
-                recentPayments
+                recent_escrows: recentEscrows,
+                pending_proofs: pendingProofs,
+                recent_payments: recentPayments
               }),
             200
           );
@@ -207,22 +208,18 @@ export function useCreateProof() {
     mutationFn: async (payload) => {
       if (isDemoMode()) {
         const now = new Date().toISOString();
-        const attachment = payload.attachment_url ?? payload.storage_url ?? 'https://example.com/demo-proof';
-        const type: ProofType | undefined = payload.type;
+        const attachment = payload.attachment_url ?? 'https://example.com/demo-proof';
         return {
           id: `demo-proof-${Date.now()}`,
           escrow_id: payload.escrow_id,
           milestone_id: payload.milestone_id,
           description: payload.description,
           attachment_url: attachment,
-          storage_url: payload.storage_url,
-          sha256: payload.sha256,
-          type,
+          file_id: payload.file_id ?? 'demo-file-id',
           status: 'pending',
           created_at: now,
           ai_risk_level: null,
           ai_score: null,
-          ai_flags: null,
           ai_explanation: null,
           ai_checked_at: null
         };

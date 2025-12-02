@@ -74,10 +74,10 @@ export default function AdminAdvisorsPage() {
             <tbody>
               {overview.map((row) => (
                 <tr key={row.advisor_id} className="border-b last:border-0">
-                  <td className="px-3 py-2 text-sm">{row.full_name}</td>
-                  <td className="px-3 py-2 text-xs">{row.active_senders}</td>
-                  <td className="px-3 py-2 text-xs">{row.open_proofs}</td>
-                  <td className="px-3 py-2 text-xs">{row.total_cases}</td>
+                  <td className="px-3 py-2 text-sm">{row.name}</td>
+                  <td className="px-3 py-2 text-xs">{row.sender_managed}</td>
+                  <td className="px-3 py-2 text-xs">{row.open_proofs ?? 0}</td>
+                  <td className="px-3 py-2 text-xs">{row.total_number_of_case_managed}</td>
                 </tr>
               ))}
             </tbody>
