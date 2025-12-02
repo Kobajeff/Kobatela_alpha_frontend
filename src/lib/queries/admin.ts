@@ -152,7 +152,7 @@ export function useAdminProofReviewQueue(params: {
 
 export function useAdminAdvisorsOverview() {
   return useQuery<AdminAdvisorSummary[]>({
-    queryKey: ['admin', 'advisors', 'overview'],
+    queryKey: ['admin-advisors-overview'],
     queryFn: async () => {
       const response = await apiClient.get<AdminAdvisorSummary[]>(
         '/admin/advisors/overview'
@@ -164,7 +164,7 @@ export function useAdminAdvisorsOverview() {
 
 export function useAdminAdvisorsList(active?: boolean) {
   return useQuery<AdminAdvisorListItem[]>({
-    queryKey: ['admin', 'advisors', 'list', { active }],
+    queryKey: ['admin-advisors', { active }],
     queryFn: async () => {
       const searchParams = new URLSearchParams();
       if (active !== undefined) {
@@ -283,10 +283,32 @@ export function useAdminUpdateAdvisor() {
       return response.data;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'advisors'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'advisors', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'advisors', 'overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'advisor', variables.advisorId] });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
+}
+
+export function useAdminCreateAdvisor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      user_id: number;
+      display_name?: string;
+      country?: string;
+      languages?: string[];
+      grade?: string;
+    }) => {
+      const response = await apiClient.post('/admin/advisors', payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
@@ -306,7 +328,8 @@ export function useAdminAssignSender() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'advisor', variables.advisorId, 'senders'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'advisors', 'overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));

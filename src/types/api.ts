@@ -217,6 +217,7 @@ export interface AdminAdvisorSummary {
 export interface AdminAdvisorListItem {
   id: string;
   user_id: string;
+  display_name?: string | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -224,8 +225,11 @@ export interface AdminAdvisorListItem {
   is_active: boolean;
   sender_managed: number;
   total_number_of_case_managed: number;
+  country?: string | null;
   languages?: string[] | null;
   specialties?: string[] | null;
+  open_proofs?: number;
+  grade?: string | null;
 }
 
 export interface AdvisorSenderItem {
