@@ -5,26 +5,11 @@ import { useMyAdvisor } from '@/lib/queries/sender';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage } from '@/lib/apiClient';
+import { EmptyState } from '@/components/common/EmptyState';
+import { isNoAdvisorAvailable } from '@/lib/errors';
+import type { AdvisorProfile } from '@/types/api';
 
-export function MyAdvisorCard() {
-  const { data, isLoading, isError, error } = useMyAdvisor();
-
-  if (isLoading) {
-    return <LoadingState label="Chargement de votre conseiller..." fullHeight={false} />;
-  }
-
-  if (isError) {
-    return <ErrorAlert message={extractErrorMessage(error)} />;
-  }
-
-  if (!data) {
-    return (
-      <div className="rounded-md border border-dashed bg-slate-50 p-4 text-sm text-muted-foreground">
-        Aucun conseiller n’a encore été assigné à votre dossier.
-      </div>
-    );
-  }
-
+export function AdvisorProfileCard({ advisor, showProfileLink = true }: { advisor: AdvisorProfile; showProfileLink?: boolean }) {
   const {
     first_name,
     last_name,
@@ -37,20 +22,16 @@ export function MyAdvisorCard() {
     country,
     is_active,
     blocked
-  } = data;
+  } = advisor;
 
   return (
     <div className="flex flex-col justify-between rounded-md border bg-white p-4">
       <div>
-        <p className="text-xs font-medium uppercase text-muted-foreground">
-          Your dedicated advisor
-        </p>
+        <p className="text-xs font-medium uppercase text-muted-foreground">Your dedicated advisor</p>
         <h3 className="mt-1 text-base font-semibold">
           {first_name} {last_name}
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {email}
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{email}</p>
 
         <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
           <span
@@ -74,26 +55,43 @@ export function MyAdvisorCard() {
             Assigned since: <span className="font-medium">{new Date(subscribe_date).toLocaleDateString()}</span>
           </p>
           {country && <p>Pays : {country}</p>}
-          {languages && languages.length > 0 && (
-            <p>Languages: {languages.join(', ')}</p>
-          )}
-          {specialties && specialties.length > 0 && (
-            <p>Focus: {specialties.join(', ')}</p>
-          )}
+          {languages && languages.length > 0 && <p>Languages: {languages.join(', ')}</p>}
+          {specialties && specialties.length > 0 && <p>Focus: {specialties.join(', ')}</p>}
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs">
-        <p className="max-w-xs text-[11px] text-muted-foreground">
-          Your advisor helps you review proofs, detect issues, and keep your project on track.
-        </p>
-        <Link
-          href="/sender/advisor"
-          className="text-xs font-semibold text-blue-600 hover:underline"
-        >
-          View advisor profile
-        </Link>
-      </div>
+      {showProfileLink && (
+        <div className="mt-3 flex items-center justify-between text-xs">
+          <p className="max-w-xs text-[11px] text-muted-foreground">
+            Your advisor helps you review proofs, detect issues, and keep your project on track.
+          </p>
+          <Link href="/sender/advisor" className="text-xs font-semibold text-blue-600 hover:underline">
+            View advisor profile
+          </Link>
+        </div>
+      )}
     </div>
   );
+}
+
+export function MyAdvisorCard({ showProfileLink = true }: { showProfileLink?: boolean } = {}) {
+  const { data, isLoading, isError, error } = useMyAdvisor();
+
+  const noAdvisorAvailable = isNoAdvisorAvailable(error) || (!data && !isLoading && !isError);
+
+  if (isLoading) {
+    return <LoadingState label="Chargement de votre conseiller..." fullHeight={false} />;
+  }
+
+  if (isError && !isNoAdvisorAvailable(error)) {
+    return <ErrorAlert message={extractErrorMessage(error)} />;
+  }
+
+  if (noAdvisorAvailable || !data) {
+    return (
+      <EmptyState message="No advisor is available yet. We will assign one to you as soon as possible." />
+    );
+  }
+
+  return <AdvisorProfileCard advisor={data} showProfileLink={showProfileLink} />;
 }

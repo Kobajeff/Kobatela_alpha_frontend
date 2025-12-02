@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClient';
+import { isNoAdvisorAvailable } from '../errors';
 import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import {
@@ -74,8 +75,15 @@ export function useMyAdvisor() {
         const response = await apiClient.get<AdvisorProfile>('/me/advisor');
         return response.data ?? null;
       } catch (error) {
-        if (isAxiosError(error) && error.response?.status === 404) {
-          return null;
+        if (isAxiosError(error)) {
+          const status = error.response?.status;
+          if (status === 404) {
+            return null;
+          }
+
+          if (isNoAdvisorAvailable(error)) {
+            throw error;
+          }
         }
         throw error;
       }
