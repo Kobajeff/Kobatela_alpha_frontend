@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
 import { useAdminBlockSender, useAdminSendersList } from '@/lib/queries/admin';
@@ -10,31 +10,25 @@ import { useToast } from '@/components/ui/ToastProvider';
 
 export default function AdminSendersPage() {
   const [search, setSearch] = useState('');
-  const { data, isLoading, isError, error, refetch } = useAdminSendersList({ limit: 100, offset: 0 });
+  const { data, isLoading, isError, error } = useAdminSendersList({
+    limit: 100,
+    offset: 0,
+    search
+  });
   const blockSender = useAdminBlockSender();
   const { showToast } = useToast();
 
-  const rows = useMemo(() => {
-    if (!data) return [];
-    const term = search.trim().toLowerCase();
-    if (!term) return data;
-    return data.filter(
-      (row) =>
-        row.email.toLowerCase().includes(term) ||
-        (row.username && row.username.toLowerCase().includes(term))
-    );
-  }, [data, search]);
+  const rows = data ?? [];
 
-  const handleBlock = (api_key_id: string | number) => {
+  const handleBlock = (apiKeyId: string) => {
     if (!window.confirm("Bloquer cette clé API ? L'expéditeur ne pourra plus l'utiliser.")) {
       return;
     }
     blockSender.mutate(
-      { api_key_id },
+      { apiKeyId },
       {
         onSuccess: () => {
           showToast?.('Clé API bloquée avec succès', 'success');
-          refetch();
         },
         onError: (err) => {
           showToast?.(extractErrorMessage(err), 'error');

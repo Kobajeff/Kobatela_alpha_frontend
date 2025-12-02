@@ -1,15 +1,19 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
 export type UserRole = 'sender' | 'admin' | 'both' | 'support';
 
-export interface AuthUser {
-  id: number | string;
+export interface User {
+  id: string;
   email: string;
   username: string;
   role: UserRole;
-  full_name?: string;
-  is_active?: boolean;
   payout_channel?: string | null;
   created_at?: string;
+  is_active?: boolean;
+}
+
+export interface AuthUser extends Omit<User, 'id'> {
+  id: number | string;
+  full_name?: string;
 }
 
 export type EscrowStatus =
@@ -108,25 +112,26 @@ export interface AuthMeResponse {
 }
 
 export interface ApiKey {
-  id: string | number;
-  name: string;
-  scope: 'sender' | 'admin' | 'support';
+  id: string;
+  name?: string;
+  scope: string;
   is_active: boolean;
-  user_id?: string | number;
-  user?: Pick<AuthUser, 'id' | 'email' | 'username' | 'role'>;
+  user_id?: string;
+  user?: Pick<User, 'id' | 'email' | 'username' | 'role'>;
   created_at?: string;
+  updated_at?: string;
 }
 
-export type SenderAccountRow = {
-  user_id: string | number;
+export interface SenderAccountRow {
+  user_id: string;
   email: string;
   username?: string;
-  role: Extract<UserRole, 'sender' | 'both' | 'admin'>;
-  api_key_id: string | number;
+  role: UserRole;
+  api_key_id: string;
   api_key_name?: string;
   is_active: boolean;
   created_at?: string;
-};
+}
 
 export type AdminDashboardStats = {
   total_escrows: number;
