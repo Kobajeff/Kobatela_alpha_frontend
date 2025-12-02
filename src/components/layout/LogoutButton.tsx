@@ -1,18 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useLogout } from '@/lib/queries/sender';
 
 export function LogoutButton({ className }: { className?: string }) {
-  const router = useRouter();
   const logout = useLogout();
 
   const handleLogout = () => {
-    logout.mutate(undefined, {
-      onSuccess: () => {
-        router.push('/login');
-      }
-    });
+    logout.mutate();
   };
 
   return (
