@@ -21,9 +21,26 @@ apiClient.interceptors.request.use((config) => {
 
 export function extractErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const message = (error.response?.data as { error?: { message?: string } })?.error?.message;
+    const status = error.response?.status;
+    const data = error.response?.data as { error?: { message?: string }; message?: string };
+    const message = data?.error?.message ?? data?.message;
+
+    if ((status === 400 || status === 422) && message) {
+      return message;
+    }
+
+    if (status === 405) {
+      return 'Méthode non autorisée';
+    }
+
+    if (status && status >= 500) {
+      return 'Une erreur est survenue côté serveur';
+    }
+
     if (message) return message;
   }
+
+  if (error instanceof Error) return error.message;
   return 'Une erreur est survenue';
 }
 
@@ -31,6 +48,23 @@ export function isUnauthorizedError(error: unknown): boolean {
   if (!axios.isAxiosError(error)) return false;
   const status = error.response?.status;
   return status === 401 || status === 403 || status === 404;
+}
+
+export function logApiError(error: unknown, context?: string) {
+  if (process.env.NODE_ENV !== "development") return;
+
+  if (axios.isAxiosError(error)) {
+    console.error("[API ERROR]", context, {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+  } else if (error instanceof Error) {
+    console.error("[APP ERROR]", context, error.message, error);
+  } else {
+    console.error("[UNKNOWN ERROR]", context, error);
+  }
 }
 
 export async function uploadProofFile(
