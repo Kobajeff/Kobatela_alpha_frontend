@@ -4,11 +4,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearAuthToken } from '@/lib/auth';
 import { useAuthMe } from '@/lib/queries/sender';
 import { getDemoRole, isDemoMode, setDemoRole } from '@/lib/config';
 import { useToast } from '@/components/ui/ToastProvider';
 import { AuthUser } from '@/types/api';
+import { LogoutButton } from './LogoutButton';
 
 export function Header() {
   const router = useRouter();
@@ -20,12 +20,6 @@ export function Header() {
   const displayName = user?.full_name ?? user?.email ?? 'Chargement...';
   const demoMode = isDemoMode();
   const currentDemoRole = demoMode ? getDemoRole() : null;
-
-  const handleLogout = () => {
-    clearAuthToken();
-    queryClient.clear();
-    router.push('/login');
-  };
 
   const handleSwitchToSender = () => {
     setDemoRole('sender');
@@ -83,13 +77,7 @@ export function Header() {
           </Link>
         )}
         <span className="font-medium text-slate-800">{displayName}</span>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="rounded-md border border-slate-200 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          Logout
-        </button>
+        <LogoutButton />
       </div>
     </header>
   );

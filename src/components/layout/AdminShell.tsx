@@ -7,9 +7,11 @@ import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
 import { useAuthMe } from '@/lib/queries/sender';
 import { AuthUser } from '@/types/api';
+import { LogoutButton } from './LogoutButton';
 
 const adminLinks = [
   { href: '/admin/dashboard', label: 'Dashboard' },
+  { href: '/admin/senders', label: 'Senders' },
   { href: '/admin/proofs/review-queue', label: 'Proof review queue' },
   { href: '/admin/advisors', label: 'Advisors' },
   { href: '/admin/settings/ai-proof', label: 'AI proof settings' }
@@ -27,8 +29,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <span className="rounded-md bg-indigo-600 px-2 py-1 text-white">KCT</span>
           <span>Admin</span>
         </Link>
-        <div className="text-sm text-slate-600">
-          {user ? `Connecté : ${user.full_name ?? user.email}` : 'Chargement...'}
+        <div className="flex items-center gap-3 text-sm text-slate-600">
+          <span>{user ? `Connecté : ${user.full_name ?? user.email}` : 'Chargement...'}</span>
+          <LogoutButton />
         </div>
       </header>
       <div className="flex">

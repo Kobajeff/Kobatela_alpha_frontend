@@ -1,6 +1,7 @@
 // React Query hooks encapsulating sender-specific API calls.
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClient';
 import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
@@ -46,7 +47,7 @@ export function useLogin() {
 }
 
 export function useMyAdvisor() {
-  return useQuery<AdvisorProfile>({
+  return useQuery<AdvisorProfile | null>({
     queryKey: ['myAdvisor'],
     queryFn: async () => {
       if (isDemoMode()) {
@@ -54,8 +55,15 @@ export function useMyAdvisor() {
           setTimeout(() => resolve(demoAdvisorProfile), 200);
         });
       }
-      const response = await apiClient.get<AdvisorProfile>('/me/advisor');
-      return response.data;
+      try {
+        const response = await apiClient.get<AdvisorProfile>('/me/advisor');
+        return response.data ?? null;
+      } catch (error) {
+        if (isAxiosError(error) && error.response?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
     }
   });
 }
@@ -90,6 +98,10 @@ export function useAuthMe() {
   }, [query.error, queryClient]);
 
   return query;
+}
+
+export function useMyProfile() {
+  return useAuthMe();
 }
 
 export function useSenderDashboard() {

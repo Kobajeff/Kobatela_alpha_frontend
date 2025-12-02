@@ -7,7 +7,8 @@ import type { Route } from 'next';
 
 const links = [
   { href: '/sender/dashboard', label: 'Dashboard' },
-  { href: '/sender/escrows', label: 'Escrows' }
+  { href: '/sender/escrows', label: 'Escrows' },
+  { href: '/sender/profile', label: 'Mon profil' }
 ];
 
 export function Sidebar() {

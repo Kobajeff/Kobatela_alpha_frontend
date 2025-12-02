@@ -20,7 +20,7 @@ export function MyAdvisorCard() {
   if (!data) {
     return (
       <div className="rounded-md border border-dashed bg-slate-50 p-4 text-sm text-muted-foreground">
-        Aucun conseiller n'est encore assigné. Vous serez notifié dès qu'un membre de l'équipe vous sera dédié.
+        Aucun conseiller n’a encore été assigné à votre dossier. Vous serez notifié dès qu'un membre de l'équipe vous sera dédié.
       </div>
     );
   }
@@ -33,7 +33,10 @@ export function MyAdvisorCard() {
     total_number_of_case_managed,
     subscribe_date,
     languages,
-    specialties
+    specialties,
+    country,
+    is_active,
+    blocked
   } = data;
 
   return (
@@ -49,6 +52,17 @@ export function MyAdvisorCard() {
           {email}
         </p>
 
+        <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+          <span
+            className={`rounded-full px-2 py-1 font-semibold ${
+              is_active ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
+            }`}
+          >
+            {is_active ? 'Actif' : 'Inactif'}
+          </span>
+          {blocked && <span className="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">Bloqué</span>}
+        </div>
+
         <div className="mt-2 space-y-1 text-xs text-muted-foreground">
           <p>
             Managing senders: <span className="font-medium">{sender_managed}</span>
@@ -59,6 +73,7 @@ export function MyAdvisorCard() {
           <p>
             Assigned since: <span className="font-medium">{new Date(subscribe_date).toLocaleDateString()}</span>
           </p>
+          {country && <p>Pays : {country}</p>}
           {languages && languages.length > 0 && (
             <p>Languages: {languages.join(', ')}</p>
           )}

@@ -2,12 +2,14 @@
 export type UserRole = 'sender' | 'admin' | 'both' | 'support';
 
 export interface AuthUser {
-  id: number;
+  id: number | string;
   email: string;
   username: string;
   role: UserRole;
   full_name?: string;
   is_active?: boolean;
+  payout_channel?: string | null;
+  created_at?: string;
 }
 
 export type EscrowStatus =
@@ -104,6 +106,27 @@ export interface AuthLoginResponse {
 export interface AuthMeResponse {
   user: AuthUser;
 }
+
+export interface ApiKey {
+  id: string | number;
+  name: string;
+  scope: 'sender' | 'admin' | 'support';
+  is_active: boolean;
+  user_id?: string | number;
+  user?: Pick<AuthUser, 'id' | 'email' | 'username' | 'role'>;
+  created_at?: string;
+}
+
+export type SenderAccountRow = {
+  user_id: string | number;
+  email: string;
+  username?: string;
+  role: Extract<UserRole, 'sender' | 'both' | 'admin'>;
+  api_key_id: string | number;
+  api_key_name?: string;
+  is_active: boolean;
+  created_at?: string;
+};
 
 export type AdminDashboardStats = {
   total_escrows: number;
