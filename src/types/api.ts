@@ -53,6 +53,11 @@ export type Proof = {
   description?: string;
   attachment_url?: string;
   status: ProofStatus;
+  ai_risk_level: string | null;
+  ai_score: number | string | null;
+  ai_flags: string[] | null;
+  ai_explanation: string | null;
+  ai_checked_at: string | null;
   created_at: string;
 
   // AI-related
@@ -133,6 +138,11 @@ export type AdminProofReviewItem = {
   sha256?: string;
   attachment_url?: string;
   status: ProofStatus;
+  ai_risk_level?: string | null;
+  ai_score?: number | string | null;
+  ai_flags?: string[] | null;
+  ai_explanation?: string | null;
+  ai_checked_at?: string | null;
   created_at: string;
 
   // AI-related

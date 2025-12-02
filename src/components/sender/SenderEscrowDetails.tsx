@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { ProofAiStatus } from '@/components/proofs/ProofAiStatus';
+import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 import type { SenderEscrowSummary } from '@/types/api';
 
@@ -110,8 +110,13 @@ export function SenderEscrowDetails({
                   </a>
                 );
               })()}
-              <div className="pt-2">
+              <div className="mt-2 space-y-2">
                 <ProofAiStatus proof={proof} />
+                {proof.ai_checked_at && (
+                  <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                    This proof was automatically analysed by the AI Proof Advisor to assist the reviewer.
+                  </div>
+                )}
               </div>
             </div>
           ))}

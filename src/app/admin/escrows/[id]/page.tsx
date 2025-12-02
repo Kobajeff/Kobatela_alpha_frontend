@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminEscrowSummary } from '@/lib/queries/admin';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { ProofAiStatus } from '@/components/proofs/ProofAiStatus';
+import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 
 export default function AdminEscrowDetailPage() {
@@ -91,8 +91,13 @@ export default function AdminEscrowDetailPage() {
                   </a>
                 );
               })()}
-              <div className="pt-2">
+              <div className="mt-2 space-y-2">
                 <ProofAiStatus proof={proof} />
+                {proof.ai_checked_at && (
+                  <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                    This proof was automatically analysed by the AI Proof Advisor to assist the reviewer.
+                  </div>
+                )}
               </div>
             </div>
           ))}
