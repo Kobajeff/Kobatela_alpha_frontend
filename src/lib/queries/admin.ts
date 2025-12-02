@@ -11,7 +11,10 @@ import type {
   AiProofSetting,
   AdvisorProfile,
   AdvisorSenderItem,
-  AdminEscrowSummary
+  AdminEscrowSummary,
+  ApiKey,
+  SenderAccountRow,
+  AuthUser
 } from '@/types/api';
 
 export function useAdminDashboard() {
@@ -25,6 +28,77 @@ export function useAdminDashboard() {
       }
       const response = await apiClient.get<AdminDashboardStats>('/admin/dashboard');
       return response.data;
+    }
+  });
+}
+
+export function useAdminSendersList(params: { limit?: number; offset?: number; search?: string } = {}) {
+  const { limit = 50, offset = 0, search } = params;
+  return useQuery<SenderAccountRow[]>({
+    queryKey: ['admin', 'senders', { limit, offset, search }],
+    queryFn: async () => {
+      const searchParams = new URLSearchParams({
+        scope: 'sender',
+        active: 'true',
+        limit: String(limit),
+        offset: String(offset)
+      });
+      const response = await apiClient.get<ApiKey[]>(`/apikeys?${searchParams.toString()}`);
+      const rows = response.data
+        .map((key) => {
+          const user = key.user as Partial<AuthUser> | undefined;
+          const userId = user?.id ?? key.user_id ?? key.id;
+          const role = (user?.role ?? 'sender') as SenderAccountRow['role'];
+
+          return {
+            user_id: userId,
+            email: user?.email ?? '',
+            username: user?.username,
+            role,
+            api_key_id: key.id,
+            api_key_name: key.name,
+            is_active: key.is_active,
+            created_at: key.created_at
+          } satisfies SenderAccountRow;
+        })
+        .filter((row) => row.email && (row.role === 'sender' || row.role === 'both'));
+
+      if (search) {
+        const term = search.toLowerCase();
+        return rows.filter(
+          (row) =>
+            row.email.toLowerCase().includes(term) ||
+            (row.username && row.username.toLowerCase().includes(term))
+        );
+      }
+
+      return rows;
+    }
+  });
+}
+
+export function useAdminSenderProfile(userId?: string | number) {
+  return useQuery<AuthUser>({
+    queryKey: ['admin', 'sender', userId],
+    queryFn: async () => {
+      const response = await apiClient.get<AuthUser>(`/users/${userId}`);
+      return response.data;
+    },
+    enabled: !!userId
+  });
+}
+
+export function useAdminBlockSender() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ api_key_id }: { api_key_id: string | number }) => {
+      await apiClient.delete(`/apikeys/${api_key_id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'senders'] });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
     }
   });
 }
