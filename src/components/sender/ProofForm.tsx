@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/ToastProvider';
 import { isDemoMode } from '@/lib/config';
-import type { ProofFileUploadResponse, ProofType } from '@/types/api';
+import type { ProofFileUploadResponse } from '@/types/api';
 
 interface ProofFormProps {
   escrowId: string;
@@ -116,12 +116,8 @@ export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
       };
 
       let payloadWithAttachment: typeof basePayload & {
+        file_id?: string;
         attachment_url?: string;
-        storage_url?: string;
-        sha256?: string;
-        type?: ProofType;
-        content_type?: string;
-        size_bytes?: number;
       } = { ...basePayload };
 
       if (selectedFile) {
@@ -144,10 +140,8 @@ export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
           });
 
           uploadResponse = {
-            storage_url: 'https://demo.kobatela.com/files/demo-proof.pdf',
-            sha256: 'demo-sha256',
-            content_type: selectedFile.type,
-            size_bytes: selectedFile.size
+            file_id: 'demo-file-id',
+            file_url: 'https://demo.kobatela.com/files/demo-proof.pdf'
           };
         } else {
           uploadResponse = await uploadProofFile(selectedFile, (percent) => {
@@ -157,17 +151,10 @@ export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
 
         setUploadProgress(100);
 
-        const contentType = uploadResponse.content_type || selectedFile.type || 'application/octet-stream';
-        const type: ProofType = contentType.startsWith('image/') ? 'PHOTO' : 'DOCUMENT';
-
         payloadWithAttachment = {
           ...basePayload,
-          type,
-          storage_url: uploadResponse.storage_url,
-          attachment_url: uploadResponse.storage_url,
-          sha256: uploadResponse.sha256,
-          content_type: contentType,
-          size_bytes: uploadResponse.size_bytes
+          file_id: uploadResponse.file_id,
+          attachment_url: uploadResponse.file_url ?? undefined
         };
       } else if (trimmedAttachmentUrl) {
         payloadWithAttachment = {

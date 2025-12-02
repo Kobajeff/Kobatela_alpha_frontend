@@ -79,7 +79,6 @@ export const demoProofs: Proof[] = [
     created_at: '2025-01-11T08:30:00Z',
     ai_risk_level: 'LOW',
     ai_score: 0.12,
-    ai_flags: ['High-resolution image'],
     ai_explanation: 'Image appears authentic with no detected anomalies.',
     ai_checked_at: '2025-01-11T09:00:00Z'
   },
@@ -93,7 +92,6 @@ export const demoProofs: Proof[] = [
     created_at: '2025-01-02T16:00:00Z',
     ai_risk_level: 'MEDIUM',
     ai_score: 0.52,
-    ai_flags: ['Document metadata mismatch'],
     ai_explanation: 'Detected minor inconsistency in metadata; manual review advised.',
     ai_checked_at: '2025-01-02T16:30:00Z'
   }
@@ -133,7 +131,6 @@ export const demoAdminProofQueue: AdminProofReviewItem[] = demoProofs
     created_at: p.created_at,
     ai_risk_level: p.ai_risk_level,
     ai_score: p.ai_score,
-    ai_flags: p.ai_flags,
     ai_explanation: p.ai_explanation,
     ai_checked_at: p.ai_checked_at
   }));

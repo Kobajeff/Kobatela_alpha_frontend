@@ -1,5 +1,5 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
-export type UserRole = 'sender' | 'admin' | 'both';
+export type UserRole = 'sender' | 'admin' | 'both' | 'support';
 
 export interface AuthUser {
   id: number;
@@ -25,24 +25,24 @@ export type EscrowListItem = {
   currency: string;
   created_at: string;
   updated_at: string;
+  client_id?: string | number;
+  provider_id?: string | number;
+  release_conditions?: string;
+  deadline?: string;
+  domain?: string;
 };
 
 export type CreateProofPayload = {
   escrow_id: string;
   milestone_id?: string;
-  type?: ProofType;
-  storage_url?: string;
-  sha256?: string;
-  content_type?: string;
-  size_bytes?: number;
   description?: string;
+  file_id?: string;
   attachment_url?: string;
 };
 
 export type AiAnalysis = {
-  ai_risk_level: string | null;
-  ai_score: number | string | null;
-  ai_flags: string[] | null;
+  ai_risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | null;
+  ai_score: number | null;
   ai_explanation: string | null;
   ai_checked_at: string | null;
 };
@@ -54,12 +54,10 @@ export type Proof = {
   escrow_id: string;
   milestone_id?: string;
   type?: ProofType;
-  storage_url?: string;
-  sha256?: string;
-  content_type?: string;
-  size_bytes?: number;
   description?: string;
   attachment_url?: string;
+  file_id?: string;
+  file_url?: string;
   status: ProofStatus;
   created_at: string;
 } & AiAnalysis;
@@ -87,15 +85,19 @@ export type SenderEscrowSummary = {
   payments: Payment[];
 };
 
+export type AdminEscrowSummary = SenderEscrowSummary & {
+  advisor?: AdvisorProfile | null;
+};
+
 export type SenderDashboard = {
-  recentEscrows: EscrowListItem[];
-  pendingProofs: Proof[];
-  recentPayments: Payment[];
+  recent_escrows: EscrowListItem[];
+  pending_proofs: Proof[];
+  recent_payments: Payment[];
 };
 
 export interface AuthLoginResponse {
-  access_token: string;
-  token: string;
+  access_token?: string;
+  token?: string;
   user: AuthUser;
 }
 
@@ -130,20 +132,21 @@ export type AdminProofReviewItem = {
   sender_email?: string;
   description?: string;
   type?: ProofType;
-  storage_url?: string;
-  sha256?: string;
-  attachment_url?: string;
   status: ProofStatus;
   created_at: string;
+  attachment_url?: string;
+  file_id?: string;
+  file_url?: string;
+  advisor_id?: string;
+  advisor_email?: string;
+  advisor_name?: string;
 } & AiAnalysis;
 
 export type ProofType = 'PHOTO' | 'DOCUMENT';
 
 export interface ProofFileUploadResponse {
-  storage_url: string;
-  sha256: string;
-  content_type: string;
-  size_bytes: number;
+  file_id: string;
+  file_url?: string;
 }
 
 export interface AdvisorProfile {
@@ -159,14 +162,20 @@ export interface AdvisorProfile {
   is_active: boolean;
   languages?: string[] | null;
   specialties?: string[] | null;
+  country?: string | null;
+  load_stats?: {
+    open_proofs?: number;
+    active_senders?: number;
+  };
 }
 
 export interface AdminAdvisorSummary {
   advisor_id: string;
-  full_name: string;
-  active_senders: number;
-  open_proofs: number;
-  total_cases: number;
+  name: string;
+  email: string;
+  sender_managed: number;
+  total_number_of_case_managed: number;
+  open_proofs?: number;
 }
 
 export interface AdminAdvisorListItem {
@@ -191,7 +200,6 @@ export interface AdvisorSenderItem {
 }
 
 export interface AiProofSetting {
-  key: string;
   bool_value: boolean;
   source?: string | null;
   updated_at?: string | null;

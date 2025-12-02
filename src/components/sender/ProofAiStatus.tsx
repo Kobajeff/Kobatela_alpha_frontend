@@ -16,10 +16,8 @@ type Props = {
 };
 
 const formatScore = (value: AiAnalysis['ai_score']): string => {
-  if (value === null || value === undefined || value === '') return 'N/A';
-  if (typeof value === 'number') return value.toFixed(2);
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric.toFixed(2) : String(value);
+  if (value === null || value === undefined) return 'N/A';
+  return value.toFixed(2);
 };
 
 export function ProofAiStatus({ proof, compact = false }: Props) {
@@ -50,9 +48,6 @@ export function ProofAiStatus({ proof, compact = false }: Props) {
         <p className="text-xs text-muted-foreground" title={proof.ai_explanation}>
           {proof.ai_explanation}
         </p>
-      )}
-      {!compact && proof.ai_flags && proof.ai_flags.length > 0 && (
-        <p className="text-xs text-muted-foreground">Signaux : {proof.ai_flags.join(', ')}</p>
       )}
     </div>
   );
