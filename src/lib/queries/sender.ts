@@ -125,7 +125,7 @@ export function useSenderDashboard() {
     queryFn: async () => {
       if (isDemoMode()) {
         const recentEscrows = demoEscrows.slice(0, 3);
-        const pendingProofs = demoProofs.filter((p) => p.status === 'pending');
+        const pendingProofs = demoProofs.filter((p) => p.status === 'PENDING');
         const recentPayments = demoPayments;
 
         return new Promise((resolve) => {

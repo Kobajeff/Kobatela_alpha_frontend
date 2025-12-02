@@ -20,7 +20,7 @@ export function MyAdvisorCard() {
   if (!data) {
     return (
       <div className="rounded-md border border-dashed bg-slate-50 p-4 text-sm text-muted-foreground">
-        Aucun conseiller n’a encore été assigné à votre dossier. Vous serez notifié dès qu'un membre de l'équipe vous sera dédié.
+        Aucun conseiller n’a encore été assigné à votre dossier.
       </div>
     );
   }

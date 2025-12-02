@@ -2,7 +2,15 @@
 
 import type { HTMLAttributes } from 'react';
 
-type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'outline';
+type BadgeVariant =
+  | 'default'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'info'
+  | 'outline'
+  | 'neutral'
+  | 'muted';
 
 const badgeVariants: Record<BadgeVariant, string> = {
   default: 'bg-slate-100 text-slate-800',
@@ -10,7 +18,9 @@ const badgeVariants: Record<BadgeVariant, string> = {
   warning: 'bg-amber-100 text-amber-700',
   danger: 'bg-rose-100 text-rose-700',
   info: 'bg-indigo-100 text-indigo-700',
-  outline: 'border border-slate-200 bg-white text-slate-800'
+  outline: 'border border-slate-200 bg-white text-slate-800',
+  neutral: 'bg-slate-100 text-slate-800',
+  muted: 'border border-slate-200 bg-white text-slate-600'
 };
 
 export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
