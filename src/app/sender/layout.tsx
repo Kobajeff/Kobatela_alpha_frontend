@@ -6,10 +6,13 @@ import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { isUnauthorizedError } from '@/lib/apiClient';
 import { useAuthMe } from '@/lib/queries/sender';
+import { LoadingState } from '@/components/common/LoadingState';
+import { AuthUser } from '@/types/api';
 
 export default function SenderLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data, isLoading, error, isError } = useAuthMe();
+  const user = data as AuthUser | undefined;
   const isUnauthorized = isError && isUnauthorizedError(error);
 
   useEffect(() => {
@@ -19,20 +22,20 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
   }, [isError, isUnauthorized, router]);
 
   useEffect(() => {
-    if (data) {
-      if (data.role === 'admin') {
+    if (user) {
+      if (user.role === 'admin') {
         router.replace('/admin/dashboard');
-      } else if (data.role !== 'sender' && data.role !== 'both') {
+      } else if (user.role !== 'sender' && user.role !== 'both') {
         router.replace('/login');
       }
     }
-  }, [data, router]);
+  }, [router, user]);
 
   if (isLoading) {
-    return <div className="flex h-full items-center justify-center">Loading...</div>;
+    return <LoadingState label="Chargement de votre espace expéditeur..." />;
   }
 
-  if (isUnauthorized || !data || (data.role !== 'sender' && data.role !== 'both')) {
+  if (isUnauthorized || !user || (user.role !== 'sender' && user.role !== 'both')) {
     return null;
   }
 

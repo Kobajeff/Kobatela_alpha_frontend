@@ -6,10 +6,13 @@ import { useRouter } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { isUnauthorizedError } from '@/lib/apiClient';
 import { useAuthMe } from '@/lib/queries/sender';
+import { LoadingState } from '@/components/common/LoadingState';
+import { AuthUser } from '@/types/api';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data, isLoading, error, isError } = useAuthMe();
+  const user = data as AuthUser | undefined;
   const isUnauthorized = isError && isUnauthorizedError(error);
 
   useEffect(() => {
@@ -19,20 +22,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [isError, isUnauthorized, router]);
 
   useEffect(() => {
-    if (data) {
-      if (data.role === 'sender') {
+    if (user) {
+      if (user.role === 'sender') {
         router.replace('/sender/dashboard');
-      } else if (data.role !== 'admin' && data.role !== 'both') {
+      } else if (user.role !== 'admin' && user.role !== 'both') {
         router.replace('/login');
       }
     }
-  }, [data, router]);
+  }, [router, user]);
 
   if (isLoading) {
-    return <div className="flex h-full items-center justify-center">Loading...</div>;
+    return <LoadingState label="Vérification de l'accès administrateur..." />;
   }
 
-  if (isUnauthorized || !data || (data.role !== 'admin' && data.role !== 'both')) {
+  if (isUnauthorized || !user || (user.role !== 'admin' && user.role !== 'both')) {
     return null;
   }
 

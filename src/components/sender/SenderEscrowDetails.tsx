@@ -112,11 +112,6 @@ export function SenderEscrowDetails({
               })()}
               <div className="mt-2 space-y-2">
                 <ProofAiStatus proof={proof} />
-                {proof.ai_checked_at && (
-                  <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                    This proof was automatically analysed by the AI Proof Advisor to assist the reviewer.
-                  </div>
-                )}
               </div>
             </div>
           ))}

@@ -9,6 +9,8 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import type { EscrowStatus } from '@/types/api';
+import { LoadingState } from '@/components/common/LoadingState';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 const STATUS_OPTIONS: { label: string; value: '' | EscrowStatus }[] = [
   { label: 'Tous les statuts', value: '' },
@@ -33,15 +35,13 @@ export default function SenderEscrowsPage() {
   const query = useSenderEscrows({ status: status || undefined, limit, offset });
 
   if (query.isLoading) {
-    return <div className="flex h-full items-center justify-center">Loading...</div>;
+    return <LoadingState label="Chargement des escrows..." />;
   }
 
   if (query.isError) {
     return (
       <div className="p-4">
-        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
-          {extractErrorMessage(query.error)}
-        </div>
+        <ErrorAlert message={extractErrorMessage(query.error)} />
       </div>
     );
   }

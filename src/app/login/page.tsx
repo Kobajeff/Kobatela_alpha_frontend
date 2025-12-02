@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useLogin } from '@/lib/queries/sender';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { LoadingState } from '@/components/common/LoadingState';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,6 +37,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-semibold">Connexion</h1>
           <p className="text-slate-600">Accédez à votre espace expéditeur Kobatela.</p>
         </div>
+        {login.isPending && <LoadingState label="Connexion en cours..." fullHeight={false} />}
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium text-slate-700">
             Adresse email
@@ -47,7 +50,7 @@ export default function LoginPage() {
               placeholder="vous@example.com"
             />
           </label>
-          {error && <p className="text-sm text-rose-600">{error}</p>}
+          {error && <ErrorAlert message={error} />}
           <button
             type="submit"
             disabled={login.isPending}

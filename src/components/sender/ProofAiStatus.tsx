@@ -1,22 +1,35 @@
 import { Badge } from '@/components/ui/Badge';
 import { formatDateTime } from '@/lib/format';
-import type { Proof } from '@/types/api';
+import type { AiAnalysis } from '@/types/api';
 
-const riskToVariant = (risk: string | null | undefined): 'default' | 'success' | 'warning' | 'destructive' => {
+const riskToVariant = (risk: string | null | undefined): 'default' | 'success' | 'warning' | 'danger' => {
   if (!risk) return 'default';
   if (risk === 'LOW') return 'success';
   if (risk === 'MEDIUM') return 'warning';
-  if (risk === 'HIGH') return 'destructive';
+  if (risk === 'HIGH') return 'danger';
   return 'default';
 };
 
 type Props = {
-  proof: Proof;
+  proof: AiAnalysis & { status?: string };
+  compact?: boolean;
 };
 
-export function ProofAiStatus({ proof }: Props) {
+const formatScore = (value: AiAnalysis['ai_score']): string => {
+  if (value === null || value === undefined || value === '') return 'N/A';
+  if (typeof value === 'number') return value.toFixed(2);
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toFixed(2) : String(value);
+};
+
+export function ProofAiStatus({ proof, compact = false }: Props) {
   if (!proof.ai_checked_at) {
-    return <p className="text-xs text-muted-foreground">AI analysis pending or disabled.</p>;
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Badge variant="default">Analyse IA</Badge>
+        <span>{proof.status === 'pending' ? 'En attente de l’analyse IA…' : 'Analyse IA non disponible'}</span>
+      </div>
+    );
   }
 
   const risk = proof.ai_risk_level ?? 'UNKNOWN';
@@ -24,15 +37,22 @@ export function ProofAiStatus({ proof }: Props) {
 
   return (
     <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={variant}>AI risk: {risk}</Badge>
-        <span className="text-xs text-muted-foreground">checked at {formatDateTime(proof.ai_checked_at)}</span>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+        <Badge variant={variant}>
+          Analyse IA · Risque : {risk}
+        </Badge>
+        <Badge variant="outline">Score : {formatScore(proof.ai_score)}</Badge>
+        <span className="text-[11px] text-muted-foreground">
+          Vérifiée le {formatDateTime(proof.ai_checked_at)}
+        </span>
       </div>
-      {proof.ai_explanation && (
-        <p className="text-xs text-muted-foreground">{proof.ai_explanation}</p>
+      {!compact && proof.ai_explanation && (
+        <p className="text-xs text-muted-foreground" title={proof.ai_explanation}>
+          {proof.ai_explanation}
+        </p>
       )}
-      {proof.ai_flags && proof.ai_flags.length > 0 && (
-        <p className="text-xs text-muted-foreground">Flags: {proof.ai_flags.join(', ')}</p>
+      {!compact && proof.ai_flags && proof.ai_flags.length > 0 && (
+        <p className="text-xs text-muted-foreground">Signaux : {proof.ai_flags.join(', ')}</p>
       )}
     </div>
   );

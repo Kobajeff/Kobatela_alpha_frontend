@@ -8,12 +8,14 @@ import { clearAuthToken } from '@/lib/auth';
 import { useAuthMe } from '@/lib/queries/sender';
 import { getDemoRole, isDemoMode, setDemoRole } from '@/lib/config';
 import { useToast } from '@/components/ui/ToastProvider';
+import { AuthUser } from '@/types/api';
 
 export function Header() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { data: user } = useAuthMe();
+  const { data } = useAuthMe();
+  const user = data as AuthUser | undefined;
   const isAdmin = user?.role === 'admin' || user?.role === 'both';
   const displayName = user?.full_name ?? user?.email ?? 'Chargement...';
   const demoMode = isDemoMode();

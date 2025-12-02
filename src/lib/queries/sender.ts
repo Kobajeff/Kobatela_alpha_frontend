@@ -1,4 +1,5 @@
 // React Query hooks encapsulating sender-specific API calls.
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClient';
 import { clearAuthToken, setAuthToken } from '../auth';
@@ -60,7 +61,7 @@ export function useMyAdvisor() {
 
 export function useAuthMe() {
   const queryClient = useQueryClient();
-  return useQuery<AuthUser>({
+  const query = useQuery<AuthUser, Error>({
     queryKey: ['authMe'],
     queryFn: async () => {
       if (isDemoMode()) {
@@ -77,14 +78,17 @@ export function useAuthMe() {
       const message = extractErrorMessage(error);
       if (message && failureCount > 1) return false;
       return true;
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        clearAuthToken();
-        queryClient.removeQueries({ queryKey: ['authMe'] });
-      }
     }
   });
+
+  useEffect(() => {
+    if (query.error && isUnauthorizedError(query.error)) {
+      clearAuthToken();
+      queryClient.removeQueries({ queryKey: ['authMe'] });
+    }
+  }, [query.error, queryClient]);
+
+  return query;
 }
 
 export function useSenderDashboard() {
@@ -110,11 +114,6 @@ export function useSenderDashboard() {
       }
       const response = await apiClient.get<SenderDashboard>('/sender/dashboard');
       return response.data;
-    },
-    initialData: {
-      recentEscrows: [],
-      pendingProofs: [],
-      recentPayments: []
     }
   });
 }

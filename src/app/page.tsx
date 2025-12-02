@@ -5,10 +5,12 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthToken } from '@/lib/auth';
 import { useAuthMe } from '@/lib/queries/sender';
+import { AuthUser } from '@/types/api';
 
 export default function HomePage() {
   const router = useRouter();
   const { data, isLoading, isError } = useAuthMe();
+  const user = data as AuthUser | undefined;
 
   useEffect(() => {
     const token = getAuthToken();
@@ -21,14 +23,14 @@ export default function HomePage() {
     const token = getAuthToken();
     if (!token) return;
 
-    if (data?.role === 'admin') {
+    if (user?.role === 'admin') {
       router.replace('/admin/dashboard');
-    } else if (data?.role) {
+    } else if (user?.role) {
       router.replace('/sender/dashboard');
     } else if (isError) {
       router.replace('/login');
     }
-  }, [data, isError, router]);
+  }, [isError, router, user]);
 
   return (
     <div className="flex h-full items-center justify-center">

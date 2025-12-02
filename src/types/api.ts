@@ -39,6 +39,14 @@ export type CreateProofPayload = {
   attachment_url?: string;
 };
 
+export type AiAnalysis = {
+  ai_risk_level: string | null;
+  ai_score: number | string | null;
+  ai_flags: string[] | null;
+  ai_explanation: string | null;
+  ai_checked_at: string | null;
+};
+
 export type ProofStatus = 'pending' | 'approved' | 'rejected';
 
 export type Proof = {
@@ -53,20 +61,8 @@ export type Proof = {
   description?: string;
   attachment_url?: string;
   status: ProofStatus;
-  ai_risk_level: string | null;
-  ai_score: number | string | null;
-  ai_flags: string[] | null;
-  ai_explanation: string | null;
-  ai_checked_at: string | null;
   created_at: string;
-
-  // AI-related
-  ai_risk_level: string | null;
-  ai_score: string | number | null;
-  ai_flags: string[] | null;
-  ai_explanation: string | null;
-  ai_checked_at: string | null;
-};
+} & AiAnalysis;
 
 export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refunded';
 
@@ -138,20 +134,8 @@ export type AdminProofReviewItem = {
   sha256?: string;
   attachment_url?: string;
   status: ProofStatus;
-  ai_risk_level?: string | null;
-  ai_score?: number | string | null;
-  ai_flags?: string[] | null;
-  ai_explanation?: string | null;
-  ai_checked_at?: string | null;
   created_at: string;
-
-  // AI-related
-  ai_risk_level: string | null;
-  ai_score: string | number | null;
-  ai_flags: string[] | null;
-  ai_explanation: string | null;
-  ai_checked_at: string | null;
-};
+} & AiAnalysis;
 
 export type ProofType = 'PHOTO' | 'DOCUMENT';
 

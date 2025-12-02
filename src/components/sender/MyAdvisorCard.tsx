@@ -2,22 +2,25 @@
 
 import Link from 'next/link';
 import { useMyAdvisor } from '@/lib/queries/sender';
+import { LoadingState } from '@/components/common/LoadingState';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { extractErrorMessage } from '@/lib/apiClient';
 
 export function MyAdvisorCard() {
-  const { data, isLoading, isError } = useMyAdvisor();
+  const { data, isLoading, isError, error } = useMyAdvisor();
 
   if (isLoading) {
-    return (
-      <div className="rounded-md border p-4 text-sm text-muted-foreground">
-        Loading your advisor...
-      </div>
-    );
+    return <LoadingState label="Chargement de votre conseiller..." fullHeight={false} />;
   }
 
-  if (isError || !data) {
+  if (isError) {
+    return <ErrorAlert message={extractErrorMessage(error)} />;
+  }
+
+  if (!data) {
     return (
-      <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-        No advisor assigned yet.
+      <div className="rounded-md border border-dashed bg-slate-50 p-4 text-sm text-muted-foreground">
+        Aucun conseiller n'est encore assigné. Vous serez notifié dès qu'un membre de l'équipe vous sera dédié.
       </div>
     );
   }

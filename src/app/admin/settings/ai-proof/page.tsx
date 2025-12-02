@@ -1,9 +1,12 @@
 'use client';
 
 import { useAiProofSetting, useUpdateAiProofSetting } from '@/lib/queries/admin';
+import { LoadingState } from '@/components/common/LoadingState';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { extractErrorMessage } from '@/lib/apiClient';
 
 export default function AdminAiProofSettingsPage() {
-  const { data, isLoading } = useAiProofSetting();
+  const { data, isLoading, isError, error } = useAiProofSetting();
   const updateMutation = useUpdateAiProofSetting();
 
   const enabled = data?.bool_value ?? false;
@@ -22,9 +25,9 @@ export default function AdminAiProofSettingsPage() {
         </p>
       </div>
 
-      {isLoading && (
-        <p className="text-sm text-muted-foreground">Loading AI setting...</p>
-      )}
+      {isLoading && <LoadingState label="Chargement des paramètres IA..." />}
+
+      {isError && <ErrorAlert message={extractErrorMessage(error)} />}
 
       {!isLoading && data && (
         <div className="space-y-3 rounded-md border bg-white p-4 text-sm">
@@ -40,7 +43,7 @@ export default function AdminAiProofSettingsPage() {
             <button
               type="button"
               onClick={handleToggle}
-              disabled={updateMutation.isLoading}
+              disabled={updateMutation.isPending}
               className="rounded-md border px-3 py-1 text-xs font-semibold"
             >
               {enabled ? 'Disable' : 'Enable'}

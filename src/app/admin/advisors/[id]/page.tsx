@@ -14,6 +14,8 @@ import {
   useAdminAssignSender,
   useAdminUpdateAdvisor
 } from '@/lib/queries/admin';
+import { LoadingState } from '@/components/common/LoadingState';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 export default function AdminAdvisorDetailPage() {
   const params = useParams<{ id: string }>();
@@ -32,19 +34,17 @@ export default function AdminAdvisorDetailPage() {
   const assignSender = useAdminAssignSender();
 
   if (!Number.isFinite(advisorId)) {
-    return <div className="p-4 text-sm text-red-600">Invalid advisor id.</div>;
+    return <ErrorAlert message="Identifiant conseiller invalide." />;
   }
 
   if (isLoading) {
-    return <div className="p-4 text-sm text-muted-foreground">Loading advisor...</div>;
+    return <LoadingState label="Chargement du conseiller..." />;
   }
 
   if (isError) {
     return (
       <div className="p-4">
-        <div className="rounded bg-red-100 p-4 text-sm text-red-700">
-          {extractErrorMessage(error)}
-        </div>
+        <ErrorAlert message={extractErrorMessage(error)} />
       </div>
     );
   }

@@ -7,6 +7,8 @@ import { useAdminEscrowSummary } from '@/lib/queries/admin';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
+import { LoadingState } from '@/components/common/LoadingState';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 export default function AdminEscrowDetailPage() {
   const params = useParams<{ id: string }>();
@@ -14,15 +16,13 @@ export default function AdminEscrowDetailPage() {
   const query = useAdminEscrowSummary(escrowId);
 
   if (query.isLoading) {
-    return <div className="flex h-full items-center justify-center">Loading...</div>;
+    return <LoadingState label="Chargement du détail escrow..." />;
   }
 
   if (query.isError) {
     return (
       <div className="p-4">
-        <div className="my-4 rounded bg-red-100 p-4 text-red-700">
-          {extractErrorMessage(query.error)}
-        </div>
+        <ErrorAlert message={extractErrorMessage(query.error)} />
       </div>
     );
   }
@@ -93,11 +93,6 @@ export default function AdminEscrowDetailPage() {
               })()}
               <div className="mt-2 space-y-2">
                 <ProofAiStatus proof={proof} />
-                {proof.ai_checked_at && (
-                  <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-900">
-                    This proof was automatically analysed by the AI Proof Advisor to assist the reviewer.
-                  </div>
-                )}
               </div>
             </div>
           ))}
