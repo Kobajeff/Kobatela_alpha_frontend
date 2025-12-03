@@ -25,6 +25,9 @@ export function AdminUserCreator() {
         queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
         queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
       }
+      if (data?.user?.role === 'sender' || data?.user?.role === 'both') {
+        queryClient.invalidateQueries({ queryKey: ['admin-senders'] });
+      }
     }
   });
 

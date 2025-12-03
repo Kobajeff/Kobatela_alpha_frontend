@@ -1,150 +1,89 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { LoadingState } from '@/components/common/LoadingState';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { useAdminBlockSender, useAdminSendersList } from '@/lib/queries/admin';
-import { useToast } from '@/components/ui/ToastProvider';
-import { SenderAccountRow } from '@/types/api';
+import { useAdminSenders } from '@/lib/queries/admin';
 
 export default function AdminSendersPage() {
   const [search, setSearch] = useState('');
-  const { data: senders, isLoading, error } = useAdminSendersList({
-    limit: 100,
-    search
+  const { data, isLoading, isError, error, refetch } = useAdminSenders({
+    limit: 50,
+    offset: 0,
+    q: search || undefined
   });
-  const blockSender = useAdminBlockSender();
-  const { showToast } = useToast();
 
-  const handleBlock = (apiKeyId: string) => {
-    if (!window.confirm("Bloquer cette clé API ? L'expéditeur ne pourra plus l'utiliser.")) {
-      return;
-    }
-    blockSender.mutate(
-      { apiKeyId },
-      {
-        onSuccess: () => {
-          showToast?.('Clé API bloquée avec succès', 'success');
-        },
-        onError: (err) => {
-          showToast?.(extractErrorMessage(err), 'error');
-        }
-      }
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner />
-        <span className="ml-2">Chargement des expéditeurs...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return <ErrorAlert message={extractErrorMessage(error)} />;
-  }
-
-  if (!senders || senders.length === 0) {
-    return <EmptyState text="Aucun expéditeur trouvé." />;
-  }
+  const items = data?.items ?? [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-6 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Senders</h1>
-          <p className="text-sm text-muted-foreground">Gérez les expéditeurs actifs et leurs clés API.</p>
+          <p className="text-sm text-muted-foreground">Gérez les comptes expéditeurs et hybrides.</p>
         </div>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher par email ou nom d'utilisateur"
-          className="w-72 rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="w-64 rounded-md border px-3 py-2 text-sm"
+            placeholder="Rechercher par email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button
+            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            onClick={() => refetch()}
+          >
+            Rechercher
+          </button>
+        </div>
       </div>
 
-      <SendersTable rows={senders} onBlock={handleBlock} isBlocking={blockSender.isPending} />
+      {isLoading && <LoadingState label="Chargement des expéditeurs..." />}
+
+      {isError && <ErrorAlert message={extractErrorMessage(error)} />}
+
+      {!isLoading && !isError && items.length === 0 && (
+        <p className="text-sm text-slate-600">Aucun expéditeur trouvé.</p>
+      )}
+
+      {!isLoading && !isError && items.length > 0 && (
+        <div className="overflow-x-auto rounded-lg border bg-white">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left font-medium text-gray-700">Email</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-700">Rôle</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-700">Créé le</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-700">Statut</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {items.map((sender) => (
+                <tr key={sender.id}>
+                  <td className="px-4 py-2">{sender.email}</td>
+                  <td className="px-4 py-2 capitalize">{sender.role}</td>
+                  <td className="px-4 py-2">
+                    {new Date(sender.created_at).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2">
+                    {sender.is_active ? (
+                      <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                        Actif
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                        Inactif
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
-}
-
-function SendersTable({
-  rows,
-  onBlock,
-  isBlocking
-}: {
-  rows: SenderAccountRow[];
-  onBlock: (apiKeyId: string) => void;
-  isBlocking: boolean;
-}) {
-  return (
-    <div className="overflow-hidden rounded-md border bg-white">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-          <tr>
-            <th className="px-4 py-2">Email</th>
-            <th className="px-4 py-2">Username</th>
-            <th className="px-4 py-2">Rôle</th>
-            <th className="px-4 py-2">Clé API</th>
-            <th className="px-4 py-2">Statut</th>
-            <th className="px-4 py-2 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {rows.map((row) => (
-            <tr key={`${row.user_id}-${row.api_key_id}`} className="hover:bg-slate-50">
-              <td className="px-4 py-3 font-medium text-slate-800">{row.email}</td>
-              <td className="px-4 py-3 text-slate-600">{row.username ?? '—'}</td>
-              <td className="px-4 py-3 text-slate-600">{row.role}</td>
-              <td className="px-4 py-3 text-slate-600">
-                <div className="flex flex-col">
-                  <span className="font-medium">{row.api_key_name ?? 'Clé API'}</span>
-                  <span className="text-xs text-slate-500">ID: {row.api_key_id}</span>
-                </div>
-              </td>
-              <td className="px-4 py-3">
-                {row.is_active ? (
-                  <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">Active</span>
-                ) : (
-                  <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">Bloquée</span>
-                )}
-              </td>
-              <td className="px-4 py-3 text-right text-sm">
-                <div className="flex justify-end gap-2">
-                  <Link
-                    href={`/admin/senders/${row.user_id}`}
-                    className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    Voir le profil
-                  </Link>
-                  {row.is_active && (
-                    <button
-                      type="button"
-                      onClick={() => onBlock(row.api_key_id)}
-                      className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
-                      disabled={isBlocking}
-                    >
-                      {isBlocking ? 'Blocage...' : 'Bloquer'}
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function Spinner() {
-  return <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500" />;
-}
-
-function EmptyState({ text }: { text: string }) {
-  return <div className="flex h-full items-center justify-center text-sm text-slate-600">{text}</div>;
 }
