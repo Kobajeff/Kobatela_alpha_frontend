@@ -1,6 +1,13 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
 export type UserRole = 'sender' | 'admin' | 'both' | 'advisor' | 'support';
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -159,6 +166,14 @@ export interface AdminUserCreateResponse {
   user: AuthUser;
   token: string | null;
   token_type: 'api_key';
+}
+
+export interface AdminSender {
+  id: number;
+  email: string;
+  role: UserRole;
+  created_at: string;
+  is_active: boolean;
 }
 
 export type AdminProofReviewItem = {

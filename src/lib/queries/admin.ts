@@ -5,6 +5,7 @@ import { isDemoMode } from '@/lib/config';
 import { demoAdminProofQueue, demoAdminStats, getDemoEscrowSummary } from '@/lib/demoData';
 import type {
   AdminDashboardStats,
+  AdminSender,
   AdminAdvisorListItem,
   AdminAdvisorSummary,
   AdminProofReviewItem,
@@ -13,6 +14,7 @@ import type {
   AdvisorSenderItem,
   AdminEscrowSummary,
   ApiKey,
+  PaginatedResponse,
   SenderAccountRow,
   User,
   UserRole
@@ -46,6 +48,29 @@ export function useAdminDashboard() {
       }
       const response = await apiClient.get<AdminDashboardStats>('/admin/dashboard');
       return response.data;
+    }
+  });
+}
+
+export interface AdminSendersParams {
+  limit?: number;
+  offset?: number;
+  q?: string;
+}
+
+export function useAdminSenders(params: AdminSendersParams = {}) {
+  const { limit = 50, offset = 0, q } = params;
+
+  return useQuery({
+    queryKey: ['admin-senders', { limit, offset, q }],
+    queryFn: async () => {
+      const { data } = await apiClient.get<PaginatedResponse<AdminSender>>(
+        '/admin/senders',
+        {
+          params: { limit, offset, q }
+        }
+      );
+      return data;
     }
   });
 }

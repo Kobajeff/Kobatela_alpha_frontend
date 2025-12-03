@@ -51,6 +51,11 @@ It focuses on which endpoints are called, via which hooks/helpers, and where the
 - **Hook**: `useAdminEscrowSummary(id)` → `GET /admin/escrows/{id}/summary` for escrow, milestones, proofs, and payments.
 - **Display**: Proof rows include AI status via `ProofAiStatus` component.
 
+### /admin/senders
+- Lists `sender` and `both` role users.
+- Supports `q` search on email.
+- Uses paginated response `PaginatedResponse<AdminSender>`.
+
 ### /admin/advisors
 - **Overview**: `useAdminAdvisorsOverview()` → `GET /admin/advisors/overview` (workload metrics per advisor).
 - **Directory**: `useAdminAdvisorsList()` → `GET /admin/advisors` for table rows.
@@ -105,6 +110,7 @@ NEXT_PUBLIC_DEMO_MODE=false
 | `useAdminProofReviewQueue` | `GET /admin/proofs/review-queue` | `/admin/proofs/review-queue` |
 | `useAdminApproveProof`, `useAdminRejectProof` | `POST /admin/proofs/{id}/approve`, `POST /admin/proofs/{id}/reject` | Proof review actions |
 | `useAdminEscrowSummary` | `GET /admin/escrows/{id}/summary` | `/admin/escrows/[id]` |
+| `useAdminSenders` | `GET /admin/senders` | `/admin/senders` (admin sender directory) |
 | `useAdminAdvisorsOverview`, `useAdminAdvisorsList` | `GET /admin/advisors/overview`, `GET /admin/advisors` | `/admin/advisors` |
 | `useAdminAdvisorDetail`, `useAdminAdvisorSenders` | `GET /admin/advisors/{id}`, `GET /admin/advisors/{id}/senders` | `/admin/advisors/[id]` |
 | `useAdminUpdateAdvisor` | `PATCH /admin/advisors/{id}` | `/admin/advisors`, `/admin/advisors/[id]` |
