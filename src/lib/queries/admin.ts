@@ -1,8 +1,17 @@
 // React Query hooks encapsulating admin-specific API calls.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient, extractErrorMessage, logApiError } from '../apiClient';
+import { apiClient, extractErrorMessage } from '../apiClient';
 import { isDemoMode } from '@/lib/config';
 import { demoAdminProofQueue, demoAdminStats, getDemoEscrowSummary } from '@/lib/demoData';
+import {
+  deleteApiKey,
+  fetchAdminSenders,
+  fetchAdvisorsOverview,
+  fetchAiProofSetting,
+  fetchApiKeys,
+  fetchUserProfile,
+  updateAiProofSetting
+} from '@/lib/adminApi';
 import type {
   AdminDashboardStats,
   AdminSender,
@@ -13,6 +22,7 @@ import type {
   AdvisorProfile,
   AdvisorSenderItem,
   AdminEscrowSummary,
+  EscrowListItem,
   ApiKey,
   PaginatedResponse,
   Proof,
@@ -78,6 +88,14 @@ function normalizeProofReviewQueueResponse(data: unknown): AdminProofReviewItem[
   return items.map(mapProofReviewQueueItem);
 }
 
+function normalizeArrayResponse<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray((data as PaginatedResponse<T>)?.items)) {
+    return (data as PaginatedResponse<T>).items;
+  }
+  return [];
+}
+
 function adminProofReviewQueueKey(params: {
   limit: number;
   offset: number;
@@ -96,8 +114,23 @@ export function useAdminDashboard() {
           setTimeout(() => resolve(demoAdminStats), 200);
         });
       }
-      const response = await apiClient.get<AdminDashboardStats>('/admin/dashboard');
-      return response.data;
+      const [escrowsResponse, proofsResponse] = await Promise.all([
+        apiClient.get('/escrows', { params: { limit: 50, offset: 0 } }),
+        apiClient.get('/proofs', {
+          params: { review_mode: 'review_queue', limit: 50, offset: 0 }
+        })
+      ]);
+
+      const escrows = normalizeArrayResponse<EscrowListItem>(escrowsResponse.data);
+      const reviewQueue = normalizeProofReviewQueueResponse(proofsResponse.data);
+
+      return {
+        total_escrows: escrows.length,
+        pending_proofs: reviewQueue.length,
+        approved_proofs: 0,
+        rejected_proofs: 0,
+        total_payments: 0
+      };
     }
   });
 }
@@ -114,13 +147,7 @@ export function useAdminSenders(params: AdminSendersParams = {}) {
   return useQuery({
     queryKey: ['admin-senders', { limit, offset, q }],
     queryFn: async () => {
-      const { data } = await apiClient.get<PaginatedResponse<AdminSender>>(
-        '/admin/senders',
-        {
-          params: { limit, offset, q }
-        }
-      );
-      return data;
+      return fetchAdminSenders({ limit, offset, q });
     }
   });
 }
@@ -135,37 +162,24 @@ export function useAdminSendersList(params?: {
   return useQuery<SenderAccountRow[]>({
     queryKey: ['admin-senders', { limit, offset }],
     queryFn: async () => {
-      try {
-        const res = await apiClient.get('/apikeys', {
-          params: { scope: 'sender', active: true, limit, offset }
-        });
+      const raw = await fetchApiKeys({ scope: 'sender', active: true, limit, offset });
 
-        const raw = res.data as any;
+      const apiKeys = normalizeArrayResponse<ApiKey>(raw);
 
-        const apiKeys: ApiKey[] = Array.isArray(raw)
-          ? raw
-          : Array.isArray(raw?.items)
-          ? raw.items
-          : [];
+      const rows = apiKeys
+        .map(mapApiKeyToSenderRow)
+        .filter((x): x is SenderAccountRow => x !== null);
 
-        const rows = apiKeys
-          .map(mapApiKeyToSenderRow)
-          .filter((x): x is SenderAccountRow => x !== null);
-
-        if (search && search.trim()) {
-          const s = search.trim().toLowerCase();
-          return rows.filter(
-            (row) =>
-              row.email.toLowerCase().includes(s) ||
-              (row.username && row.username.toLowerCase().includes(s))
-          );
-        }
-
-        return rows;
-      } catch (err) {
-        logApiError(err, 'GET /apikeys (admin senders)');
-        throw err;
+      if (search && search.trim()) {
+        const s = search.trim().toLowerCase();
+        return rows.filter(
+          (row) =>
+            row.email.toLowerCase().includes(s) ||
+            (row.username && row.username.toLowerCase().includes(s))
+        );
       }
+
+      return rows;
     }
   });
 }
@@ -174,8 +188,7 @@ export function useAdminSenderProfile(userId?: string) {
   return useQuery<User>({
     queryKey: ['admin', 'sender', userId],
     queryFn: async () => {
-      const response = await apiClient.get<User>(`/users/${userId}`);
-      return response.data;
+      return fetchUserProfile(String(userId));
     },
     enabled: !!userId
   });
@@ -185,7 +198,7 @@ export function useAdminBlockSender() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ apiKeyId }: { apiKeyId: string }) => {
-      await apiClient.delete(`/apikeys/${apiKeyId}`);
+      await deleteApiKey(apiKeyId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'senders'] });
@@ -229,10 +242,7 @@ export function useAdminAdvisorsOverview() {
   return useQuery<AdminAdvisorSummary[]>({
     queryKey: ['admin-advisors-overview'],
     queryFn: async () => {
-      const response = await apiClient.get<AdminAdvisorSummary[]>(
-        '/admin/advisors/overview'
-      );
-      return response.data;
+      return fetchAdvisorsOverview();
     }
   });
 }
@@ -258,10 +268,7 @@ export function useAiProofSetting() {
   return useQuery<AiProofSetting>({
     queryKey: ['admin', 'settings', 'ai-proof'],
     queryFn: async () => {
-      const response = await apiClient.get<AiProofSetting>(
-        '/admin/settings/ai-proof'
-      );
-      return response.data;
+      return fetchAiProofSetting();
     }
   });
 }
@@ -270,11 +277,7 @@ export function useUpdateAiProofSetting() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (enabled: boolean) => {
-      const response = await apiClient.post<AiProofSetting>(
-        '/admin/settings/ai-proof',
-        { bool_value: enabled }
-      );
-      return response.data;
+      return updateAiProofSetting(enabled);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'ai-proof'] });

@@ -33,6 +33,10 @@ export function extractErrorMessage(error: unknown): string {
       return 'Méthode non autorisée';
     }
 
+    if (status === 401 || status === 403) {
+      return "Accès non autorisé";
+    }
+
     if (status && status >= 500) {
       return 'Une erreur est survenue côté serveur';
     }

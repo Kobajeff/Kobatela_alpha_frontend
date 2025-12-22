@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useMutation } from '../../useMutation';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { adminCreateUser } from '@/lib/services/admin';
+import { createAdminUser } from '@/lib/adminApi';
 import type { AdminUserCreateResponse } from '@/types/api';
 
 type CreateUserRole = 'sender' | 'admin' | 'both' | 'advisor';
@@ -15,7 +15,7 @@ export function AdminUserCreator() {
   const [issueApiKey, setIssueApiKey] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const mutation = useMutation(adminCreateUser, {
+  const mutation = useMutation(createAdminUser, {
     onError: (err) => {
       setError(extractErrorMessage(err));
     },
