@@ -77,12 +77,12 @@ export default function AdminEscrowDetailPage() {
         </p>
       </section>
 
-      {data.advisor && (
-        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-2 text-lg font-semibold">Conseiller assigné</h3>
-          <p className="text-sm text-muted-foreground">
-            Ce conseiller accompagne cet escrow pour les revues et la conformité.
-          </p>
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 className="mb-2 text-lg font-semibold">Conseiller assigné</h3>
+        <p className="text-sm text-muted-foreground">
+          Ce conseiller accompagne cet escrow pour les revues et la conformité.
+        </p>
+        {data.advisor ? (
           <div className="mt-3 flex flex-col gap-2 text-sm text-slate-700 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="font-semibold">
@@ -92,8 +92,10 @@ export default function AdminEscrowDetailPage() {
             </div>
             <Badge variant="neutral">Conseiller assigné</Badge>
           </div>
-        </section>
-      )}
+        ) : (
+          <p className="mt-3 text-sm text-slate-600">Aucun conseiller assigné.</p>
+        )}
+      </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-3 text-lg font-semibold">Jalons</h3>
