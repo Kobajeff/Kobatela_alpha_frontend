@@ -1,0 +1,341 @@
+[
+  {
+    "path": "/auth/login",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 49, "snippet": "const response = await apiClient.post<AuthLoginResponse>('/auth/login', { email });"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/auth/me",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 106, "snippet": "const response = await apiClient.get<AuthMeResponse>('/auth/me');"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/sender/dashboard",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 151, "snippet": "const response = await apiClient.get<SenderDashboard>('/sender/dashboard');"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/me/advisor",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 75, "snippet": "const response = await apiClient.get<AdvisorProfile>('/me/advisor');"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/escrows",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 175, "snippet": "const response = await apiClient.get<EscrowListItem[]>(`/escrows?${searchParams.toString()}`);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/escrows/{escrowId}/summary",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 194, "snippet": "const response = await apiClient.get<SenderEscrowSummary>(`/escrows/${escrowId}/summary`);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/escrows/{escrowId}/mark-delivered",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 225, "snippet": "return useEscrowAction(escrowId, 'mark-delivered');"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/escrows/{escrowId}/client-approve",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 229, "snippet": "return useEscrowAction(escrowId, 'client-approve');"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/escrows/{escrowId}/client-reject",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 233, "snippet": "return useEscrowAction(escrowId, 'client-reject');"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/escrows/{escrowId}/check-deadline",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 237, "snippet": "return useEscrowAction(escrowId, 'check-deadline');"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/proofs",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/sender.ts",
+        "matches": [
+          {"line": 262, "snippet": "const response = await apiClient.post<Proof>('/proofs', payload);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/files/proofs",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/apiClient.ts",
+        "matches": [
+          {"line": 77, "snippet": "const response = await apiClient.post<ProofFileUploadResponse>('/files/proofs', formData, {"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/dashboard",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 49, "snippet": "const response = await apiClient.get<AdminDashboardStats>('/admin/dashboard');"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/users",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/services/admin.ts",
+        "matches": [
+          {"line": 8, "snippet": "'/admin/users',"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/senders",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 68, "snippet": "'/admin/senders',"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/apikeys",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 89, "snippet": "const res = await apiClient.get('/apikeys', {"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/apikeys/{apiKeyId}",
+    "methods_guess": ["DELETE"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 138, "snippet": "await apiClient.delete(`/apikeys/${apiKeyId}`);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/users/{userId}",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 127, "snippet": "const response = await apiClient.get<User>(`/users/${userId}`);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/proofs/review-queue",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 171, "snippet": "`/admin/proofs/review-queue?${searchParams.toString()}`"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/proofs/{proofId}/approve",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 266, "snippet": "await apiClient.post(`/admin/proofs/${proofId}/approve`);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/proofs/{proofId}/reject",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 374, "snippet": "await apiClient.post(`/admin/proofs/${proofId}/reject`);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/advisors/overview",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 183, "snippet": "'/admin/advisors/overview'"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/advisors",
+    "methods_guess": ["GET", "POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 200, "snippet": "suffix ? `/admin/advisors?${suffix}` : '/admin/advisors'"},
+          {"line": 331, "snippet": "const response = await apiClient.post('/admin/advisors', payload);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/advisors/{advisorId}",
+    "methods_guess": ["GET", "PATCH"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 282, "snippet": "const response = await apiClient.get<AdvisorProfile>(`/admin/advisors/${advisorId}`);"},
+          {"line": 307, "snippet": "const response = await apiClient.patch(`/admin/advisors/${advisorId}`, data);"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/advisors/{advisorId}/senders",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 294, "snippet": "`/admin/advisors/${advisorId}/senders`"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/advisors/{advisorId}/assign-sender",
+    "methods_guess": ["POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 349, "snippet": "const response = await apiClient.post(`/admin/advisors/${advisorId}/assign-sender`, {"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/escrows/{escrowId}/summary",
+    "methods_guess": ["GET"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 249, "snippet": "`/admin/escrows/${escrowId}/summary`"}
+        ]
+      }
+    ]
+  },
+  {
+    "path": "/admin/settings/ai-proof",
+    "methods_guess": ["GET", "POST"],
+    "files": [
+      {
+        "file": "src/lib/queries/admin.ts",
+        "matches": [
+          {"line": 212, "snippet": "'/admin/settings/ai-proof'"},
+          {"line": 224, "snippet": "'/admin/settings/ai-proof',"}
+        ]
+      }
+    ]
+  }
+]
