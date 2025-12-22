@@ -148,8 +148,34 @@ export function useSenderDashboard() {
           );
         });
       }
-      const response = await apiClient.get<SenderDashboard>('/sender/dashboard');
-      return response.data;
+      const [escrowsResponse, proofsResponse] = await Promise.all([
+        apiClient.get('/escrows', {
+          params: { mine: true, limit: 5, offset: 0 }
+        }),
+        apiClient.get('/proofs', {
+          params: { mine: true, limit: 50, offset: 0 }
+        })
+      ]);
+
+      const escrows = Array.isArray(escrowsResponse.data)
+        ? escrowsResponse.data
+        : Array.isArray(escrowsResponse.data?.items)
+        ? escrowsResponse.data.items
+        : [];
+
+      const proofs = Array.isArray(proofsResponse.data)
+        ? proofsResponse.data
+        : Array.isArray(proofsResponse.data?.items)
+        ? proofsResponse.data.items
+        : [];
+
+      const pendingProofs = (proofs as Proof[]).filter((proof) => proof.status === 'PENDING');
+
+      return {
+        recent_escrows: escrows as EscrowListItem[],
+        pending_proofs: pendingProofs,
+        recent_payments: []
+      };
     }
   });
 }
