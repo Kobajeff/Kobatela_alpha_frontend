@@ -135,15 +135,14 @@
   - Sender assignments: `sender_email`, `active`, `assigned_at` (`src/app/admin/advisors/[id]/page.tsx:173-183`).
 - **Errors handled**: `extractErrorMessage` (`src/app/admin/advisors/[id]/page.tsx:44-48`).
 
-### `/admin/proofs/review-queue`
-- **File**: `src/app/admin/proofs/review-queue/page.tsx`
+### Admin proof review queue
+- **File**: `src/app/admin/proofs/` + `review-queue/page.tsx`
 - **Role**: Admin or Both
 - **API calls**:
-  - `GET /admin/proofs/review-queue` (`src/lib/queries/admin.ts:171`).
-  - `POST /admin/proofs/{id}/approve` (`src/lib/queries/admin.ts:266`).
-  - `POST /admin/proofs/{id}/reject` (`src/lib/queries/admin.ts:374`).
+  - `GET /proofs?review_mode=review_queue` (`src/lib/queries/admin.ts:171`).
+  - `POST /proofs/{id}/decision` (`src/lib/queries/admin.ts:266`).
 - **Response fields used**: `id`, `escrow_id`, `milestone_name`, `sender_email`, `created_at`, `status`, AI fields (`src/components/admin/AdminProofReviewTable.tsx:47-58`).
-- **Errors handled**: `extractErrorMessage` (`src/app/admin/proofs/review-queue/page.tsx:24-43`, `src/app/admin/proofs/review-queue/page.tsx:54-58`).
+- **Errors handled**: `extractErrorMessage` (`src/app/admin/proofs/` + `review-queue/page.tsx:24-43`, `src/app/admin/proofs/` + `review-queue/page.tsx:54-58`).
 
 ### `/admin/settings/ai-proof`
 - **File**: `src/app/admin/settings/ai-proof/page.tsx`
@@ -165,4 +164,3 @@
   - Proofs: `id`, `description`, `status`, `created_at`, `attachment_url|file_url`, AI fields (`src/app/admin/escrows/[id]/page.tsx:105-135`).
   - Payments: `id`, `amount`, `currency`, `status`, `created_at` (`src/app/admin/escrows/[id]/page.tsx:147-155`).
 - **Errors handled**: `extractErrorMessage` (`src/app/admin/escrows/[id]/page.tsx:29-33`).
-

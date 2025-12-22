@@ -15,6 +15,7 @@ import type {
   AdminEscrowSummary,
   ApiKey,
   PaginatedResponse,
+  Proof,
   ProofDecisionRequest,
   ProofDecisionResponse,
   SenderAccountRow,
@@ -37,6 +38,53 @@ function mapApiKeyToSenderRow(apiKey: ApiKey): SenderAccountRow | null {
     is_active: apiKey.is_active,
     created_at: apiKey.created_at
   };
+}
+
+type ProofReviewQueueApiItem = Proof & Partial<AdminProofReviewItem> & {
+  milestone?: { name?: string };
+  sender?: { email?: string };
+  advisor?: { id?: string | number; email?: string; name?: string };
+};
+
+function mapProofReviewQueueItem(item: ProofReviewQueueApiItem): AdminProofReviewItem {
+  return {
+    id: String(item.id),
+    escrow_id: String(item.escrow_id ?? ''),
+    milestone_name: item.milestone_name ?? item.milestone?.name,
+    sender_email: item.sender_email ?? item.sender?.email,
+    description: item.description,
+    type: item.type,
+    status: item.status ?? 'PENDING',
+    created_at: item.created_at ?? new Date().toISOString(),
+    attachment_url: item.attachment_url,
+    file_id: item.file_id,
+    file_url: item.file_url,
+    advisor_id: item.advisor_id ?? item.advisor?.id?.toString(),
+    advisor_email: item.advisor_email ?? item.advisor?.email,
+    advisor_name: item.advisor_name ?? item.advisor?.name,
+    ai_risk_level: item.ai_risk_level ?? null,
+    ai_score: item.ai_score ?? null,
+    ai_explanation: item.ai_explanation ?? null,
+    ai_checked_at: item.ai_checked_at ?? null
+  };
+}
+
+function normalizeProofReviewQueueResponse(data: unknown): AdminProofReviewItem[] {
+  const items = Array.isArray(data)
+    ? data
+    : Array.isArray((data as PaginatedResponse<ProofReviewQueueApiItem>)?.items)
+    ? (data as PaginatedResponse<ProofReviewQueueApiItem>).items
+    : [];
+  return items.map(mapProofReviewQueueItem);
+}
+
+function adminProofReviewQueueKey(params: {
+  limit: number;
+  offset: number;
+  advisor_id?: string;
+  unassigned_only?: boolean;
+}) {
+  return ['adminProofReviewQueue', 'review_queue', params] as const;
 }
 
 export function useAdminDashboard() {
@@ -156,23 +204,23 @@ export function useAdminProofReviewQueue(params: {
 } = {}) {
   const { limit = 20, offset = 0, advisor_id, unassigned_only } = params;
   return useQuery<AdminProofReviewItem[]>({
-    queryKey: ['adminProofReviewQueue', { limit, offset, advisor_id, unassigned_only }],
+    queryKey: adminProofReviewQueueKey({ limit, offset, advisor_id, unassigned_only }),
     queryFn: async () => {
       if (isDemoMode()) {
         return new Promise<AdminProofReviewItem[]>((resolve) => {
           setTimeout(() => resolve(demoAdminProofQueue), 200);
         });
       }
-      const searchParams = new URLSearchParams({
-        limit: String(limit),
-        offset: String(offset)
+      const response = await apiClient.get('/proofs', {
+        params: {
+          review_mode: 'review_queue',
+          limit,
+          offset,
+          advisor_id,
+          unassigned_only
+        }
       });
-      if (advisor_id) searchParams.set('advisor_id', advisor_id);
-      if (unassigned_only !== undefined) searchParams.set('unassigned_only', String(unassigned_only));
-      const response = await apiClient.get<AdminProofReviewItem[]>(
-        `/admin/proofs/review-queue?${searchParams.toString()}`
-      );
-      return response.data;
+      return normalizeProofReviewQueueResponse(response.data);
     }
   });
 }

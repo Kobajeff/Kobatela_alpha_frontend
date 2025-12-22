@@ -43,9 +43,9 @@ It focuses on which endpoints are called, via which hooks/helpers, and where the
 - **Hook**: `useAdminDashboard()` → `GET /admin/dashboard` for aggregated stats.
 - **Create test user**: `AdminUserCreator` uses `adminCreateUser` (`POST /admin/users`) with payload `{ email, role, issue_api_key }` and shows returned `user` and optional `token`.
 
-### /admin/proofs/review-queue
-- **Hook**: `useAdminProofReviewQueue()` → `GET /admin/proofs/review-queue`.
-- **Actions**: `useAdminApproveProof()` → `POST /admin/proofs/{id}/approve`; `useAdminRejectProof()` → `POST /admin/proofs/{id}/reject`. Both invalidate the review queue and surface errors via toasts.
+### Admin proof review queue
+- **Hook**: `useAdminProofReviewQueue()` → `GET /proofs?review_mode=review_queue`.
+- **Actions**: `useAdminProofDecision()` → `POST /proofs/{id}/decision`. The mutation invalidates the review queue and surfaces errors via toasts.
 
 ### /admin/escrows/[id]
 - **Hook**: `useAdminEscrowSummary(id)` → `GET /admin/escrows/{id}/summary` for escrow, milestones, proofs, and payments.
@@ -107,7 +107,7 @@ NEXT_PUBLIC_DEMO_MODE=false
 | `uploadProofFile` + `useCreateProof` | `POST /files/proofs`, `POST /proofs` | ProofForm on `/sender/escrows/[id]` |
 | `useAdminDashboard` | `GET /admin/dashboard` | `/admin/dashboard` |
 | `adminCreateUser` | `POST /admin/users` | `AdminUserCreator` on `/admin/dashboard` |
-| `useAdminProofReviewQueue` | `GET /admin/proofs/review-queue` | `/admin/proofs/review-queue` |
+| `useAdminProofReviewQueue` | `GET /proofs?review_mode=review_queue` | Admin proof review queue |
 | `useAdminApproveProof`, `useAdminRejectProof` | `POST /admin/proofs/{id}/approve`, `POST /admin/proofs/{id}/reject` | Proof review actions |
 | `useAdminEscrowSummary` | `GET /admin/escrows/{id}/summary` | `/admin/escrows/[id]` |
 | `useAdminSenders` | `GET /admin/senders` | `/admin/senders` (admin sender directory) |
@@ -122,6 +122,6 @@ NEXT_PUBLIC_DEMO_MODE=false
 1. **Start backend**: Run the FastAPI app (see backend `docs/API_GUIDE.md`) on `http://127.0.0.1:8000` and bootstrap demo users with `python -m scripts.bootstrap_admin_and_sender`.
 2. **Configure frontend**: Create `.env.local` as shown above and run `npm install && npm run dev`.
 3. **Sender flow**: Open `http://localhost:3000/login`, log in with the sender email created by the bootstrap script (e.g., `sender+concierge@kobatela.dev`). Verify `/sender/dashboard` stats, list filtering on `/sender/escrows`, and escrow actions/proof upload on `/sender/escrows/{id}`.
-4. **Admin flow**: Log in with the admin email (e.g., `admin+console@kobatela.dev`). Check `/admin/dashboard` stats and create a test user; review proofs on `/admin/proofs/review-queue`; view an escrow at `/admin/escrows/{id}`.
+4. **Admin flow**: Log in with the admin email (e.g., `admin+console@kobatela.dev`). Check `/admin/dashboard` stats and create a test user; review proofs in the admin proof review queue; view an escrow at `/admin/escrows/{id}`.
 5. **Advisor management**: Visit `/admin/advisors` for workload tables; open `/admin/advisors/{id}` to toggle status or assign senders; test the AI proof toggle at `/admin/settings/ai-proof`.
 6. **Demo mode smoke test**: Set `NEXT_PUBLIC_DEMO_MODE=true` to browse the same pages without a backend, using the header switches to simulate sender/admin roles.
