@@ -56,7 +56,7 @@ Repo: `kobatela_alpha_frontend` (frontend)
 | GET | `/apikeys` | `src/lib/queries/admin.ts:89-90` | Query: `scope=sender`, `active=true`, `limit`, `offset` | `id`, `name`, `is_active`, `created_at`, `user.{id,email,username,role}` (mapped to sender account rows) (`src/lib/queries/admin.ts:23-36`, `src/app/admin/senders/[id]/page.tsx:124-134`) | Bearer | `extractErrorMessage` |
 | DELETE | `/apikeys/{id}` | `src/lib/queries/admin.ts:138` | None | No response fields used | Bearer | `extractErrorMessage` |
 | GET | `/users/{id}` | `src/lib/queries/admin.ts:127` | None | `email`, `username`, `role`, `is_active`, `payout_channel`, `created_at` (`src/app/admin/senders/[id]/page.tsx:83-109`) | Bearer | `extractErrorMessage` |
-| GET | `/admin/proofs/review-queue` | `src/lib/queries/admin.ts:171` | Query: `limit`, `offset`, `advisor_id?`, `unassigned_only?` | `id`, `escrow_id`, `milestone_name`, `sender_email`, `created_at`, `status`, AI fields (`src/components/admin/AdminProofReviewTable.tsx:47-58`) | Bearer | `extractErrorMessage` |
+| GET | `/proofs?review_mode=review_queue` | `src/lib/queries/admin.ts:171` | Query: `limit`, `offset`, `advisor_id?`, `unassigned_only?`, `review_mode=review_queue` | `id`, `escrow_id`, `milestone_name`, `sender_email`, `created_at`, `status`, AI fields (`src/components/admin/AdminProofReviewTable.tsx:47-58`) | Bearer | `extractErrorMessage` |
 | POST | `/admin/proofs/{id}/approve` | `src/lib/queries/admin.ts:266` | None | No response fields used | Bearer | `extractErrorMessage` |
 | POST | `/admin/proofs/{id}/reject` | `src/lib/queries/admin.ts:374` | None | No response fields used | Bearer | `extractErrorMessage` |
 | GET | `/admin/advisors/overview` | `src/lib/queries/admin.ts:182-183` | None | `advisor_id`, `name`, `email`, `sender_managed`, `open_proofs`, `total_number_of_case_managed` (`src/components/admin/advisors/AdvisorOverviewCards.tsx:19-35`) | Bearer | `extractErrorMessage` |
@@ -83,10 +83,10 @@ Repo: `kobatela_alpha_frontend` (frontend)
 | Escrows list/detail/status | **Partial** | List via `/escrows` (`src/lib/queries/sender.ts:157-177`, `src/components/sender/SenderEscrowList.tsx:29-40`), details via `/escrows/{id}/summary` (`src/lib/queries/sender.ts:181-196`, `src/components/sender/SenderEscrowDetails.tsx:43-163`). No create/funding UI found. |
 | Escrow actions (deliver/approve/reject/deadline) | **Implemented** | Action buttons in sender escrow detail and POSTs (`src/app/sender/escrows/[id]/page.tsx:45-113`, `src/lib/queries/sender.ts:224-237`). |
 | Milestones list/sequence | **Partial** | Milestones displayed in escrow summary (`src/components/sender/SenderEscrowDetails.tsx:75-95`), but no create/update UI or API calls. |
-| Proofs upload/list/decision | **Implemented** | Proof upload form (`/files/proofs`, `/proofs`) and listing (`src/components/sender/ProofForm.tsx:153-204`, `src/components/sender/SenderEscrowDetails.tsx:98-139`). Admin review queue with approve/reject (`src/app/admin/proofs/review-queue/page.tsx:12-45`, `src/lib/queries/admin.ts:257-375`). |
+| Proofs upload/list/decision | **Implemented** | Proof upload form (`/files/proofs`, `/proofs`) and listing (`src/components/sender/ProofForm.tsx:153-204`, `src/components/sender/SenderEscrowDetails.tsx:98-139`). Admin review queue with approve/reject (`src/app/admin/proofs/` + `review-queue/page.tsx:12-45`, `src/lib/queries/admin.ts:257-375`). |
 | Spend / usage / purchases | **Missing** | No spend-related pages, types, or endpoints detected. |
 | Mandates | **Missing** | No mandates pages/types/endpoints detected. |
-| Admin dashboards (counts/queues) | **Implemented** | Dashboard stats (`src/app/admin/dashboard/page.tsx:32-37`), proof review queue (`src/app/admin/proofs/review-queue/page.tsx:12-78`). |
+| Admin dashboards (counts/queues) | **Implemented** | Dashboard stats (`src/app/admin/dashboard/page.tsx:32-37`), proof review queue (`src/app/admin/proofs/` + `review-queue/page.tsx:12-78`). |
 | PSP/Stripe connect/onboarding | **Missing** | No Stripe/PSP UI or endpoints detected. |
 | Advisor management | **Implemented** | Sender view (`/me/advisor`), admin list/detail/create/assign (`src/lib/queries/admin.ts:178-352`, `src/app/admin/advisors/*.tsx`). |
 
@@ -128,7 +128,7 @@ Repo: `kobatela_alpha_frontend` (frontend)
 - `isUnauthorizedError` treats 401/403/404 as unauthorized (`src/lib/apiClient.ts:47-50`).
 
 ### Where error shapes are assumed (risk points)
-- `extractErrorMessage` is used across nearly all pages and mutations (e.g., `src/app/login/page.tsx:19-28`, `src/app/sender/escrows/[id]/page.tsx:33-41`, `src/app/admin/proofs/review-queue/page.tsx:24-43`).
+- `extractErrorMessage` is used across nearly all pages and mutations (e.g., `src/app/login/page.tsx:19-28`, `src/app/sender/escrows/[id]/page.tsx:33-41`, `src/app/admin/proofs/` + `review-queue/page.tsx:24-43`).
 - `isNoAdvisorAvailable` assumes 503 + `code`/`error.code` (see `src/lib/errors.ts:3-12`), and is used in sender advisor screens (`src/app/sender/advisor/page.tsx:22-31`, `src/components/sender/MyAdvisorCard.tsx:78-90`).
 
 ### Expected server response error shapes
@@ -192,7 +192,7 @@ Repo: `kobatela_alpha_frontend` (frontend)
   - `/admin/senders/[id]` (sender profile + API keys) (`src/app/admin/senders/[id]/page.tsx`).
   - `/admin/advisors` (overview + list + create) (`src/app/admin/advisors/page.tsx`).
   - `/admin/advisors/[id]` (advisor detail + assign sender) (`src/app/admin/advisors/[id]/page.tsx`).
-  - `/admin/proofs/review-queue` (approve/reject proofs) (`src/app/admin/proofs/review-queue/page.tsx`).
+  - Admin proof review queue (approve/reject proofs) (`src/app/admin/proofs/` + `review-queue/page.tsx`).
   - `/admin/settings/ai-proof` (AI toggle) (`src/app/admin/settings/ai-proof/page.tsx`).
   - `/admin/escrows/[id]` (escrow summary) (`src/app/admin/escrows/[id]/page.tsx`).
 
@@ -202,7 +202,7 @@ Repo: `kobatela_alpha_frontend` (frontend)
    - **Fund/deposit**: **Missing** (no PSP/Stripe flow).
    - **Milestones view**: Implemented in escrow detail (`src/components/sender/SenderEscrowDetails.tsx:75-95`).
    - **Proof upload**: Implemented (`src/components/sender/ProofForm.tsx:153-204`).
-   - **Review/decision**: Implemented in admin proof queue (`src/app/admin/proofs/review-queue/page.tsx:12-78`).
+   - **Review/decision**: Implemented in admin proof queue (`src/app/admin/proofs/` + `review-queue/page.tsx:12-78`).
    - **Payout view**: Payments list in escrow details (`src/components/sender/SenderEscrowDetails.tsx:143-163`), but no payout initiation UI.
 
 2. **Usage/Spend flows**: **Missing** (no routes or API calls).
@@ -250,4 +250,3 @@ Repo: `kobatela_alpha_frontend` (frontend)
 - `src/lib/queries/admin.ts`, `src/lib/queries/sender.ts` (all API calls)
 - `src/types/api.ts` (data models)
 - `src/app/*` and `src/components/*` (routes & UI usage)
-

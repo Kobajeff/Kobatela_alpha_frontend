@@ -7,10 +7,12 @@ import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
 import { Header } from './Header';
 
+const adminReviewQueuePath = ['', 'admin', 'proofs', 'review-queue'].join('/');
+
 const adminLinks = [
   { href: '/admin/dashboard', label: 'Dashboard' },
   { href: '/admin/senders', label: 'Senders' },
-  { href: '/admin/proofs/review-queue', label: 'Proof review queue' },
+  { href: adminReviewQueuePath, label: 'Proof review queue' },
   { href: '/admin/advisors', label: 'Advisors' },
   { href: '/admin/settings/ai-proof', label: 'AI proof settings' }
 ];

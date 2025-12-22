@@ -216,13 +216,13 @@
     ]
   },
   {
-    "path": "/admin/proofs/review-queue",
+    "path": "/proofs?review_mode=review_queue",
     "methods_guess": ["GET"],
     "files": [
       {
         "file": "src/lib/queries/admin.ts",
         "matches": [
-          {"line": 171, "snippet": "`/admin/proofs/review-queue?${searchParams.toString()}`"}
+          {"line": 171, "snippet": "const response = await apiClient.get('/proofs', {"}
         ]
       }
     ]

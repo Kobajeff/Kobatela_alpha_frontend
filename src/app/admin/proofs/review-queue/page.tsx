@@ -27,6 +27,16 @@ export default function AdminProofReviewQueuePage() {
     return extractErrorMessage(error);
   };
 
+  const getQueueErrorMessage = (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      if (status === 403) return 'Insufficient scope';
+      if (status === 422) return extractErrorMessage(error);
+    }
+
+    return extractErrorMessage(error);
+  };
+
   const handleApprove = async (proofId: string) => {
     setProcessingId(proofId);
     setActionError('');
@@ -64,7 +74,7 @@ export default function AdminProofReviewQueuePage() {
   if (query.isError) {
     return (
       <div className="p-4">
-        <ErrorAlert message={extractErrorMessage(query.error)} />
+        <ErrorAlert message={getQueueErrorMessage(query.error)} />
       </div>
     );
   }
