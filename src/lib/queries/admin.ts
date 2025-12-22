@@ -11,17 +11,17 @@ import {
   normalizePaginatedItems
 } from './queryUtils';
 import {
-  deleteApiKey,
-  fetchAdminSenders,
   fetchAdvisorsOverview,
   fetchAiProofSetting,
-  fetchApiKeys,
-  fetchUserProfile,
+  getAdminUserApiKeys,
+  getAdminUserById,
+  getAdminUsers,
+  issueAdminUserApiKey,
+  revokeAdminUserApiKey,
   updateAiProofSetting
 } from '@/lib/adminApi';
 import type {
   AdminDashboardStats,
-  AdminSender,
   AdminAdvisorListItem,
   AdminAdvisorSummary,
   AdminProofReviewItem,
@@ -35,27 +35,8 @@ import type {
   ProofStatus,
   ProofDecisionRequest,
   ProofDecisionResponse,
-  SenderAccountRow,
-  User,
-  UserRole
+  User
 } from '@/types/api';
-
-function mapApiKeyToSenderRow(apiKey: ApiKey): SenderAccountRow | null {
-  const user = apiKey.user;
-  const userId = user?.id ?? apiKey.user_id;
-  if (!userId || !user?.email) return null;
-
-  return {
-    user_id: String(userId),
-    email: user.email,
-    username: user.username,
-    role: (user.role ?? 'sender') as UserRole,
-    api_key_id: String(apiKey.id),
-    api_key_name: apiKey.name,
-    is_active: apiKey.is_active,
-    created_at: apiKey.created_at
-  };
-}
 
 type ProofReviewQueueApiItem = Proof & Partial<AdminProofReviewItem> & {
   milestone?: { name?: string };
@@ -255,69 +236,64 @@ export interface AdminSendersParams {
   limit?: number;
   offset?: number;
   q?: string;
+  active?: boolean;
 }
 
 export function useAdminSenders(params: AdminSendersParams = {}) {
-  const { limit = 50, offset = 0, q } = params;
+  const { limit = 50, offset = 0, q, active } = params;
 
   return useQuery({
-    queryKey: ['admin-senders', { limit, offset, q }],
+    queryKey: ['admin-users', { role: 'sender', limit, offset, q, active }],
     queryFn: async () => {
-      return fetchAdminSenders({ limit, offset, q });
-    }
-  });
-}
-
-export function useAdminSendersList(params?: {
-  limit?: number;
-  offset?: number;
-  search?: string;
-}) {
-  const { limit = 100, offset = 0, search } = params ?? {};
-
-  return useQuery<SenderAccountRow[]>({
-    queryKey: ['admin-senders', { limit, offset }],
-    queryFn: async () => {
-      const raw = await fetchApiKeys({ scope: 'sender', active: true, limit, offset });
-
-      const apiKeys = normalizeArrayResponse<ApiKey>(raw);
-
-      const rows = apiKeys
-        .map(mapApiKeyToSenderRow)
-        .filter((x): x is SenderAccountRow => x !== null);
-
-      if (search && search.trim()) {
-        const s = search.trim().toLowerCase();
-        return rows.filter(
-          (row) =>
-            row.email.toLowerCase().includes(s) ||
-            (row.username && row.username.toLowerCase().includes(s))
-        );
-      }
-
-      return rows;
+      return getAdminUsers({ role: 'sender', limit, offset, q, active });
     }
   });
 }
 
 export function useAdminSenderProfile(userId?: string) {
   return useQuery<User>({
-    queryKey: ['admin', 'sender', userId],
+    queryKey: ['admin', 'users', userId],
     queryFn: async () => {
-      return fetchUserProfile(String(userId));
+      return getAdminUserById(String(userId));
     },
     enabled: !!userId
   });
 }
 
-export function useAdminBlockSender() {
+export function useAdminUserApiKeys(userId?: string, params?: { active?: boolean }) {
+  return useQuery<ApiKey[]>({
+    queryKey: ['admin', 'users', userId, 'api-keys', params],
+    queryFn: async () => {
+      const raw = await getAdminUserApiKeys(String(userId), params);
+      return normalizeArrayResponse<ApiKey>(raw);
+    },
+    enabled: !!userId
+  });
+}
+
+export function useIssueAdminUserApiKey(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ name }: { name?: string }) => {
+      return issueAdminUserApiKey(userId, { name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId, 'api-keys'] });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
+}
+
+export function useRevokeAdminUserApiKey(userId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ apiKeyId }: { apiKeyId: string }) => {
-      await deleteApiKey(apiKeyId);
+      await revokeAdminUserApiKey(userId, apiKeyId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'senders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId, 'api-keys'] });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));

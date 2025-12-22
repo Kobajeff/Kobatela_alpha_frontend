@@ -1,13 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { useAdminBlockSender, useAdminSenderProfile, useAdminSendersList } from '@/lib/queries/admin';
+import { useAdminSenderProfile, useAdminUserApiKeys, useRevokeAdminUserApiKey } from '@/lib/queries/admin';
 import { useToast } from '@/components/ui/ToastProvider';
 import Link from 'next/link';
+import { isAxiosError } from 'axios';
 
 export default function AdminSenderProfilePage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -23,20 +24,21 @@ export default function AdminSenderProfilePage({ params }: { params: { id: strin
     isLoading: keysLoading,
     isError: isKeysError,
     error: keysError
-  } = useAdminSendersList({ limit: 200, offset: 0 });
-  const blockSender = useAdminBlockSender();
+  } = useAdminUserApiKeys(id, { active: true });
+  const revokeApiKey = useRevokeAdminUserApiKey(id);
   const { showToast } = useToast();
+  const [keyActionsDenied, setKeyActionsDenied] = useState(false);
 
-  const userKeys = useMemo(
-    () => (keys ?? []).filter((row) => String(row.user_id) === String(id)),
-    [keys, id]
-  );
+  const userKeys = useMemo(() => keys ?? [], [keys]);
+  const keysForbidden =
+    isKeysError && isAxiosError(keysError) && keysError.response?.status === 403;
+  const actionsForbidden = keysForbidden || keyActionsDenied;
 
   const handleBlock = (apiKeyId: string) => {
     if (!window.confirm("Bloquer cette clé API ? L'expéditeur ne pourra plus l'utiliser.")) {
       return;
     }
-    blockSender.mutate(
+    revokeApiKey.mutate(
       { apiKeyId },
       {
         onSuccess: () => {
@@ -44,6 +46,11 @@ export default function AdminSenderProfilePage({ params }: { params: { id: strin
           refetch();
         },
         onError: (err) => {
+          if (isAxiosError(err) && err.response?.status === 403) {
+            setKeyActionsDenied(true);
+            showToast?.("Insufficient scope: action non autorisée sur les clés API.", 'error');
+            return;
+          }
           showToast?.(extractErrorMessage(err), 'error');
         }
       }
@@ -117,35 +124,47 @@ export default function AdminSenderProfilePage({ params }: { params: { id: strin
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {keysLoading && <p className="text-muted-foreground">Chargement des clés API...</p>}
-          {isKeysError && <ErrorAlert message={extractErrorMessage(keysError)} />}
-          {userKeys.length === 0 && !keysLoading && !isKeysError && (
+          {keysForbidden && (
+            <ErrorAlert message="Insufficient scope: accès aux clés API non autorisé." />
+          )}
+          {isKeysError && !keysForbidden && (
+            <ErrorAlert message={extractErrorMessage(keysError)} />
+          )}
+          {userKeys.length === 0 && !keysLoading && !isKeysError && !keysForbidden && (
             <p className="text-muted-foreground">Aucune clé API active trouvée.</p>
           )}
-          {userKeys.map((key) => (
-            <div
-              key={key.api_key_id}
-              className="flex flex-col gap-2 rounded-md border border-slate-100 px-3 py-2 md:flex-row md:items-center md:justify-between"
-            >
-              <div>
-                <p className="font-semibold text-slate-800">{key.api_key_name ?? 'Clé API'}</p>
-                <p className="text-xs text-slate-500">ID : {key.api_key_id}</p>
-                {key.created_at && (
-                  <p className="text-xs text-slate-500">Créée le {new Date(key.created_at).toLocaleString()}</p>
-                )}
+          {!keysForbidden &&
+            userKeys.map((key) => (
+              <div
+                key={key.id}
+                className="flex flex-col gap-2 rounded-md border border-slate-100 px-3 py-2 md:flex-row md:items-center md:justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-slate-800">{key.name ?? 'Clé API'}</p>
+                  <p className="text-xs text-slate-500">ID : {key.id}</p>
+                  {key.created_at && (
+                    <p className="text-xs text-slate-500">
+                      Créée le {new Date(key.created_at).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
+                    Active
+                  </span>
+                  {!actionsForbidden && (
+                    <button
+                      type="button"
+                      onClick={() => handleBlock(key.id)}
+                      className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                      disabled={revokeApiKey.isPending}
+                    >
+                      {revokeApiKey.isPending ? 'Blocage...' : 'Bloquer'}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">Active</span>
-                <button
-                  type="button"
-                  onClick={() => handleBlock(key.api_key_id)}
-                  className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
-                  disabled={blockSender.isPending}
-                >
-                  {blockSender.isPending ? 'Blocage...' : 'Bloquer'}
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
         </CardContent>
       </Card>
     </div>
