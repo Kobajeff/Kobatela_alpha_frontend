@@ -1,7 +1,6 @@
 import { apiClient, extractErrorMessage, logApiError } from '@/lib/apiClient';
 import type {
   AdminAdvisorSummary,
-  AdminSender,
   AdminUserCreatePayload,
   AdminUserCreateResponse,
   AiProofSetting,
@@ -28,44 +27,63 @@ export async function createAdminUser(
   }, 'POST /admin/users');
 }
 
-export async function fetchAdminSenders(params: {
-  limit?: number;
-  offset?: number;
+export async function getAdminUsers(params: {
+  role?: string;
   q?: string;
-}): Promise<PaginatedResponse<AdminSender>> {
-  return withAdminError(async () => {
-    const { data } = await apiClient.get<PaginatedResponse<AdminSender>>('/admin/senders', {
-      params
-    });
-    return data;
-  }, 'GET /admin/senders');
-}
-
-export async function fetchApiKeys(params: {
-  scope?: string;
-  active?: boolean;
   limit?: number;
   offset?: number;
-}): Promise<ApiKey[] | PaginatedResponse<ApiKey>> {
+  active?: boolean;
+}): Promise<PaginatedResponse<User>> {
   return withAdminError(async () => {
-    const { data } = await apiClient.get<ApiKey[] | PaginatedResponse<ApiKey>>('/apikeys', {
+    const { data } = await apiClient.get<PaginatedResponse<User>>('/admin/users', {
       params
     });
     return data;
-  }, 'GET /apikeys');
+  }, 'GET /admin/users');
 }
 
-export async function deleteApiKey(apiKeyId: string): Promise<void> {
+export async function getAdminUserById(userId: string): Promise<User> {
   return withAdminError(async () => {
-    await apiClient.delete(`/apikeys/${apiKeyId}`);
-  }, 'DELETE /apikeys/{id}');
-}
-
-export async function fetchUserProfile(userId: string): Promise<User> {
-  return withAdminError(async () => {
-    const { data } = await apiClient.get<User>(`/users/${userId}`);
+    const { data } = await apiClient.get<User>(`/admin/users/${userId}`);
     return data;
-  }, 'GET /users/{id}');
+  }, 'GET /admin/users/{id}');
+}
+
+export async function getAdminUserApiKeys(
+  userId: string,
+  params?: { active?: boolean }
+): Promise<ApiKey[] | PaginatedResponse<ApiKey>> {
+  return withAdminError(async () => {
+    const { data } = await apiClient.get<ApiKey[] | PaginatedResponse<ApiKey>>(
+      `/admin/users/${userId}/api-keys`,
+      {
+        params
+      }
+    );
+    return data;
+  }, 'GET /admin/users/{id}/api-keys');
+}
+
+export async function issueAdminUserApiKey(
+  userId: string,
+  payload?: { name?: string }
+): Promise<ApiKey> {
+  return withAdminError(async () => {
+    const { data } = await apiClient.post<ApiKey>(
+      `/admin/users/${userId}/api-keys`,
+      payload ?? {}
+    );
+    return data;
+  }, 'POST /admin/users/{id}/api-keys');
+}
+
+export async function revokeAdminUserApiKey(
+  userId: string,
+  apiKeyId: string
+): Promise<void> {
+  return withAdminError(async () => {
+    await apiClient.delete(`/admin/users/${userId}/api-keys/${apiKeyId}`);
+  }, 'DELETE /admin/users/{id}/api-keys/{apiKeyId}');
 }
 
 export async function fetchAdvisorsOverview(): Promise<AdminAdvisorSummary[]> {

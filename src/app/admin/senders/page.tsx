@@ -65,7 +65,7 @@ export default function AdminSendersPage() {
                   <td className="px-4 py-2">{sender.email}</td>
                   <td className="px-4 py-2 capitalize">{sender.role}</td>
                   <td className="px-4 py-2">
-                    {new Date(sender.created_at).toLocaleString()}
+                    {sender.created_at ? new Date(sender.created_at).toLocaleString() : '—'}
                   </td>
                   <td className="px-4 py-2">
                     {sender.is_active ? (
