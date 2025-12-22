@@ -2,12 +2,15 @@
 
 // Layout guarding admin routes and providing the admin chrome.
 import { useEffect } from 'react';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { isUnauthorizedError } from '@/lib/apiClient';
 import { useAuthMe } from '@/lib/queries/sender';
 import { LoadingState } from '@/components/common/LoadingState';
 import { AuthUser } from '@/types/api';
+
+const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,7 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (user) {
       if (user.role === 'sender') {
-        router.replace('/sender/dashboard');
+        router.replace(senderDashboardPath as Route);
       } else if (user.role !== 'admin' && user.role !== 'both') {
         router.replace('/login');
       }

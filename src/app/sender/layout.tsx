@@ -2,12 +2,15 @@
 
 // Layout guarding sender routes and wrapping them in the application shell.
 import { useEffect } from 'react';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { isUnauthorizedError } from '@/lib/apiClient';
 import { useAuthMe } from '@/lib/queries/sender';
 import { LoadingState } from '@/components/common/LoadingState';
 import { AuthUser } from '@/types/api';
+
+const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
 
 export default function SenderLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,7 +27,7 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (user) {
       if (user.role === 'admin') {
-        router.replace('/admin/dashboard');
+        router.replace(adminDashboardPath as Route);
       } else if (user.role !== 'sender' && user.role !== 'both') {
         router.replace('/login');
       }

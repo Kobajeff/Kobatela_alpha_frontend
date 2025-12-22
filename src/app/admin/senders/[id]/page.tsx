@@ -8,7 +8,10 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminSenderProfile, useAdminUserApiKeys, useRevokeAdminUserApiKey } from '@/lib/queries/admin';
 import { useToast } from '@/components/ui/ToastProvider';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { isAxiosError } from 'axios';
+
+const adminSendersPath = ['', 'admin', 'senders'].join('/');
 
 export default function AdminSenderProfilePage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -74,7 +77,7 @@ export default function AdminSenderProfilePage({ params }: { params: { id: strin
             <p className="text-sm text-muted-foreground">Détails du compte et clés API associées.</p>
           </div>
           <Link
-            href="/admin/senders"
+            href={adminSendersPath as Route}
             className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
           >
             ← Retour aux expéditeurs

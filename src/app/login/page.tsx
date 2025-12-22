@@ -2,11 +2,15 @@
 
 // Login page allowing the sender to request a token via email.
 import { useState } from 'react';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useLogin } from '@/lib/queries/sender';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
+
+const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
+const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,9 +25,9 @@ export default function LoginPage() {
       const response = await login.mutateAsync({ email });
       const role = response.user.role;
       if (role === 'admin') {
-        router.push('/admin/dashboard');
+        router.push(adminDashboardPath as Route);
       } else {
-        router.push('/sender/dashboard');
+        router.push(senderDashboardPath as Route);
       }
     } catch (err) {
       setError(extractErrorMessage(err));

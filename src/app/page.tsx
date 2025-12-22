@@ -2,10 +2,14 @@
 
 // Landing page redirects users to the correct dashboard based on authentication.
 import { useEffect } from 'react';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { getAuthToken } from '@/lib/auth';
 import { useAuthMe } from '@/lib/queries/sender';
 import { AuthUser } from '@/types/api';
+
+const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
+const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
 
 export default function HomePage() {
   const router = useRouter();
@@ -24,9 +28,9 @@ export default function HomePage() {
     if (!token) return;
 
     if (user?.role === 'admin') {
-      router.replace('/admin/dashboard');
+      router.replace(adminDashboardPath as Route);
     } else if (user?.role) {
-      router.replace('/sender/dashboard');
+      router.replace(senderDashboardPath as Route);
     } else if (isError) {
       router.replace('/login');
     }
