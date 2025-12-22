@@ -251,7 +251,7 @@ export function useCreateProof() {
           description: payload.description,
           attachment_url: attachment,
           file_id: payload.file_id ?? 'demo-file-id',
-          status: 'pending',
+          status: 'PENDING',
           created_at: now,
           ai_risk_level: null,
           ai_score: null,

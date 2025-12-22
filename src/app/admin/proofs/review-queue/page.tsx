@@ -2,29 +2,39 @@
 
 // Admin page to review proofs and approve or reject them.
 import { useState } from 'react';
+import axios from 'axios';
 import { AdminProofReviewTable } from '@/components/admin/AdminProofReviewTable';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { useAdminApproveProof, useAdminProofReviewQueue, useAdminRejectProof } from '@/lib/queries/admin';
+import { useAdminProofDecision, useAdminProofReviewQueue } from '@/lib/queries/admin';
 import { useToast } from '@/components/ui/ToastProvider';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 export default function AdminProofReviewQueuePage() {
   const query = useAdminProofReviewQueue();
-  const approve = useAdminApproveProof();
-  const reject = useAdminRejectProof();
+  const decision = useAdminProofDecision();
   const [processingId, setProcessingId] = useState<string | undefined>();
   const [actionError, setActionError] = useState('');
   const { showToast } = useToast();
+
+  const getDecisionErrorMessage = (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      if (status === 403) return 'Insufficient scope';
+      if (status === 404 || status === 405) return 'Endpoint not available';
+    }
+
+    return extractErrorMessage(error);
+  };
 
   const handleApprove = async (proofId: string) => {
     setProcessingId(proofId);
     setActionError('');
     try {
-      await approve.mutateAsync(proofId);
+      await decision.mutateAsync({ proofId, payload: { decision: 'approve' } });
       showToast('Proof updated successfully', 'success');
     } catch (err) {
-      const message = extractErrorMessage(err);
+      const message = getDecisionErrorMessage(err);
       setActionError(message);
       showToast(message, 'error');
     } finally {
@@ -36,10 +46,10 @@ export default function AdminProofReviewQueuePage() {
     setProcessingId(proofId);
     setActionError('');
     try {
-      await reject.mutateAsync(proofId);
+      await decision.mutateAsync({ proofId, payload: { decision: 'reject' } });
       showToast('Proof updated successfully', 'success');
     } catch (err) {
-      const message = extractErrorMessage(err);
+      const message = getDecisionErrorMessage(err);
       setActionError(message);
       showToast(message, 'error');
     } finally {

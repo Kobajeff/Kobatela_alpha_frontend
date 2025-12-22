@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge } from '../ui/Badge';
+import type { BadgeProps } from '../ui/Badge';
 import {
   mapEscrowStatusToBadge,
   mapPaymentStatusToBadge,
@@ -14,7 +15,10 @@ type StatusBadgeProps = {
   type: StatusType;
 };
 
-const mapperByType: Record<StatusType, (status: string) => { label: string; variant: string }> = {
+const mapperByType: Record<
+  StatusType,
+  (status: string) => { label: string; variant: BadgeProps['variant'] }
+> = {
   escrow: mapEscrowStatusToBadge,
   proof: mapProofStatusToBadge,
   payment: mapPaymentStatusToBadge

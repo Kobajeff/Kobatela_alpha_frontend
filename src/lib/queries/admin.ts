@@ -15,6 +15,8 @@ import type {
   AdminEscrowSummary,
   ApiKey,
   PaginatedResponse,
+  ProofDecisionRequest,
+  ProofDecisionResponse,
   SenderAccountRow,
   User,
   UserRole
@@ -254,23 +256,41 @@ export function useAdminEscrowSummary(escrowId: string) {
   });
 }
 
-export function useAdminApproveProof() {
+export function useAdminProofDecision() {
   const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: async (proofId) => {
+  return useMutation<ProofDecisionResponse, Error, { proofId: string; payload: ProofDecisionRequest }>({
+    mutationFn: async ({ proofId, payload }) => {
       if (isDemoMode()) {
-        return new Promise<void>((resolve) => {
-          setTimeout(() => resolve(), 200);
+        return new Promise<ProofDecisionResponse>((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                id: proofId,
+                escrow_id: '',
+                status: payload.decision === 'approve' ? 'APPROVED' : 'REJECTED',
+                created_at: new Date().toISOString(),
+                description: '',
+                attachment_url: '',
+                file_id: '',
+                file_url: '',
+                ai_risk_level: null,
+                ai_score: null,
+                ai_explanation: null,
+                ai_checked_at: null
+              }),
+            200
+          );
         });
       }
-      await apiClient.post(`/admin/proofs/${proofId}/approve`);
+      const response = await apiClient.post<ProofDecisionResponse>(
+        `/proofs/${proofId}/decision`,
+        payload
+      );
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProofReviewQueue'] });
       queryClient.invalidateQueries({ queryKey: ['adminEscrowSummary'] });
-    },
-    onError: (error) => {
-      throw new Error(extractErrorMessage(error));
     }
   });
 }
@@ -355,27 +375,6 @@ export function useAdminAssignSender() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'advisor', variables.advisorId, 'senders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
       queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
-    },
-    onError: (error) => {
-      throw new Error(extractErrorMessage(error));
-    }
-  });
-}
-
-export function useAdminRejectProof() {
-  const queryClient = useQueryClient();
-  return useMutation<void, Error, string>({
-    mutationFn: async (proofId) => {
-      if (isDemoMode()) {
-        return new Promise<void>((resolve) => {
-          setTimeout(() => resolve(), 200);
-        });
-      }
-      await apiClient.post(`/admin/proofs/${proofId}/reject`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminProofReviewQueue'] });
-      queryClient.invalidateQueries({ queryKey: ['adminEscrowSummary'] });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));

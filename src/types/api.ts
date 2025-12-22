@@ -62,6 +62,13 @@ export type AiAnalysis = {
 
 export type ProofStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+export type ProofDecision = 'approve' | 'reject';
+
+export interface ProofDecisionRequest {
+  decision: ProofDecision;
+  comment?: string;
+}
+
 export type Proof = {
   id: string;
   escrow_id: string;
@@ -74,6 +81,8 @@ export type Proof = {
   status: ProofStatus;
   created_at: string;
 } & AiAnalysis;
+
+export type ProofDecisionResponse = Proof;
 
 export type PaymentStatus = 'PENDING' | 'SENT' | 'SETTLED' | 'ERROR' | 'REFUNDED';
 
