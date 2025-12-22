@@ -296,7 +296,7 @@ export function useAdminEscrowSummary(escrowId: string) {
         });
       }
       const response = await apiClient.get<AdminEscrowSummary>(
-        `/admin/escrows/${escrowId}/summary`
+        `/escrows/${escrowId}/summary`
       );
       return response.data;
     },
