@@ -96,6 +96,14 @@ function normalizeArrayResponse<T>(data: unknown): T[] {
   return [];
 }
 
+async function postProofDecision(proofId: string, payload: ProofDecisionRequest) {
+  const response = await apiClient.post<ProofDecisionResponse>(
+    `/proofs/${proofId}/decision`,
+    payload
+  );
+  return response.data;
+}
+
 function adminProofReviewQueueKey(params: {
   limit: number;
   offset: number;
@@ -333,11 +341,7 @@ export function useAdminProofDecision() {
           );
         });
       }
-      const response = await apiClient.post<ProofDecisionResponse>(
-        `/proofs/${proofId}/decision`,
-        payload
-      );
-      return response.data;
+      return postProofDecision(proofId, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProofReviewQueue'] });
