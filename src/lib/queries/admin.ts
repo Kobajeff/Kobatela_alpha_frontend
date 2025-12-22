@@ -1,8 +1,15 @@
 // React Query hooks encapsulating admin-specific API calls.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { apiClient, extractErrorMessage } from '../apiClient';
 import { isDemoMode } from '@/lib/config';
 import { demoAdminProofQueue, demoAdminStats, getDemoEscrowSummary } from '@/lib/demoData';
+import {
+  buildQueryString,
+  createQueryKey,
+  getPaginatedTotal,
+  normalizePaginatedItems
+} from './queryUtils';
 import {
   deleteApiKey,
   fetchAdminSenders,
@@ -22,10 +29,10 @@ import type {
   AdvisorProfile,
   AdvisorSenderItem,
   AdminEscrowSummary,
-  EscrowListItem,
   ApiKey,
   PaginatedResponse,
   Proof,
+  ProofStatus,
   ProofDecisionRequest,
   ProofDecisionResponse,
   SenderAccountRow,
@@ -96,6 +103,77 @@ function normalizeArrayResponse<T>(data: unknown): T[] {
   return [];
 }
 
+const PENDING_PROOF_STATUSES = new Set(['PENDING', 'PENDING_REVIEW']);
+
+function filterProofsByStatus(proofs: Proof[], status: ProofStatus) {
+  const normalizedStatus = status.toUpperCase();
+  if (normalizedStatus === 'PENDING') {
+    return proofs.filter((proof) =>
+      PENDING_PROOF_STATUSES.has(String(proof.status).toUpperCase())
+    );
+  }
+  return proofs.filter(
+    (proof) => String(proof.status).toUpperCase() === normalizedStatus
+  );
+}
+
+async function fetchProofCountByStatus(status: ProofStatus) {
+  const query = buildQueryString({
+    review_mode: true,
+    status,
+    limit: 1,
+    offset: 0
+  });
+  try {
+    const response = await apiClient.get(`/proofs?${query}`);
+    return { count: getPaginatedTotal<Proof>(response.data), denied: false };
+  } catch (error) {
+    if (isAxiosError(error)) {
+      const statusCode = error.response?.status;
+      if (statusCode === 403) {
+        return { count: null, denied: true };
+      }
+      if (statusCode === 422) {
+        const fallbackQuery = buildQueryString({
+          review_mode: true,
+          limit: 100,
+          offset: 0
+        });
+        const response = await apiClient.get(`/proofs?${fallbackQuery}`);
+        const proofs = normalizePaginatedItems<Proof>(response.data);
+        return { count: filterProofsByStatus(proofs, status).length, denied: false };
+      }
+    }
+    throw error;
+  }
+}
+
+async function fetchEscrowsTotal() {
+  const query = buildQueryString({ limit: 1, offset: 0 });
+  try {
+    const response = await apiClient.get(`/escrows?${query}`);
+    return { total: getPaginatedTotal(response.data), denied: false };
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 403) {
+      return { total: null, denied: true };
+    }
+    throw error;
+  }
+}
+
+async function fetchAdminPaymentsTotal() {
+  const query = buildQueryString({ limit: 1, offset: 0 });
+  try {
+    const response = await apiClient.get(`/admin/payments?${query}`);
+    return { total: getPaginatedTotal(response.data), denied: false };
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 403) {
+      return { total: null, denied: true };
+    }
+    throw error;
+  }
+}
+
 async function postProofDecision(proofId: string, payload: ProofDecisionRequest) {
   const response = await apiClient.post<ProofDecisionResponse>(
     `/proofs/${proofId}/decision`,
@@ -113,31 +191,61 @@ function adminProofReviewQueueKey(params: {
   return ['adminProofReviewQueue', 'review_queue', params] as const;
 }
 
-export function useAdminDashboard() {
-  return useQuery<AdminDashboardStats>({
-    queryKey: ['adminDashboard'],
+export type AdminDashboardComputed = Omit<
+  AdminDashboardStats,
+  'total_escrows' | 'pending_proofs' | 'approved_proofs' | 'rejected_proofs' | 'total_payments'
+> & {
+  total_escrows: number | null;
+  pending_proofs: number | null;
+  approved_proofs: number | null;
+  rejected_proofs: number | null;
+  total_payments: number | null;
+  access: {
+    escrowsDenied: boolean;
+    paymentsDenied: boolean;
+    proofsDenied: boolean;
+  };
+};
+
+export function useAdminDashboardStatsComputed() {
+  return useQuery<AdminDashboardComputed>({
+    queryKey: createQueryKey('adminDashboardStats', { scope: 'canonical' }),
     queryFn: async () => {
       if (isDemoMode()) {
-        return new Promise<AdminDashboardStats>((resolve) => {
-          setTimeout(() => resolve(demoAdminStats), 200);
+        return new Promise<AdminDashboardComputed>((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                ...demoAdminStats,
+                access: { escrowsDenied: false, paymentsDenied: false, proofsDenied: false }
+              }),
+            200
+          );
         });
       }
-      const [escrowsResponse, proofsResponse] = await Promise.all([
-        apiClient.get('/escrows', { params: { limit: 50, offset: 0 } }),
-        apiClient.get('/proofs', {
-          params: { review_mode: 'review_queue', limit: 50, offset: 0 }
-        })
-      ]);
 
-      const escrows = normalizeArrayResponse<EscrowListItem>(escrowsResponse.data);
-      const reviewQueue = normalizeProofReviewQueueResponse(proofsResponse.data);
+      const [escrowsResult, paymentsResult, pendingResult, approvedResult, rejectedResult] =
+        await Promise.all([
+          fetchEscrowsTotal(),
+          fetchAdminPaymentsTotal(),
+          fetchProofCountByStatus('PENDING'),
+          fetchProofCountByStatus('APPROVED'),
+          fetchProofCountByStatus('REJECTED')
+        ]);
+
+      const proofsDenied = pendingResult.denied || approvedResult.denied || rejectedResult.denied;
 
       return {
-        total_escrows: escrows.length,
-        pending_proofs: reviewQueue.length,
-        approved_proofs: 0,
-        rejected_proofs: 0,
-        total_payments: 0
+        total_escrows: escrowsResult.total,
+        pending_proofs: proofsDenied ? null : pendingResult.count,
+        approved_proofs: proofsDenied ? null : approvedResult.count,
+        rejected_proofs: proofsDenied ? null : rejectedResult.count,
+        total_payments: paymentsResult.total,
+        access: {
+          escrowsDenied: escrowsResult.denied,
+          paymentsDenied: paymentsResult.denied,
+          proofsDenied
+        }
       };
     }
   });

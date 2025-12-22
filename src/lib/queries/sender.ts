@@ -24,11 +24,63 @@ import type {
   AuthUser,
   Payment,
   Proof,
+  ProofStatus,
   AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
   AuthMeResponse
 } from '@/types/api';
+import {
+  buildQueryString,
+  createQueryKey,
+  normalizePaginatedItems
+} from './queryUtils';
+
+const PENDING_PROOF_STATUSES = new Set(['PENDING', 'PENDING_REVIEW']);
+
+function filterProofsByStatus(proofs: Proof[], status: ProofStatus) {
+  const normalizedStatus = status.toUpperCase();
+  if (normalizedStatus === 'PENDING') {
+    return proofs.filter((proof) =>
+      PENDING_PROOF_STATUSES.has(String(proof.status).toUpperCase())
+    );
+  }
+  return proofs.filter(
+    (proof) => String(proof.status).toUpperCase() === normalizedStatus
+  );
+}
+
+async function fetchProofsWithStatus({
+  status,
+  mine,
+  limit,
+  offset,
+  fallbackLimit
+}: {
+  status: ProofStatus;
+  mine?: boolean;
+  limit: number;
+  offset: number;
+  fallbackLimit: number;
+}) {
+  const query = buildQueryString({ mine, status, limit, offset });
+  try {
+    const response = await apiClient.get(`/proofs?${query}`);
+    return normalizePaginatedItems<Proof>(response.data);
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 422) {
+      const fallbackQuery = buildQueryString({
+        mine,
+        limit: fallbackLimit,
+        offset
+      });
+      const response = await apiClient.get(`/proofs?${fallbackQuery}`);
+      const proofs = normalizePaginatedItems<Proof>(response.data);
+      return filterProofsByStatus(proofs, status);
+    }
+    throw error;
+  }
+}
 
 export function useLogin() {
   const queryClient = useQueryClient();
@@ -129,7 +181,7 @@ export function useMyProfile() {
 
 export function useSenderDashboard() {
   return useQuery<SenderDashboard>({
-    queryKey: ['senderDashboard'],
+    queryKey: createQueryKey('senderDashboard', { scope: 'canonical' }),
     queryFn: async () => {
       if (isDemoMode()) {
         const recentEscrows = demoEscrows.slice(0, 3);
@@ -148,33 +200,39 @@ export function useSenderDashboard() {
           );
         });
       }
-      const [escrowsResponse, proofsResponse] = await Promise.all([
-        apiClient.get('/escrows', {
-          params: { mine: true, limit: 5, offset: 0 }
-        }),
-        apiClient.get('/proofs', {
-          params: { mine: true, limit: 50, offset: 0 }
-        })
-      ]);
+      const escrowsQuery = buildQueryString({ mine: true, limit: 5, offset: 0 });
+      const escrowsResponse = await apiClient.get(`/escrows?${escrowsQuery}`);
+      const escrows = normalizePaginatedItems<EscrowListItem>(escrowsResponse.data);
 
-      const escrows = Array.isArray(escrowsResponse.data)
-        ? escrowsResponse.data
-        : Array.isArray(escrowsResponse.data?.items)
-        ? escrowsResponse.data.items
-        : [];
+      const pendingProofs = await fetchProofsWithStatus({
+        status: 'PENDING',
+        mine: true,
+        limit: 5,
+        offset: 0,
+        fallbackLimit: 50
+      });
 
-      const proofs = Array.isArray(proofsResponse.data)
-        ? proofsResponse.data
-        : Array.isArray(proofsResponse.data?.items)
-        ? proofsResponse.data.items
-        : [];
+      const escrowsForPayments = escrows.slice(0, 5);
+      const summaries = await Promise.allSettled(
+        escrowsForPayments.map((escrow) =>
+          apiClient.get<SenderEscrowSummary>(`/escrows/${escrow.id}/summary`)
+        )
+      );
 
-      const pendingProofs = (proofs as Proof[]).filter((proof) => proof.status === 'PENDING');
+      const payments = summaries.flatMap((result) =>
+        result.status === 'fulfilled'
+          ? (result.value.data.payments ?? [])
+          : []
+      );
+
+      const recentPayments = payments
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5);
 
       return {
         recent_escrows: escrows as EscrowListItem[],
         pending_proofs: pendingProofs,
-        recent_payments: []
+        recent_payments: recentPayments
       };
     }
   });
