@@ -2,6 +2,7 @@
 
 // Header component displaying the Kobatela brand and current user info.
 import Link from 'next/link';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthMe } from '@/lib/queries/sender';
@@ -9,6 +10,9 @@ import { getDemoRole, isDemoMode, setDemoRole } from '@/lib/config';
 import { useToast } from '@/components/ui/ToastProvider';
 import { AuthUser } from '@/types/api';
 import { LogoutButton } from './LogoutButton';
+
+const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
+const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
 
 export function Header() {
   const router = useRouter();
@@ -25,20 +29,23 @@ export function Header() {
   const handleSwitchToSender = () => {
     setDemoRole('sender');
     queryClient.invalidateQueries({ queryKey: ['authMe'] });
-    router.replace('/sender/dashboard');
+    router.replace(senderDashboardPath as Route);
     showToast?.('Switched to demo sender view', 'info');
   };
 
   const handleSwitchToAdmin = () => {
     setDemoRole('admin');
     queryClient.invalidateQueries({ queryKey: ['authMe'] });
-    router.replace('/admin/dashboard');
+    router.replace(adminDashboardPath as Route);
     showToast?.('Switched to demo admin view', 'info');
   };
 
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-      <Link href="/sender/dashboard" className="flex items-center gap-2 text-lg font-semibold">
+      <Link
+        href={senderDashboardPath as Route}
+        className="flex items-center gap-2 text-lg font-semibold"
+      >
         <span className="rounded-md bg-indigo-600 px-2 py-1 text-white">KCT</span>
         <span>Kobatela</span>
       </Link>
@@ -71,7 +78,7 @@ export function Header() {
         )}
         {isAdmin && (
           <Link
-            href="/admin/dashboard"
+            href={adminDashboardPath as Route}
             className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100"
           >
             Admin

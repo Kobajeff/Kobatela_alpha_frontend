@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 
+const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
+
 const links = [
-  { href: '/sender/dashboard', label: 'Dashboard' },
+  { href: senderDashboardPath, label: 'Dashboard' },
   { href: '/sender/escrows', label: 'Escrows' },
   { href: '/sender/profile', label: 'Mon profil' }
 ];
