@@ -10,8 +10,8 @@ import { Header } from './Header';
 const adminReviewQueuePath = ['', 'admin', 'proofs', 'review-queue'].join('/');
 
 const adminLinks = [
-  { href: '/admin/dashboard', label: 'Dashboard' },
-  { href: '/admin/senders', label: 'Senders' },
+  { href: '/admin', label: 'Dashboard' },
+  { href: '/admin/users', label: 'Senders' },
   { href: adminReviewQueuePath, label: 'Proof review queue' },
   { href: '/admin/advisors', label: 'Advisors' },
   { href: '/admin/settings/ai-proof', label: 'AI proof settings' }

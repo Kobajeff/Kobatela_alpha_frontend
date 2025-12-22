@@ -21,9 +21,9 @@ export default function LoginPage() {
       const response = await login.mutateAsync({ email });
       const role = response.user.role;
       if (role === 'admin') {
-        router.push('/admin/dashboard');
+        router.push('/admin');
       } else {
-        router.push('/sender/dashboard');
+        router.push('/sender');
       }
     } catch (err) {
       setError(extractErrorMessage(err));

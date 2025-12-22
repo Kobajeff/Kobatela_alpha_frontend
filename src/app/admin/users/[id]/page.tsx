@@ -74,7 +74,7 @@ export default function AdminSenderProfilePage({ params }: { params: { id: strin
             <p className="text-sm text-muted-foreground">Détails du compte et clés API associées.</p>
           </div>
           <Link
-            href="/admin/senders"
+            href="/admin/users"
             className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
           >
             ← Retour aux expéditeurs

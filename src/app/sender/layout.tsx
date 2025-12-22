@@ -24,7 +24,7 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (user) {
       if (user.role === 'admin') {
-        router.replace('/admin/dashboard');
+        router.replace('/admin');
       } else if (user.role !== 'sender' && user.role !== 'both') {
         router.replace('/login');
       }

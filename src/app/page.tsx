@@ -24,9 +24,9 @@ export default function HomePage() {
     if (!token) return;
 
     if (user?.role === 'admin') {
-      router.replace('/admin/dashboard');
+      router.replace('/admin');
     } else if (user?.role) {
-      router.replace('/sender/dashboard');
+      router.replace('/sender');
     } else if (isError) {
       router.replace('/login');
     }

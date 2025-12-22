@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 
 const links = [
-  { href: '/sender/dashboard', label: 'Dashboard' },
+  { href: '/sender', label: 'Dashboard' },
   { href: '/sender/escrows', label: 'Escrows' },
   { href: '/sender/profile', label: 'Mon profil' }
 ];

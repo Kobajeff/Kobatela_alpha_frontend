@@ -25,20 +25,20 @@ export function Header() {
   const handleSwitchToSender = () => {
     setDemoRole('sender');
     queryClient.invalidateQueries({ queryKey: ['authMe'] });
-    router.replace('/sender/dashboard');
+    router.replace('/sender');
     showToast?.('Switched to demo sender view', 'info');
   };
 
   const handleSwitchToAdmin = () => {
     setDemoRole('admin');
     queryClient.invalidateQueries({ queryKey: ['authMe'] });
-    router.replace('/admin/dashboard');
+    router.replace('/admin');
     showToast?.('Switched to demo admin view', 'info');
   };
 
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-      <Link href="/sender/dashboard" className="flex items-center gap-2 text-lg font-semibold">
+      <Link href="/sender" className="flex items-center gap-2 text-lg font-semibold">
         <span className="rounded-md bg-indigo-600 px-2 py-1 text-white">KCT</span>
         <span>Kobatela</span>
       </Link>
@@ -71,7 +71,7 @@ export function Header() {
         )}
         {isAdmin && (
           <Link
-            href="/admin/dashboard"
+            href="/admin"
             className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100"
           >
             Admin
