@@ -108,6 +108,9 @@ export type Milestone = {
   due_date?: string;
 };
 
+// Milestone creation payload contract is defined by the backend; use a JSON object to match it.
+export type MilestoneCreatePayload = Record<string, unknown>;
+
 export type Payment = {
   id: string;
   escrow_id: string;
