@@ -27,6 +27,16 @@ export default function AdminEscrowDetailPage() {
   const escrowId = params?.id ?? '';
   const query = useAdminEscrowSummary(escrowId);
   const queryClient = useQueryClient();
+  const polling = query.polling;
+  const banners = useMemo(
+    () =>
+      [
+        polling?.fundingActive ? 'Traitement PSP' : null,
+        polling?.milestoneActive ? 'Mise à jour en cours' : null,
+        polling?.payoutActive ? 'Traitement payout' : null
+      ].filter((label): label is string => Boolean(label)),
+    [polling?.fundingActive, polling?.milestoneActive, polling?.payoutActive]
+  );
 
   if (query.isLoading) {
     return <LoadingState label="Chargement du détail escrow..." />;
@@ -58,17 +68,7 @@ export default function AdminEscrowDetailPage() {
   const formatOptionalDate = (value?: string | Date | null) =>
     value ? formatDateTime(value) : '—';
   const lastUpdatedAt = query.dataUpdatedAt ? new Date(query.dataUpdatedAt) : null;
-  const polling = query.polling;
   const refreshSummary = () => invalidateEscrowSummary(queryClient, escrowId);
-  const banners = useMemo(
-    () =>
-      [
-        polling?.fundingActive ? 'Traitement PSP' : null,
-        polling?.milestoneActive ? 'Mise à jour en cours' : null,
-        polling?.payoutActive ? 'Traitement payout' : null
-      ].filter((label): label is string => Boolean(label)),
-    [polling?.fundingActive, polling?.milestoneActive, polling?.payoutActive]
-  );
 
   if (!data) {
     return null;

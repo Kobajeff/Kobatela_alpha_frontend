@@ -12,6 +12,7 @@ import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import { afterProofUpload } from '@/lib/queryInvalidation';
 import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
+import { queryKeys } from '@/lib/queryKeys';
 import {
   demoEscrows,
   demoAdvisorProfile,
@@ -33,11 +34,7 @@ import type {
   SenderEscrowSummary,
   AuthMeResponse
 } from '@/types/api';
-import {
-  buildQueryString,
-  createQueryKey,
-  normalizePaginatedItems
-} from './queryUtils';
+import { buildQueryString, normalizePaginatedItems } from './queryUtils';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
 const PENDING_PROOF_STATUSES = new Set(['PENDING', 'PENDING_REVIEW']);
@@ -110,7 +107,7 @@ export function useLogin() {
       if (token) {
         setAuthToken(token);
       }
-      queryClient.invalidateQueries({ queryKey: ['authMe'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
@@ -120,7 +117,7 @@ export function useLogin() {
 
 export function useMyAdvisor() {
   return useQuery<AdvisorProfile | null>({
-    queryKey: ['myAdvisor'],
+    queryKey: queryKeys.sender.myAdvisor(),
     queryFn: async () => {
       if (isDemoMode()) {
         return new Promise((resolve) => {
@@ -150,7 +147,7 @@ export function useMyAdvisor() {
 export function useAuthMe() {
   const queryClient = useQueryClient();
   const query = useQuery<AuthUser, Error>({
-    queryKey: ['authMe'],
+    queryKey: queryKeys.auth.me(),
     queryFn: async () => {
       if (isDemoMode()) {
         const role = getDemoRole();
@@ -185,7 +182,7 @@ export function useMyProfile() {
 
 export function useSenderDashboard() {
   return useQuery<SenderDashboard>({
-    queryKey: createQueryKey('senderDashboard', { scope: 'canonical' }),
+    queryKey: queryKeys.sender.dashboard(),
     queryFn: async () => {
       if (isDemoMode()) {
         const recentEscrows = demoEscrows.slice(0, 3);
@@ -244,8 +241,12 @@ export function useSenderDashboard() {
 
 export function useSenderEscrows(params: { status?: string; limit?: number; offset?: number } = {}) {
   const { status, limit = 20, offset = 0 } = params;
+  const filters = useMemo(
+    () => ({ status, limit, offset, mine: true }),
+    [limit, offset, status]
+  );
   return useQuery<EscrowListItem[]>({
-    queryKey: ['senderEscrows', { status, limit, offset }],
+    queryKey: queryKeys.escrows.list(filters),
     queryFn: async () => {
       if (isDemoMode()) {
         let items = demoEscrows;
@@ -340,7 +341,7 @@ export function useSenderEscrowSummary(
   );
 
   const query = useQuery<SenderEscrowSummary>({
-    queryKey: ['escrowSummary', escrowId],
+    queryKey: queryKeys.escrows.summary(escrowId, 'sender'),
     queryFn: async () => {
       if (isDemoMode()) {
         const summary = getDemoEscrowSummary(escrowId);
@@ -445,7 +446,9 @@ function useEscrowAction(
       await apiClient.post(`/escrows/${escrowId}/${path}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['escrowSummary', escrowId] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.escrows.summary(escrowId, 'sender')
+      });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
@@ -510,7 +513,7 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
   }, [proofId, stopPolling]);
 
   const query = useQuery<Proof, Error>({
-    queryKey: ['proof', proofId],
+    queryKey: queryKeys.proofs.byId(proofId),
     queryFn: async () => {
       if (!proofId) {
         throw new Error('Proof id is required');
@@ -521,7 +524,6 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
         return {
           id: proofId,
           escrow_id: escrowId,
-          milestone_id: null,
           description: 'Demo proof',
           attachment_url: 'https://demo.kobatela.com/files/demo-proof.pdf',
           file_id: 'demo-file-id',
@@ -554,18 +556,19 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
         return failureCount < 3;
       }
       return false;
-    },
-    onError: (error) => {
-      if (!isAxiosError(error)) return;
-      const status = error.response?.status;
-      if (status && status >= 500) {
-        setServerErrorMessage(
-          "Le statut de la preuve ne peut pas être rafraîchi pour le moment. Réessayez plus tard."
-        );
-        setStopPolling(true);
-      }
     }
   });
+
+  useEffect(() => {
+    if (!query.error || !isAxiosError(query.error)) return;
+    const status = query.error.response?.status;
+    if (status && status >= 500) {
+      setServerErrorMessage(
+        "Le statut de la preuve ne peut pas être rafraîchi pour le moment. Réessayez plus tard."
+      );
+      setStopPolling(true);
+    }
+  }, [query.error]);
 
   useEffect(() => {
     if (!proofId || !query.data) return;
@@ -573,7 +576,9 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
       setStopPolling(true);
       if (!refreshedSummaryRef.current) {
         refreshedSummaryRef.current = true;
-        queryClient.invalidateQueries({ queryKey: ['escrowSummary', escrowId] });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.escrows.summary(escrowId, 'sender')
+        });
       }
     }
   }, [proofId, escrowId, query.data, queryClient]);
@@ -588,7 +593,9 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
       query.refetch();
       if (!refreshedSummaryRef.current) {
         refreshedSummaryRef.current = true;
-        queryClient.invalidateQueries({ queryKey: ['escrowSummary', escrowId] });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.escrows.summary(escrowId, 'sender')
+        });
       }
     }
   }, [proofId, escrowId, query, query.error, conflictRefetched, queryClient]);
@@ -631,7 +638,7 @@ export function useCreateProof() {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(['proof', data.id], data);
+      queryClient.setQueryData(queryKeys.proofs.byId(data.id), data);
       afterProofUpload(queryClient, data.escrow_id, data.id);
     },
     onError: (error) => {

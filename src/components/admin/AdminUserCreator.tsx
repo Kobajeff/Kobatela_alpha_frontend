@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useMutation } from '../../useMutation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { createAdminUser } from '@/lib/adminApi';
+import { queryKeys } from '@/lib/queryKeys';
 import type { AdminUserCreateResponse } from '@/types/api';
 
 type CreateUserRole = 'sender' | 'admin' | 'both' | 'advisor';
@@ -22,11 +23,11 @@ export function AdminUserCreator() {
     onSuccess: (data) => {
       setError(null);
       if (data?.user?.role === 'advisor') {
-        queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
-        queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.overview() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.listBase() });
       }
       if (data?.user?.role === 'sender' || data?.user?.role === 'both') {
-        queryClient.invalidateQueries({ queryKey: ['admin-senders'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.senders() });
       }
     }
   });

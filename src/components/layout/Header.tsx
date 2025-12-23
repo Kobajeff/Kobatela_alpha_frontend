@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthMe } from '@/lib/queries/sender';
 import { getDemoRole, isDemoMode, setDemoRole } from '@/lib/config';
+import { queryKeys } from '@/lib/queryKeys';
 import { useToast } from '@/components/ui/ToastProvider';
 import { AuthUser } from '@/types/api';
 import { LogoutButton } from './LogoutButton';
@@ -28,14 +29,14 @@ export function Header() {
 
   const handleSwitchToSender = () => {
     setDemoRole('sender');
-    queryClient.invalidateQueries({ queryKey: ['authMe'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
     router.replace(senderDashboardPath as Route);
     showToast?.('Switched to demo sender view', 'info');
   };
 
   const handleSwitchToAdmin = () => {
     setDemoRole('admin');
-    queryClient.invalidateQueries({ queryKey: ['authMe'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
     router.replace(adminDashboardPath as Route);
     showToast?.('Switched to demo admin view', 'info');
   };
