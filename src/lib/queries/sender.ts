@@ -10,7 +10,7 @@ import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClien
 import { isNoAdvisorAvailable } from '../errors';
 import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
-import { afterProofUpload } from '@/lib/queryInvalidation';
+import { invalidateEscrowBundle, invalidateProofBundle } from '@/lib/invalidation';
 import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
 import { queryKeys } from '@/lib/queryKeys';
 import {
@@ -446,8 +446,10 @@ function useEscrowAction(
       await apiClient.post(`/escrows/${escrowId}/${path}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.escrows.summary(escrowId, 'sender')
+      invalidateEscrowBundle(queryClient, {
+        escrowId,
+        viewer: 'sender',
+        refetchSummary: true
       });
     },
     onError: (error) => {
@@ -639,7 +641,12 @@ export function useCreateProof() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.proofs.byId(data.id), data);
-      afterProofUpload(queryClient, data.escrow_id, data.id);
+      invalidateProofBundle(queryClient, {
+        proofId: data.id,
+        escrowId: data.escrow_id,
+        milestoneId: data.milestone_id,
+        viewer: 'sender'
+      });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
