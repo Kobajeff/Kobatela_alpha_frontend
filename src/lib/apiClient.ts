@@ -26,7 +26,22 @@ export function extractErrorMessage(error: unknown): string {
 
 export function isUnauthorizedError(error: unknown): boolean {
   const status = normalizeApiError(error).status;
-  return status === 401 || status === 419;
+  return status === 401;
+}
+
+export function isForbiddenError(error: unknown): boolean {
+  const status = normalizeApiError(error).status;
+  return status === 403;
+}
+
+export function isNotFoundError(error: unknown): boolean {
+  const status = normalizeApiError(error).status;
+  return status === 404;
+}
+
+export function isGoneError(error: unknown): boolean {
+  const status = normalizeApiError(error).status;
+  return status === 410;
 }
 
 export function logApiError(error: unknown, context?: string) {

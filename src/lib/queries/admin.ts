@@ -20,6 +20,7 @@ import {
   revokeAdminUserApiKey,
   updateAiProofSetting
 } from '@/lib/adminApi';
+import { afterProofDecision } from '@/lib/queryInvalidation';
 import type {
   AdminDashboardStats,
   AdminAdvisorListItem,
@@ -427,7 +428,11 @@ export function useAdminProofDecision() {
       }
       return postProofDecision(proofId, payload);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data.escrow_id) {
+        afterProofDecision(queryClient, data.escrow_id);
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['adminProofReviewQueue'] });
       queryClient.invalidateQueries({ queryKey: ['adminEscrowSummary'] });
     }
