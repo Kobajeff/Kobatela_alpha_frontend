@@ -25,6 +25,9 @@ interface SenderEscrowDetailsProps {
   onApprove: () => void;
   onReject: () => void;
   onCheckDeadline: () => void;
+  onRequestAdvisorReview?: (proofId: string) => void;
+  proofRequestPendingId?: string | null;
+  proofRequestMessage?: { tone: 'success' | 'info' | 'error'; text: string } | null;
   onStartFundingSession?: () => void;
   onDirectDeposit?: () => void;
   fundingSessionPending?: boolean;
@@ -55,6 +58,9 @@ export function SenderEscrowDetails({
   onCheckDeadline,
   onMarkDelivered,
   onReject,
+  onRequestAdvisorReview,
+  proofRequestPendingId,
+  proofRequestMessage,
   onStartFundingSession,
   onDirectDeposit,
   fundingSessionPending,
@@ -211,6 +217,19 @@ export function SenderEscrowDetails({
           <CardTitle>Preuves</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
+          {proofRequestMessage && (
+            <div
+              className={
+                proofRequestMessage.tone === 'success'
+                  ? 'rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800'
+                  : proofRequestMessage.tone === 'info'
+                    ? 'rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900'
+                    : 'rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700'
+              }
+            >
+              {proofRequestMessage.text}
+            </div>
+          )}
           {proofReviewActive && (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               Analyse en cours
@@ -254,6 +273,23 @@ export function SenderEscrowDetails({
               })()}
               <div className="mt-2 space-y-2">
                 <ProofAiStatus proof={proof} />
+                {onRequestAdvisorReview && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onRequestAdvisorReview(proof.id)}
+                      disabled={
+                        proofRequestPendingId === proof.id ||
+                        proof.status !== 'PENDING'
+                      }
+                    >
+                      {proofRequestPendingId === proof.id
+                        ? 'Requesting...'
+                        : 'Request advisor review'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
