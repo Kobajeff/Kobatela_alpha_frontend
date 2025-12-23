@@ -1,6 +1,7 @@
 // Axios client configured for the Kobatela backend with auth header support.
 import axios from 'axios';
 import type { ProofFileUploadResponse } from '@/types/api';
+import { normalizeApiError } from './apiError';
 import { getAuthToken } from './auth';
 
 const API_BASE_URL =
@@ -20,38 +21,12 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export function extractErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    const status = error.response?.status;
-    const data = error.response?.data as { error?: { message?: string }; message?: string };
-    const message = data?.error?.message ?? data?.message;
-
-    if ((status === 400 || status === 422) && message) {
-      return message;
-    }
-
-    if (status === 405) {
-      return 'Méthode non autorisée';
-    }
-
-    if (status === 401 || status === 403) {
-      return "Accès non autorisé";
-    }
-
-    if (status && status >= 500) {
-      return 'Une erreur est survenue côté serveur';
-    }
-
-    if (message) return message;
-  }
-
-  if (error instanceof Error) return error.message;
-  return 'Une erreur est survenue';
+  return normalizeApiError(error).message;
 }
 
 export function isUnauthorizedError(error: unknown): boolean {
-  if (!axios.isAxiosError(error)) return false;
-  const status = error.response?.status;
-  return status === 401 || status === 403 || status === 404;
+  const status = normalizeApiError(error).status;
+  return status === 401 || status === 419;
 }
 
 export function logApiError(error: unknown, context?: string) {

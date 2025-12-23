@@ -1,12 +1,7 @@
-import axios from 'axios';
+import { normalizeApiError } from './apiError';
 
 export function isNoAdvisorAvailable(error: unknown): boolean {
-  if (!axios.isAxiosError(error)) return false;
-
-  const status = error.response?.status;
-  const data = error.response?.data as { error?: { code?: string }; code?: string } | undefined;
-  const code = data?.error?.code ?? data?.code;
-
+  const { status, code } = normalizeApiError(error);
   if (status !== 503) return false;
 
   return !code || code === 'NO_ADVISOR_AVAILABLE';
