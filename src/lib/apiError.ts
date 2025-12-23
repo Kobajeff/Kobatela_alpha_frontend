@@ -1,10 +1,12 @@
 import axios from 'axios';
+import { getApiErrorMessage } from './errorMessages';
 
 export type NormalizedApiError = {
   status?: number;
   code?: string;
   message: string;
   details?: unknown;
+  raw?: unknown;
 };
 
 type ErrorPayload = {
@@ -15,19 +17,16 @@ type ErrorPayload = {
   status?: number;
 };
 
-const DEFAULT_ERROR_MESSAGE = 'Une erreur est survenue';
+const DEFAULT_ERROR_MESSAGE = 'Une erreur est survenue.';
 
 const formatValidationErrors = (
   detail: Array<{ loc?: Array<string | number>; msg?: string }>
 ): string => {
-  const parts = detail
-    .map((item) => {
-      const location = item.loc?.length ? item.loc.join('.') : 'Erreur';
-      return item.msg ? `${location}: ${item.msg}` : location;
-    })
-    .filter(Boolean);
-
-  return parts.length ? parts.join(' ; ') : DEFAULT_ERROR_MESSAGE;
+  if (!detail.length) return DEFAULT_ERROR_MESSAGE;
+  const first = detail[0]?.msg ?? 'Validation error';
+  const remaining = detail.length - 1;
+  const suffix = remaining > 0 ? ` (+${remaining})` : '';
+  return `Validation error: ${first}${suffix}`;
 };
 
 const normalizeFromPayload = (
@@ -54,24 +53,24 @@ const normalizeFromPayload = (
     };
   }
 
-  if (typeof payload.detail === 'string') {
-    return { status, message: payload.detail, details: payload.detail };
-  }
-
   if (
     typeof payload.detail === 'object' &&
     payload.detail !== null &&
     'message' in payload.detail
   ) {
-    const detail = payload.detail as { message?: string; code?: string };
+    const detail = payload.detail as { message?: string; code?: string; details?: unknown };
     if (detail.message) {
       return {
         status,
         code: detail.code,
         message: detail.message,
-        details: payload.detail
+        details: detail.details ?? payload.detail
       };
     }
+  }
+
+  if (typeof payload.detail === 'string') {
+    return { status, message: payload.detail, details: payload.detail };
   }
 
   if (Array.isArray(payload.detail)) {
@@ -108,48 +107,46 @@ export function normalizeApiError(err: unknown): NormalizedApiError {
     status,
     code: normalized?.code,
     message: baseMessage,
-    details: normalized?.details
+    details: normalized?.details,
+    raw: undefined
   };
 
-  if (status === 405) {
-    return { ...baseError, message: 'Méthode non autorisée' };
-  }
-
-  if (status === 401) {
-    return { ...baseError, message: 'Accès non autorisé' };
-  }
-
-  if (status === 403) {
-    if (baseError.code === 'INSUFFICIENT_SCOPE') {
-      return { ...baseError, message: 'Action non autorisée' };
-    }
-    return { ...baseError, message: 'Accès non autorisé' };
-  }
-
-  if (status === 404) {
-    return { ...baseError, message: 'Ressource introuvable' };
+  const mappedMessage = getApiErrorMessage(baseError);
+  if (mappedMessage) {
+    return { ...baseError, message: mappedMessage };
   }
 
   if (status && status >= 500) {
-    return { ...baseError, message: 'Une erreur est survenue côté serveur' };
-  }
-
-  if (normalized) {
-    return baseError;
+    return { ...baseError, message: 'Une erreur est survenue côté serveur.' };
   }
 
   return baseError;
+}
+
+export function isUnauthorized(error: NormalizedApiError): boolean {
+  return error.status === 401;
+}
+
+export function isForbidden(error: NormalizedApiError): boolean {
+  return error.status === 403;
+}
+
+export function isNotFound(error: NormalizedApiError): boolean {
+  return error.status === 404;
+}
+
+export function isGone(error: NormalizedApiError): boolean {
+  return error.status === 410;
 }
 
 export function isInsufficientScope(error: NormalizedApiError): boolean {
   return error.status === 403 && error.code === 'INSUFFICIENT_SCOPE';
 }
 
-export function isAuthExpired(error: NormalizedApiError): boolean {
-  return error.status === 401;
+export function isConflict(error: NormalizedApiError): boolean {
+  return error.status === 409;
 }
 
-export function isDomainForbidden(error: NormalizedApiError): boolean {
-  if (error.status !== 403 || !error.code) return false;
-  return error.code.startsWith('NOT_') || error.code.endsWith('_FORBIDDEN');
+export function isValidation(error: NormalizedApiError): boolean {
+  return error.status === 422 || error.status === 400;
 }
