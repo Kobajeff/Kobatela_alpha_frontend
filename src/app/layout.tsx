@@ -13,24 +13,26 @@ export const metadata: Metadata = {
   description: 'Sender portal for the Kobatela KCT product.'
 };
 
-function UiShell({ children }: { children: React.ReactNode }) {
+function GlobalBanners() {
   return (
-    <ToastProvider>
+    <>
       <DemoBanner />
       <ConnectionBanner />
-      {children}
-    </ToastProvider>
+    </>
   );
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const content = DEV_DISABLE_PROVIDERS ? children : <UiShell>{children}</UiShell>;
-
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-50 text-slate-900">
         <DevProviderStatus />
-        <ReactQueryProvider>{content}</ReactQueryProvider>
+        <ReactQueryProvider>
+          <ToastProvider>
+            {DEV_DISABLE_PROVIDERS ? null : <GlobalBanners />}
+            {children}
+          </ToastProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );
