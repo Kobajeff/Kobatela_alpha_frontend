@@ -631,6 +631,7 @@ export function useCreateProof() {
       return response.data;
     },
     onSuccess: (data) => {
+      queryClient.setQueryData(['proof', data.id], data);
       afterProofUpload(queryClient, data.escrow_id, data.id);
     },
     onError: (error) => {
