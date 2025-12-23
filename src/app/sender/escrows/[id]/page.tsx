@@ -16,6 +16,7 @@ import {
   useDepositEscrow,
   useMarkDelivered,
   useProofReviewPolling,
+  useRequestAdvisorReview,
   useSenderEscrowSummary
 } from '@/lib/queries/sender';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -54,6 +55,11 @@ export default function SenderEscrowDetailsPage() {
   const [fundingNote, setFundingNote] = useState<string | null>(null);
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('');
   const [latestProofId, setLatestProofId] = useState<string | null>(null);
+  const [proofRequestMessage, setProofRequestMessage] = useState<{
+    tone: 'success' | 'info' | 'error';
+    text: string;
+  } | null>(null);
+  const [proofRequestPendingId, setProofRequestPendingId] = useState<string | null>(null);
   const { showToast } = useToast();
   const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
   const proofReview = useProofReviewPolling(latestProofId, escrowId);
@@ -75,6 +81,7 @@ export default function SenderEscrowDetailsPage() {
   const checkDeadline = useCheckDeadline(escrowId);
   const createFundingSession = useCreateFundingSession(escrowId);
   const depositEscrow = useDepositEscrow(escrowId);
+  const requestAdvisorReview = useRequestAdvisorReview();
   const isFundingTerminalState = isFundingTerminal(query.data);
   const isFundingActiveState = isFundingInProgress(query.data) || fundingInProgress;
   const PSP_RETURN_TIMEOUT_MS = 60_000;
@@ -187,6 +194,41 @@ export default function SenderEscrowDetailsPage() {
   const handleReject = () => {
     if (!window.confirm('Are you sure you want to reject this escrow?')) return;
     return handleAction(() => reject.mutateAsync(), 'Escrow updated successfully');
+  };
+
+  const handleRequestAdvisorReview = async (proofId: string) => {
+    setProofRequestMessage(null);
+    setProofRequestPendingId(proofId);
+    try {
+      await requestAdvisorReview.mutateAsync({ proofId, escrowId });
+      const successMessage = 'Advisor review requested.';
+      setProofRequestMessage({ tone: 'success', text: successMessage });
+      showToast(successMessage, 'success');
+    } catch (error) {
+      const normalized = normalizeApiError(error);
+      const message = (() => {
+        if (normalized.status === 409) {
+          return 'Advisor review already requested.';
+        }
+        if (normalized.status === 403) {
+          return 'Access denied: you cannot request advisor review.';
+        }
+        if (normalized.status === 404) {
+          return 'Proof not found.';
+        }
+        if (normalized.status === 401) {
+          return 'Your session has expired. Please sign in again.';
+        }
+        return normalized.message ?? extractErrorMessage(error);
+      })();
+      setProofRequestMessage({
+        tone: normalized.status === 409 ? 'info' : 'error',
+        text: message
+      });
+      showToast(message, normalized.status === 409 ? 'info' : 'error');
+    } finally {
+      setProofRequestPendingId(null);
+    }
   };
 
   const resolveFundingErrorMessage = (error: unknown) => {
@@ -372,6 +414,9 @@ export default function SenderEscrowDetailsPage() {
         lastUpdatedAt={lastUpdatedAt}
         proofReviewActive={proofReview.polling.active}
         proofReviewError={proofReview.polling.errorMessage ?? null}
+        onRequestAdvisorReview={handleRequestAdvisorReview}
+        proofRequestMessage={proofRequestMessage}
+        proofRequestPendingId={proofRequestPendingId}
         onMarkDelivered={handleMarkDelivered}
         onApprove={handleApprove}
         onReject={handleReject}

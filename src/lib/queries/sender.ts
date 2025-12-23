@@ -778,6 +778,35 @@ export function useCreateProof() {
   });
 }
 
+type RequestAdvisorReviewPayload = {
+  proofId: string;
+  escrowId: string;
+};
+
+export function useRequestAdvisorReview() {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, RequestAdvisorReviewPayload>({
+    mutationFn: async ({ proofId }) => {
+      if (isDemoMode()) {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve({}), 200);
+        });
+      }
+      const response = await apiClient.post(`/proofs/${proofId}/request_advisor_review`, {});
+      return response.data;
+    },
+    retry: false,
+    onSettled: (_data, _error, variables) => {
+      if (!variables) return;
+      invalidateProofBundle(queryClient, {
+        proofId: variables.proofId,
+        escrowId: variables.escrowId,
+        viewer: 'sender'
+      });
+    }
+  });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
