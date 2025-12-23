@@ -1,13 +1,14 @@
 'use client';
 
 // Client-side provider that sets up React Query for the entire app.
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useEffect, useState } from 'react';
 import { setQueryClient } from '@/lib/queryClient';
+import { createQueryClient } from '@/lib/reactQueryClient';
 
 export function ReactQueryProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => createQueryClient());
 
   useEffect(() => {
     setQueryClient(queryClient);

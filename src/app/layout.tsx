@@ -4,6 +4,7 @@ import './globals.css';
 import { ReactQueryProvider } from './providers';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { DemoBanner } from '@/components/layout/DemoBanner';
+import { ConnectionBanner } from '@/components/system/ConnectionBanner';
 
 export const metadata: Metadata = {
   title: 'Kobatela KCT – MVP',
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ReactQueryProvider>
           <ToastProvider>
             <DemoBanner />
+            <ConnectionBanner />
             {children}
           </ToastProvider>
         </ReactQueryProvider>
