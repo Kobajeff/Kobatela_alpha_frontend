@@ -7,12 +7,8 @@ import { apiClient, extractErrorMessage } from '../apiClient';
 import { isDemoMode } from '@/lib/config';
 import { demoAdminProofQueue, demoAdminStats, getDemoEscrowSummary } from '@/lib/demoData';
 import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
-import {
-  buildQueryString,
-  createQueryKey,
-  getPaginatedTotal,
-  normalizePaginatedItems
-} from './queryUtils';
+import { queryKeys } from '@/lib/queryKeys';
+import { buildQueryString, getPaginatedTotal, normalizePaginatedItems } from './queryUtils';
 import {
   fetchAdvisorsOverview,
   fetchAiProofSetting,
@@ -168,15 +164,6 @@ async function postProofDecision(proofId: string, payload: ProofDecisionRequest)
   return response.data;
 }
 
-function adminProofReviewQueueKey(params: {
-  limit: number;
-  offset: number;
-  advisor_id?: string;
-  unassigned_only?: boolean;
-}) {
-  return ['adminProofReviewQueue', 'review_queue', params] as const;
-}
-
 export type AdminDashboardComputed = Omit<
   AdminDashboardStats,
   'total_escrows' | 'pending_proofs' | 'approved_proofs' | 'rejected_proofs' | 'total_payments'
@@ -195,7 +182,7 @@ export type AdminDashboardComputed = Omit<
 
 export function useAdminDashboardStatsComputed() {
   return useQuery<AdminDashboardComputed>({
-    queryKey: createQueryKey('adminDashboardStats', { scope: 'canonical' }),
+    queryKey: queryKeys.admin.dashboardStats(),
     queryFn: async () => {
       if (isDemoMode()) {
         return new Promise<AdminDashboardComputed>((resolve) => {
@@ -246,9 +233,13 @@ export interface AdminSendersParams {
 
 export function useAdminSenders(params: AdminSendersParams = {}) {
   const { limit = 50, offset = 0, q, active } = params;
+  const filters = useMemo(
+    () => ({ role: 'sender', limit, offset, q, active }),
+    [active, limit, offset, q]
+  );
 
   return useQuery({
-    queryKey: ['admin-users', { role: 'sender', limit, offset, q, active }],
+    queryKey: queryKeys.admin.users.list(filters),
     queryFn: async () => {
       return getAdminUsers({ role: 'sender', limit, offset, q, active });
     }
@@ -257,7 +248,7 @@ export function useAdminSenders(params: AdminSendersParams = {}) {
 
 export function useAdminSenderProfile(userId?: string) {
   return useQuery<User>({
-    queryKey: ['admin', 'users', userId],
+    queryKey: queryKeys.admin.users.byId(userId),
     queryFn: async () => {
       return getAdminUserById(String(userId));
     },
@@ -266,8 +257,12 @@ export function useAdminSenderProfile(userId?: string) {
 }
 
 export function useAdminUserApiKeys(userId?: string, params?: { active?: boolean }) {
+  const apiKeyParams = useMemo(
+    () => (params ? { active: params.active } : undefined),
+    [params]
+  );
   return useQuery<ApiKey[]>({
-    queryKey: ['admin', 'users', userId, 'api-keys', params],
+    queryKey: queryKeys.admin.users.apiKeys(userId, apiKeyParams),
     queryFn: async () => {
       const raw = await getAdminUserApiKeys(String(userId), params);
       return normalizeArrayResponse<ApiKey>(raw);
@@ -283,7 +278,7 @@ export function useIssueAdminUserApiKey(userId: string) {
       return issueAdminUserApiKey(userId, { name });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId, 'api-keys'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users.apiKeysBase(userId) });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
@@ -298,7 +293,7 @@ export function useRevokeAdminUserApiKey(userId: string) {
       await revokeAdminUserApiKey(userId, apiKeyId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId, 'api-keys'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users.apiKeysBase(userId) });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
@@ -313,8 +308,12 @@ export function useAdminProofReviewQueue(params: {
   unassigned_only?: boolean;
 } = {}) {
   const { limit = 20, offset = 0, advisor_id, unassigned_only } = params;
+  const filters = useMemo(
+    () => ({ limit, offset, advisor_id, unassigned_only }),
+    [advisor_id, limit, offset, unassigned_only]
+  );
   return useQuery<AdminProofReviewItem[]>({
-    queryKey: adminProofReviewQueueKey({ limit, offset, advisor_id, unassigned_only }),
+    queryKey: queryKeys.admin.proofReviewQueue(filters),
     queryFn: async () => {
       if (isDemoMode()) {
         return new Promise<AdminProofReviewItem[]>((resolve) => {
@@ -337,7 +336,7 @@ export function useAdminProofReviewQueue(params: {
 
 export function useAdminAdvisorsOverview() {
   return useQuery<AdminAdvisorSummary[]>({
-    queryKey: ['admin-advisors-overview'],
+    queryKey: queryKeys.admin.advisors.overview(),
     queryFn: async () => {
       return fetchAdvisorsOverview();
     }
@@ -345,8 +344,9 @@ export function useAdminAdvisorsOverview() {
 }
 
 export function useAdminAdvisorsList(active?: boolean) {
+  const filters = useMemo(() => ({ active }), [active]);
   return useQuery<AdminAdvisorListItem[]>({
-    queryKey: ['admin-advisors', { active }],
+    queryKey: queryKeys.admin.advisors.list(filters),
     queryFn: async () => {
       const searchParams = new URLSearchParams();
       if (active !== undefined) {
@@ -363,7 +363,7 @@ export function useAdminAdvisorsList(active?: boolean) {
 
 export function useAiProofSetting() {
   return useQuery<AiProofSetting>({
-    queryKey: ['admin', 'settings', 'ai-proof'],
+    queryKey: queryKeys.admin.settings.aiProof(),
     queryFn: async () => {
       return fetchAiProofSetting();
     }
@@ -377,7 +377,7 @@ export function useUpdateAiProofSetting() {
       return updateAiProofSetting(enabled);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'ai-proof'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.settings.aiProof() });
     }
   });
 }
@@ -456,7 +456,7 @@ export function useAdminEscrowSummary(
   );
 
   const query = useQuery<AdminEscrowSummary>({
-    queryKey: ['adminEscrowSummary', escrowId],
+    queryKey: queryKeys.escrows.summary(escrowId, 'admin'),
     queryFn: async () => {
       if (isDemoMode()) {
         const summary = getDemoEscrowSummary(escrowId);
@@ -581,15 +581,20 @@ export function useAdminProofDecision() {
         afterProofDecision(queryClient, data.escrow_id);
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ['adminProofReviewQueue'] });
-      queryClient.invalidateQueries({ queryKey: ['adminEscrowSummary'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.proofReviewQueueBase() });
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === 'escrows' &&
+          query.queryKey[2] === 'summary' &&
+          query.queryKey[3] === 'admin'
+      });
     }
   });
 }
 
 export function useAdminAdvisorDetail(advisorId: number) {
   return useQuery<AdvisorProfile>({
-    queryKey: ['admin', 'advisor', advisorId],
+    queryKey: queryKeys.admin.advisors.detail(advisorId),
     queryFn: async () => {
       const response = await apiClient.get<AdvisorProfile>(`/admin/advisors/${advisorId}`);
       return response.data;
@@ -600,7 +605,7 @@ export function useAdminAdvisorDetail(advisorId: number) {
 
 export function useAdminAdvisorSenders(advisorId: number) {
   return useQuery<AdvisorSenderItem[]>({
-    queryKey: ['admin', 'advisor', advisorId, 'senders'],
+    queryKey: queryKeys.admin.advisors.senders(advisorId),
     queryFn: async () => {
       const response = await apiClient.get<AdvisorSenderItem[]>(
         `/admin/advisors/${advisorId}/senders`
@@ -620,9 +625,9 @@ export function useAdminUpdateAdvisor() {
       return response.data;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'advisor', variables.advisorId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.listBase() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.overview() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.detail(variables.advisorId) });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
@@ -644,8 +649,8 @@ export function useAdminCreateAdvisor() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.listBase() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.overview() });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
@@ -664,9 +669,9 @@ export function useAdminAssignSender() {
       return response.data;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'advisor', variables.advisorId, 'senders'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-advisors-overview'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-advisors'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.senders(variables.advisorId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.overview() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.advisors.listBase() });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));

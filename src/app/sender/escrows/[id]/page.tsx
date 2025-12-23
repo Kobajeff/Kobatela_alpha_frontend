@@ -34,6 +34,16 @@ export default function SenderEscrowDetailsPage() {
   const { showToast } = useToast();
   const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
   const proofReview = useProofReviewPolling(latestProofId, escrowId);
+  const polling = query.polling;
+  const banners = useMemo(
+    () =>
+      [
+        polling?.fundingActive ? 'Traitement PSP' : null,
+        polling?.milestoneActive ? 'Mise à jour en cours' : null,
+        polling?.payoutActive ? 'Traitement payout' : null
+      ].filter((label): label is string => Boolean(label)),
+    [polling?.fundingActive, polling?.milestoneActive, polling?.payoutActive]
+  );
 
   const markDelivered = useMarkDelivered(escrowId);
   const approve = useClientApprove(escrowId);
@@ -99,20 +109,10 @@ export default function SenderEscrowDetailsPage() {
   const loading =
     markDelivered.isPending || approve.isPending || reject.isPending || checkDeadline.isPending;
   const lastUpdatedAt = query.dataUpdatedAt ? new Date(query.dataUpdatedAt) : null;
-  const polling = query.polling;
   const hasProcessing = Boolean(
     polling?.fundingActive || polling?.milestoneActive || polling?.payoutActive
   );
   const refreshSummary = () => invalidateEscrowSummary(queryClient, escrowId);
-  const banners = useMemo(
-    () =>
-      [
-        polling?.fundingActive ? 'Traitement PSP' : null,
-        polling?.milestoneActive ? 'Mise à jour en cours' : null,
-        polling?.payoutActive ? 'Traitement payout' : null
-      ].filter((label): label is string => Boolean(label)),
-    [polling?.fundingActive, polling?.milestoneActive, polling?.payoutActive]
-  );
 
   const proofForm = (
     <div className="space-y-3 rounded-md border border-slate-100 bg-slate-50 p-4">
