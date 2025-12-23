@@ -36,4 +36,5 @@ export function afterPayout(
 export function invalidateEscrowSummary(queryClient: QueryClient, escrowId: string) {
   queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
   queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
+  queryClient.invalidateQueries({ queryKey: queryKeys.milestones.byEscrow(escrowId) });
 }

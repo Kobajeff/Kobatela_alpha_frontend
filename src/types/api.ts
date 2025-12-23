@@ -101,6 +101,13 @@ export type MilestoneStatus =
   | 'PAYING'
   | 'PAID';
 
+export type Milestone = {
+  id: string;
+  name: string;
+  status: MilestoneStatus;
+  due_date?: string;
+};
+
 export type Payment = {
   id: string;
   escrow_id: string;
@@ -112,12 +119,7 @@ export type Payment = {
 
 export type SenderEscrowSummary = {
   escrow: EscrowListItem;
-  milestones: Array<{
-    id: string;
-    name: string;
-    status: MilestoneStatus;
-    due_date?: string;
-  }>;
+  milestones: Milestone[];
   proofs: Proof[];
   payments: Payment[];
 };

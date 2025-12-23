@@ -2,6 +2,7 @@
 
 // Detail view for a single escrow including milestones, proofs, and payments.
 import type { ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
@@ -84,6 +85,7 @@ export function SenderEscrowDetails({
   forbiddenCode,
   proofForm
 }: SenderEscrowDetailsProps) {
+  const router = useRouter();
   const fundingComplete = isFundingTerminal(summary);
   const canTriggerFunding = Boolean(onStartFundingSession && !fundingComplete);
   const fundingButtonsDisabled =
@@ -190,8 +192,14 @@ export function SenderEscrowDetails({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <CardTitle>Jalons</CardTitle>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/sender/escrows/${summary.escrow.id}/milestones`)}
+          >
+            View all milestones
+          </Button>
         </CardHeader>
         <CardContent className="space-y-2">
           {summary.milestones.map((milestone) => (
