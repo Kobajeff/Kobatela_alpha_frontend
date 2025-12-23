@@ -126,6 +126,10 @@ export function normalizeApiError(err: unknown): NormalizedApiError {
     return { ...baseError, message: 'Accès non autorisé' };
   }
 
+  if (status === 404) {
+    return { ...baseError, message: 'Ressource introuvable' };
+  }
+
   if (status && status >= 500) {
     return { ...baseError, message: 'Une erreur est survenue côté serveur' };
   }
