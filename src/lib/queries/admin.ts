@@ -5,10 +5,10 @@ import type { Query } from '@tanstack/query-core';
 import { isAxiosError } from 'axios';
 import { apiClient, extractErrorMessage } from '../apiClient';
 import { isDemoMode } from '@/lib/config';
-import { demoAdminProofQueue, demoAdminStats, getDemoEscrowSummary } from '@/lib/demoData';
+import { demoAdminProofQueue, demoAdminStats, demoPayments, getDemoEscrowSummary } from '@/lib/demoData';
 import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
 import { queryKeys } from '@/lib/queryKeys';
-import { buildQueryString, getPaginatedTotal, normalizePaginatedItems } from './queryUtils';
+import { buildQueryString, getPaginatedTotal, normalizePaginatedItems, type QueryParams } from './queryUtils';
 import {
   fetchAdvisorsOverview,
   fetchAiProofSetting,
@@ -20,6 +20,7 @@ import {
   updateAiProofSetting
 } from '@/lib/adminApi';
 import { invalidateAdminDashboards, invalidateProofBundle } from '@/lib/invalidation';
+import { invalidateEscrowSummary } from '@/lib/queryInvalidation';
 import type {
   AdminDashboardStats,
   AdminAdvisorListItem,
@@ -32,6 +33,7 @@ import type {
   ApiKey,
   MilestoneCreatePayload,
   PaginatedResponse,
+  Payment,
   Proof,
   ProofStatus,
   ProofDecisionRequest,
@@ -157,6 +159,29 @@ async function fetchAdminPaymentsTotal() {
   }
 }
 
+export interface AdminPaymentsParams extends QueryParams {
+  limit?: number;
+  offset?: number;
+  escrow_id?: string;
+  status?: string;
+  payment_id?: string;
+  id?: string;
+}
+
+export type AdminPaymentsResponse = {
+  items: Payment[];
+  total: number;
+};
+
+async function fetchAdminPayments(params: AdminPaymentsParams) {
+  const query = buildQueryString(params);
+  const response = await apiClient.get(`/admin/payments?${query}`);
+  return {
+    items: normalizePaginatedItems<Payment>(response.data),
+    total: getPaginatedTotal<Payment>(response.data)
+  };
+}
+
 async function postProofDecision(proofId: string, payload: ProofDecisionRequest) {
   const response = await apiClient.post<ProofDecisionResponse>(
     `/proofs/${proofId}/decision`,
@@ -221,6 +246,69 @@ export function useAdminDashboardStatsComputed() {
           proofsDenied
         }
       };
+    }
+  });
+}
+
+export function useAdminPayments(
+  params: AdminPaymentsParams = {},
+  options?: {
+    enabled?: boolean;
+    refetchInterval?: (query: Query<AdminPaymentsResponse>) => number | false;
+  }
+) {
+  const { limit = 50, offset = 0, escrow_id, status, payment_id, id } = params;
+  const filters = useMemo(
+    () => ({ limit, offset, escrow_id, status, payment_id, id }),
+    [escrow_id, id, limit, offset, payment_id, status]
+  );
+
+  return useQuery<AdminPaymentsResponse>({
+    queryKey: queryKeys.payments.adminList(filters),
+    queryFn: async () => {
+      if (isDemoMode()) {
+        return new Promise<AdminPaymentsResponse>((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                items: demoPayments,
+                total: demoPayments.length
+              }),
+            200
+          );
+        });
+      }
+      return fetchAdminPayments(filters);
+    },
+    enabled: options?.enabled,
+    refetchInterval: options?.refetchInterval,
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 403 || statusCode === 404) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+}
+
+export function useExecutePayment() {
+  const queryClient = useQueryClient();
+  return useMutation<Payment, unknown, { paymentId: string }>({
+    mutationFn: async ({ paymentId }) => {
+      const response = await apiClient.post<Payment>(`/payments/execute/${paymentId}`);
+      return response.data;
+    },
+    retry: false,
+    onSuccess: (payment) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.adminListBase() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.byId(payment.id) });
+      invalidateAdminDashboards(queryClient);
+      if (payment?.escrow_id) {
+        invalidateEscrowSummary(queryClient, payment.escrow_id);
+      }
     }
   });
 }

@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (user) {
       if (user.role === 'sender') {
         router.replace(senderDashboardPath as Route);
-      } else if (user.role !== 'admin' && user.role !== 'both') {
+      } else if (user.role !== 'admin' && user.role !== 'both' && user.role !== 'support') {
         router.replace('/login');
       }
     }
@@ -47,7 +47,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (isUnauthorized || !user || (user.role !== 'admin' && user.role !== 'both')) {
+  if (
+    isUnauthorized ||
+    !user ||
+    (user.role !== 'admin' && user.role !== 'both' && user.role !== 'support')
+  ) {
     return null;
   }
 

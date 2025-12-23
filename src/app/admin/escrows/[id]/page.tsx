@@ -3,6 +3,8 @@
 // Admin view of a single escrow, showing milestones, proofs, and payments.
 import { useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import type { Route } from 'next';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
 import { useAdminEscrowSummary, useCreateMilestone } from '@/lib/queries/admin';
@@ -73,7 +75,7 @@ export default function AdminEscrowDetailPage() {
   const data = query.data;
   const escrow = data?.escrow;
   const milestones = data?.milestones ?? [];
-  const fullMilestones = useMemo(() => milestonesQuery.data ?? [], [milestonesQuery.data]);
+  const fullMilestones = milestonesQuery.data ?? [];
   const proofs = data?.proofs ?? [];
   const payments = data?.payments ?? [];
   const formatOptionalDate = (value?: string | Date | null) =>
@@ -82,6 +84,8 @@ export default function AdminEscrowDetailPage() {
   const listUpdatedAt = milestonesQuery.dataUpdatedAt ? new Date(milestonesQuery.dataUpdatedAt) : null;
   const refreshSummary = () => invalidateEscrowSummary(queryClient, escrowId);
   const refreshMilestones = () => milestonesQuery.refetch();
+  const paymentDetailPath = (paymentId: string) =>
+    ['', 'admin', 'payments', paymentId].join('/') as Route;
 
   const handleCreateMilestone = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -345,13 +349,21 @@ export default function AdminEscrowDetailPage() {
                 <p className="font-medium">{payment.amount ?? '—'} {payment.currency ?? ''}</p>
                 <p className="text-xs text-slate-500">{formatOptionalDate(payment.created_at)}</p>
               </div>
-              {(() => {
-                if (!payment.status) {
-                  return <Badge variant="neutral">—</Badge>;
-                }
-                const badge = mapPaymentStatusToBadge(payment.status);
-                return <Badge variant={badge.variant}>{badge.label}</Badge>;
-              })()}
+              <div className="flex items-center gap-3">
+                {(() => {
+                  if (!payment.status) {
+                    return <Badge variant="neutral">—</Badge>;
+                  }
+                  const badge = mapPaymentStatusToBadge(payment.status);
+                  return <Badge variant={badge.variant}>{badge.label}</Badge>;
+                })()}
+                <Link
+                  href={paymentDetailPath(payment.id)}
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Voir
+                </Link>
+              </div>
             </div>
           ))}
         </div>
