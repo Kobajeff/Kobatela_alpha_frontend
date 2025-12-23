@@ -29,6 +29,7 @@ export function Header() {
 
   const handleSwitchToSender = () => {
     setDemoRole('sender');
+    queryClient.clear();
     queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
     router.replace(senderDashboardPath as Route);
     showToast?.('Switched to demo sender view', 'info');
@@ -36,6 +37,7 @@ export function Header() {
 
   const handleSwitchToAdmin = () => {
     setDemoRole('admin');
+    queryClient.clear();
     queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
     router.replace(adminDashboardPath as Route);
     showToast?.('Switched to demo admin view', 'info');

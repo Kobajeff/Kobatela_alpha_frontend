@@ -3,6 +3,8 @@ import axios from 'axios';
 import type { ProofFileUploadResponse } from '@/types/api';
 import { normalizeApiError } from './apiError';
 import { getAuthToken } from './auth';
+import { getQueryClient } from './queryClient';
+import { resetSession } from './sessionReset';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
@@ -10,6 +12,8 @@ const API_BASE_URL =
 export const apiClient = axios.create({
   baseURL: API_BASE_URL
 });
+
+let isResettingSession = false;
 
 apiClient.interceptors.request.use((config) => {
   const token = getAuthToken();
@@ -19,6 +23,18 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = normalizeApiError(error).status;
+    if (status === 401 && !isResettingSession) {
+      isResettingSession = true;
+      resetSession(getQueryClient());
+    }
+    return Promise.reject(error);
+  }
+);
 
 export function extractErrorMessage(error: unknown): string {
   return normalizeApiError(error).message;
