@@ -2,7 +2,8 @@
 
 // Detail page for a specific escrow, exposing lifecycle actions.
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import type { Route } from 'next';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { SenderEscrowDetails } from '@/components/sender/SenderEscrowDetails';
 import { ProofForm } from '@/components/sender/ProofForm';
@@ -31,10 +32,17 @@ import { isFundingInProgress, isFundingTerminal } from '@/lib/escrowFunding';
 
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const escrowId = params?.id ?? '';
   const [fundingInProgress, setFundingInProgress] = useState(false);
   const [fundingStartedAt, setFundingStartedAt] = useState<number | null>(null);
   const [fundingElapsedMs, setFundingElapsedMs] = useState(0);
+  const [pspReturnMode, setPspReturnMode] = useState(false);
+  const [pspReturnStartedAt, setPspReturnStartedAt] = useState<number | null>(null);
+  const [pspReturnElapsedMs, setPspReturnElapsedMs] = useState(0);
+  const [pspReturnTimedOut, setPspReturnTimedOut] = useState(false);
   const query = useSenderEscrowSummary(
     escrowId,
     fundingInProgress ? { fundingInProgress: true } : undefined
@@ -69,12 +77,31 @@ export default function SenderEscrowDetailsPage() {
   const depositEscrow = useDepositEscrow(escrowId);
   const isFundingTerminalState = isFundingTerminal(query.data);
   const isFundingActiveState = isFundingInProgress(query.data) || fundingInProgress;
+  const PSP_RETURN_TIMEOUT_MS = 60_000;
+
+  useEffect(() => {
+    const hasReturnParam = searchParams.get('return_from_psp');
+    if (!hasReturnParam || pspReturnMode) return;
+
+    setPspReturnMode(true);
+    setPspReturnTimedOut(false);
+    setPspReturnStartedAt(Date.now());
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete('return_from_psp');
+    const nextUrl = nextParams.toString() ? `${pathname}?${nextParams}` : pathname;
+    router.replace(nextUrl as Route, { scroll: false });
+  }, [pathname, pspReturnMode, router, searchParams]);
 
   useEffect(() => {
     if (isFundingTerminalState) {
       setFundingInProgress(false);
       setFundingStartedAt(null);
       setFundingElapsedMs(0);
+      setPspReturnMode(false);
+      setPspReturnStartedAt(null);
+      setPspReturnElapsedMs(0);
+      setPspReturnTimedOut(false);
     }
   }, [isFundingTerminalState]);
 
@@ -95,6 +122,44 @@ export default function SenderEscrowDetailsPage() {
     const intervalId = setInterval(updateElapsed, 1000);
     return () => clearInterval(intervalId);
   }, [isFundingActiveState, fundingStartedAt]);
+
+  useEffect(() => {
+    if (!pspReturnMode) {
+      setPspReturnElapsedMs(0);
+      return;
+    }
+    if (!pspReturnStartedAt) return;
+    const updateElapsed = () => {
+      setPspReturnElapsedMs(Date.now() - pspReturnStartedAt);
+    };
+    updateElapsed();
+    const intervalId = setInterval(updateElapsed, 1000);
+    return () => clearInterval(intervalId);
+  }, [pspReturnMode, pspReturnStartedAt]);
+
+  useEffect(() => {
+    if (!pspReturnMode) return;
+    if (isFundingTerminalState) {
+      setPspReturnMode(false);
+      setPspReturnStartedAt(null);
+      setPspReturnElapsedMs(0);
+      setPspReturnTimedOut(false);
+      return;
+    }
+    const intervalId = setInterval(() => {
+      void query.refetch();
+    }, 2000);
+    return () => clearInterval(intervalId);
+  }, [isFundingTerminalState, pspReturnMode, query]);
+
+  useEffect(() => {
+    if (!pspReturnMode) return;
+    if (pspReturnElapsedMs < PSP_RETURN_TIMEOUT_MS) return;
+    setPspReturnMode(false);
+    setPspReturnStartedAt(null);
+    setPspReturnElapsedMs(0);
+    setPspReturnTimedOut(true);
+  }, [pspReturnElapsedMs, pspReturnMode]);
 
   const handleAction = async (action: () => Promise<unknown>, successMessage: string) => {
     setActionError(null);
@@ -264,11 +329,22 @@ export default function SenderEscrowDetailsPage() {
   return (
     <div className="space-y-4">
       {actionError && <p className="text-sm text-rose-600">{actionError}</p>}
+      {pspReturnMode && (
+        <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+          <span>Vérification du paiement…</span>
+        </div>
+      )}
       {banners.map((label) => (
         <div key={label} className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
           {label}
         </div>
       ))}
+      {pspReturnTimedOut && !isFundingTerminalState && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          Still processing — this can take a few minutes.
+        </div>
+      )}
       {polling?.timedOut && (
         <div className="flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
           <span>La mise à jour automatique a été suspendue. Rafraîchissez pour obtenir le dernier statut.</span>
