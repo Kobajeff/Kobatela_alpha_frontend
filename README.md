@@ -107,7 +107,8 @@ flag in `.env.local` and restart the dev server:
 NEXT_PUBLIC_DISABLE_PROVIDERS=true
 ```
 
-When enabled, the app renders without wrapping providers. Production behavior is unchanged.
+When enabled, the app skips the UI shell providers (toast + banners) but keeps React Query
+enabled. Production behavior is unchanged.
 
 ## Testing the local connection (Frontend ↔ Backend)
 
