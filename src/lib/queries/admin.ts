@@ -19,7 +19,7 @@ import {
   revokeAdminUserApiKey,
   updateAiProofSetting
 } from '@/lib/adminApi';
-import { afterProofDecision } from '@/lib/queryInvalidation';
+import { invalidateAdminDashboards, invalidateProofBundle } from '@/lib/invalidation';
 import type {
   AdminDashboardStats,
   AdminAdvisorListItem,
@@ -578,9 +578,15 @@ export function useAdminProofDecision() {
     },
     onSuccess: (data) => {
       if (data.escrow_id) {
-        afterProofDecision(queryClient, data.escrow_id);
+        invalidateProofBundle(queryClient, {
+          proofId: data.id,
+          escrowId: data.escrow_id,
+          viewer: 'admin'
+        });
+        invalidateAdminDashboards(queryClient);
         return;
       }
+      invalidateAdminDashboards(queryClient);
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.proofReviewQueueBase() });
       queryClient.invalidateQueries({
         predicate: (query) =>
