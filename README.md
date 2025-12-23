@@ -100,15 +100,27 @@ When demo mode is on:
 
 ## Provider isolation switch (dev only)
 
-If you need to isolate global providers to debug render loops in development, set the following
-flag in `.env.local` and restart the dev server:
+If you need to isolate global banners to debug render loops in development, set one or more
+flags in `.env.local` and restart the dev server. These flags are only respected in
+development and do not affect production behavior.
 
 ```
+# Legacy master switch for all banners (Demo + Connection)
 NEXT_PUBLIC_DISABLE_PROVIDERS=true
+
+# Fine-grained banner toggles
+NEXT_PUBLIC_DISABLE_CONNECTION_BANNER=true
+NEXT_PUBLIC_DISABLE_DEMO_BANNER=true
 ```
 
-When enabled, the app skips only the global banners (Demo + Connection) while keeping
-React Query and toast providers enabled. Production behavior is unchanged.
+### Banner test matrix
+
+| Scenario | Flags | Expected result |
+| --- | --- | --- |
+| Baseline | _(no flags)_ | Demo + Connection banners render. |
+| Disable connection only | `NEXT_PUBLIC_DISABLE_CONNECTION_BANNER=true` | Demo banner renders; connection banner hidden. |
+| Disable demo only | `NEXT_PUBLIC_DISABLE_DEMO_BANNER=true` | Connection banner renders; demo banner hidden. |
+| Disable both | `NEXT_PUBLIC_DISABLE_PROVIDERS=true` or both fine-grained flags | Both banners hidden; providers stay enabled. |
 
 ## Testing the local connection (Frontend ↔ Backend)
 
