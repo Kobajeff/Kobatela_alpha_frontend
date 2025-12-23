@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Query } from '@tanstack/query-core';
 import { isAxiosError } from 'axios';
 import { apiClient, extractErrorMessage } from '../apiClient';
+import { normalizeApiError } from '../apiError';
 import { isNoAdvisorAvailable } from '../errors';
 import { setAuthToken } from '../auth';
 import { resetSession } from '../sessionReset';
@@ -603,6 +604,34 @@ type ProofReviewPollingState = {
   errorMessage?: string | null;
 };
 
+type ProofLookupParams = {
+  proofId: string;
+  escrowId?: string;
+};
+
+const PROOF_POLLING_LIST_LIMIT = 100;
+
+function createProofStatusError(message: string, status: number) {
+  const error = new Error(message) as Error & { status?: number };
+  error.status = status;
+  return error;
+}
+
+async function fetchProofViaList({ proofId }: ProofLookupParams) {
+  const query = buildQueryString({
+    mine: true,
+    limit: PROOF_POLLING_LIST_LIMIT,
+    offset: 0
+  });
+  const response = await apiClient.get(`/proofs?${query}`);
+  const proofs = normalizePaginatedItems<Proof>(response.data);
+  const match = proofs.find((proof) => String(proof.id) === String(proofId));
+  if (!match) {
+    throw createProofStatusError('Preuve introuvable', 404);
+  }
+  return match;
+}
+
 export function useProofReviewPolling(proofId: string | null, escrowId: string) {
   const queryClient = useQueryClient();
   const [stopPolling, setStopPolling] = useState(false);
@@ -661,8 +690,7 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
           ai_checked_at: null
         };
       }
-      const response = await apiClient.get<Proof>(`/proofs/${proofId}`);
-      return response.data;
+      return fetchProofViaList({ proofId, escrowId });
     },
     enabled: Boolean(proofId) && !stopPolling,
     refetchInterval: (queryInstance) => {
@@ -676,8 +704,7 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
       )();
     },
     retry: (failureCount, error) => {
-      if (!isAxiosError(error)) return false;
-      const status = error.response?.status;
+      const status = normalizeApiError(error).status;
       if (status && status >= 500) {
         return failureCount < 3;
       }
@@ -686,12 +713,20 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
   });
 
   useEffect(() => {
-    if (!query.error || !isAxiosError(query.error)) return;
-    const status = query.error.response?.status;
+    if (!query.error) return;
+    const status = normalizeApiError(query.error).status;
     if (status && status >= 500) {
       setServerErrorMessage(
         "Le statut de la preuve ne peut pas être rafraîchi pour le moment. Réessayez plus tard."
       );
+      setStopPolling(true);
+    }
+    if (status === 404 || status === 410) {
+      setServerErrorMessage('Preuve introuvable.');
+      setStopPolling(true);
+    }
+    if (status === 403) {
+      setServerErrorMessage('Accès refusé.');
       setStopPolling(true);
     }
   }, [query.error]);
@@ -711,8 +746,7 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
 
   useEffect(() => {
     if (!proofId || !query.error || conflictRefetched) return;
-    if (!isAxiosError(query.error)) return;
-    const status = query.error.response?.status;
+    const status = normalizeApiError(query.error).status;
     if (status === 409) {
       setConflictRefetched(true);
       setStopPolling(true);
