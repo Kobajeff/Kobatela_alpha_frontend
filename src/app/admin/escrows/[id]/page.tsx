@@ -1,10 +1,12 @@
 'use client';
 
 // Admin view of a single escrow, showing milestones, proofs, and payments.
-import { useMemo } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { useAdminEscrowSummary } from '@/lib/queries/admin';
+import { normalizeApiError } from '@/lib/apiError';
+import { useAdminEscrowSummary, useCreateMilestone } from '@/lib/queries/admin';
+import { useEscrowMilestones } from '@/lib/queries/sender';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -21,12 +23,20 @@ import axios from 'axios';
 import { Button } from '@/components/ui/Button';
 import { invalidateEscrowSummary } from '@/lib/queryInvalidation';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function AdminEscrowDetailPage() {
   const params = useParams<{ id: string }>();
   const escrowId = params?.id ?? '';
   const query = useAdminEscrowSummary(escrowId);
+  const milestonesQuery = useEscrowMilestones(escrowId);
+  const createMilestone = useCreateMilestone(escrowId);
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [payloadJson, setPayloadJson] = useState('{\n\n}');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
   const polling = query.polling;
   const banners = useMemo(
     () =>
@@ -63,12 +73,56 @@ export default function AdminEscrowDetailPage() {
   const data = query.data;
   const escrow = data?.escrow;
   const milestones = data?.milestones ?? [];
+  const fullMilestones = useMemo(() => milestonesQuery.data ?? [], [milestonesQuery.data]);
   const proofs = data?.proofs ?? [];
   const payments = data?.payments ?? [];
   const formatOptionalDate = (value?: string | Date | null) =>
     value ? formatDateTime(value) : '—';
   const lastUpdatedAt = query.dataUpdatedAt ? new Date(query.dataUpdatedAt) : null;
+  const listUpdatedAt = milestonesQuery.dataUpdatedAt ? new Date(milestonesQuery.dataUpdatedAt) : null;
   const refreshSummary = () => invalidateEscrowSummary(queryClient, escrowId);
+  const refreshMilestones = () => milestonesQuery.refetch();
+
+  const handleCreateMilestone = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCreateError(null);
+    setCreateSuccess(null);
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(payloadJson);
+    } catch (_error) {
+      setCreateError('Le payload doit être un JSON valide.');
+      return;
+    }
+
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      setCreateError('Le payload doit être un objet JSON.');
+      return;
+    }
+
+    try {
+      await createMilestone.mutateAsync(payload as Record<string, unknown>);
+      setCreateSuccess('Milestone created');
+      showToast('Milestone created', 'success');
+      setShowCreateForm(false);
+      setPayloadJson('{\n\n}');
+    } catch (error) {
+      const normalized = normalizeApiError(error);
+      if (normalized.status === 409) {
+        setCreateError('Conflit : ce jalon est déjà créé ou l’escrow a avancé.');
+      } else if (normalized.status === 422) {
+        setCreateError(extractErrorMessage(error));
+      } else if (normalized.status === 403) {
+        setCreateError("Accès refusé : vous n'avez pas les droits pour créer un jalon.");
+      } else if (normalized.status === 404) {
+        setCreateError("Ressource introuvable : l'escrow n'existe pas.");
+      } else {
+        setCreateError(extractErrorMessage(error));
+      }
+      showToast(extractErrorMessage(error), 'error');
+    }
+  };
 
   if (!data) {
     return null;
@@ -138,6 +192,86 @@ export default function AdminEscrowDetailPage() {
         <h3 className="mb-3 text-lg font-semibold">Jalons</h3>
         <div className="space-y-2">
           {milestones.map((milestone) => (
+            <div key={milestone.id} className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2">
+              <div>
+                <p className="font-medium">{milestone.name ?? '—'}</p>
+                <p className="text-xs text-slate-500">Échéance : {milestone.due_date ?? '—'}</p>
+              </div>
+              {(() => {
+                if (!milestone.status) {
+                  return <Badge variant="neutral">—</Badge>;
+                }
+                const badge = mapMilestoneStatusToBadge(milestone.status);
+                return <Badge variant={badge.variant}>{badge.label}</Badge>;
+              })()}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Jalons (liste complète)</h3>
+            {listUpdatedAt && (
+              <p className="text-xs text-slate-500">Dernière mise à jour : {formatOptionalDate(listUpdatedAt)}</p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={refreshMilestones} disabled={milestonesQuery.isFetching}>
+              Rafraîchir la liste
+            </Button>
+            <Button size="sm" onClick={() => setShowCreateForm((prev) => !prev)}>
+              {showCreateForm ? 'Fermer' : 'Add milestone'}
+            </Button>
+          </div>
+        </div>
+
+        {createSuccess && (
+          <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            {createSuccess}
+          </div>
+        )}
+        {createError && (
+          <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
+            {createError}
+          </div>
+        )}
+
+        {showCreateForm && (
+          <form onSubmit={handleCreateMilestone} className="mt-4 space-y-3 rounded-md border border-slate-100 bg-slate-50 p-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Payload JSON (admin)</label>
+              <p className="text-xs text-slate-500">
+                Renseignez le JSON exact attendu par l&apos;API de création de jalon.
+              </p>
+              <textarea
+                className="mt-2 w-full rounded-md border border-slate-300 p-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                rows={6}
+                value={payloadJson}
+                onChange={(event) => setPayloadJson(event.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="submit" disabled={createMilestone.isPending}>
+                {createMilestone.isPending ? 'Création...' : 'Créer le jalon'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)} disabled={createMilestone.isPending}>
+                Annuler
+              </Button>
+            </div>
+          </form>
+        )}
+
+        <div className="mt-4 space-y-2">
+          {milestonesQuery.isLoading && <p className="text-sm text-slate-600">Chargement des jalons...</p>}
+          {milestonesQuery.isError && (
+            <ErrorAlert message={extractErrorMessage(milestonesQuery.error)} />
+          )}
+          {!milestonesQuery.isLoading && !milestonesQuery.isError && fullMilestones.length === 0 && (
+            <p className="text-sm text-slate-600">Aucun jalon enregistré.</p>
+          )}
+          {fullMilestones.map((milestone) => (
             <div key={milestone.id} className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2">
               <div>
                 <p className="font-medium">{milestone.name ?? '—'}</p>

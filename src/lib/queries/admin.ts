@@ -30,6 +30,7 @@ import type {
   AdvisorSenderItem,
   AdminEscrowSummary,
   ApiKey,
+  MilestoneCreatePayload,
   PaginatedResponse,
   Proof,
   ProofStatus,
@@ -546,6 +547,31 @@ export function useAdminEscrowSummary(
   };
 
   return { ...query, polling };
+}
+
+async function createMilestone(escrowId: string, payload: MilestoneCreatePayload) {
+  if (isDemoMode()) {
+    return new Promise<MilestoneCreatePayload>((resolve) => {
+      setTimeout(() => resolve(payload), 200);
+    });
+  }
+  const response = await apiClient.post(`/escrows/${escrowId}/milestones`, payload);
+  return response.data;
+}
+
+export function useCreateMilestone(escrowId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, MilestoneCreatePayload>({
+    mutationFn: (payload) => createMilestone(escrowId, payload),
+    retry: false,
+    onSettled: () => {
+      if (!escrowId) return;
+      queryClient.invalidateQueries({ queryKey: queryKeys.milestones.byEscrow(escrowId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
+      queryClient.invalidateQueries({ queryKey: queryKeys.escrows.byId(escrowId) });
+    }
+  });
 }
 
 export function useAdminProofDecision() {
