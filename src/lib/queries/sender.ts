@@ -526,6 +526,17 @@ export function useCreateFundingSession(escrowId: string) {
         viewer: 'sender',
         refetchSummary: true
       });
+    },
+    onError: (error) => {
+      if (!isAxiosError(error)) return;
+      const status = error.response?.status;
+      if (status === 409 || status === 422) {
+        invalidateEscrowBundle(queryClient, {
+          escrowId,
+          viewer: 'sender',
+          refetchSummary: true
+        });
+      }
     }
   });
 }
@@ -572,6 +583,17 @@ export function useDepositEscrow(escrowId: string) {
         viewer: 'sender',
         refetchSummary: true
       });
+    },
+    onError: (error) => {
+      if (!isAxiosError(error)) return;
+      const status = error.response?.status;
+      if (status === 409 || status === 422) {
+        invalidateEscrowBundle(queryClient, {
+          escrowId,
+          viewer: 'sender',
+          refetchSummary: true
+        });
+      }
     }
   });
 }

@@ -27,11 +27,14 @@ import { invalidateEscrowBundle } from '@/lib/invalidation';
 import { useQueryClient } from '@tanstack/react-query';
 import { normalizeApiError } from '@/lib/apiError';
 import { isDirectDepositEnabled } from '@/lib/config';
+import { isFundingInProgress, isFundingTerminal } from '@/lib/escrowFunding';
 
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
   const escrowId = params?.id ?? '';
   const [fundingInProgress, setFundingInProgress] = useState(false);
+  const [fundingStartedAt, setFundingStartedAt] = useState<number | null>(null);
+  const [fundingElapsedMs, setFundingElapsedMs] = useState(0);
   const query = useSenderEscrowSummary(
     escrowId,
     fundingInProgress ? { fundingInProgress: true } : undefined
@@ -64,14 +67,34 @@ export default function SenderEscrowDetailsPage() {
   const checkDeadline = useCheckDeadline(escrowId);
   const createFundingSession = useCreateFundingSession(escrowId);
   const depositEscrow = useDepositEscrow(escrowId);
-  const escrowStatus = query.data?.escrow?.status?.toUpperCase();
+  const isFundingTerminalState = isFundingTerminal(query.data);
+  const isFundingActiveState = isFundingInProgress(query.data) || fundingInProgress;
 
   useEffect(() => {
-    const terminalStatuses = ['FUNDED', 'RELEASABLE', 'RELEASED', 'REFUNDED', 'CANCELLED'];
-    if (escrowStatus && terminalStatuses.includes(escrowStatus)) {
+    if (isFundingTerminalState) {
       setFundingInProgress(false);
+      setFundingStartedAt(null);
+      setFundingElapsedMs(0);
     }
-  }, [escrowStatus]);
+  }, [isFundingTerminalState]);
+
+  useEffect(() => {
+    if (!isFundingActiveState) return;
+    setFundingStartedAt((prev) => prev ?? Date.now());
+  }, [isFundingActiveState]);
+
+  useEffect(() => {
+    if (!isFundingActiveState || !fundingStartedAt) {
+      setFundingElapsedMs(0);
+      return;
+    }
+    const updateElapsed = () => {
+      setFundingElapsedMs(Date.now() - fundingStartedAt);
+    };
+    updateElapsed();
+    const intervalId = setInterval(updateElapsed, 1000);
+    return () => clearInterval(intervalId);
+  }, [isFundingActiveState, fundingStartedAt]);
 
   const handleAction = async (action: () => Promise<unknown>, successMessage: string) => {
     setActionError(null);
@@ -110,10 +133,10 @@ export default function SenderEscrowDetailsPage() {
       return "Escrow introuvable. Vérifiez l'identifiant.";
     }
     if (normalized.status === 409) {
-      return 'Action déjà traitée. Le statut sera rafraîchi.';
+      return 'Already processed / state advanced. The status will refresh.';
     }
     if (normalized.status === 422) {
-      return 'Données invalides ou séquence non permise.';
+      return extractErrorMessage(error);
     }
     if (normalized.status === 401) {
       return 'Votre session a expiré. Merci de vous reconnecter.';
@@ -140,6 +163,7 @@ export default function SenderEscrowDetailsPage() {
     setDepositError(null);
     setFundingNote(null);
     setFundingInProgress(true);
+    setFundingStartedAt(Date.now());
     try {
       await createFundingSession.mutateAsync();
       showToast('Session PSP créée. Suivez les instructions de paiement.', 'success');
@@ -159,6 +183,7 @@ export default function SenderEscrowDetailsPage() {
     setFundingError(null);
     setFundingNote(null);
     setFundingInProgress(true);
+    setFundingStartedAt(Date.now());
     try {
       const idempotencyKey = generateIdempotencyKey();
       await depositEscrow.mutateAsync({ idempotencyKey });
@@ -256,7 +281,10 @@ export default function SenderEscrowDetailsPage() {
         summary={data}
         loading={loading}
         processing={hasProcessing}
-        fundingProcessing={Boolean(polling?.fundingActive || fundingInProgress)}
+        fundingProcessing={isFundingActiveState}
+        fundingElapsedMs={fundingElapsedMs}
+        fundingRefreshPending={query.isFetching}
+        onFundingRefresh={!isFundingTerminalState ? refreshSummary : undefined}
         fundingSessionPending={createFundingSession.isPending}
         depositPending={depositEscrow.isPending}
         fundingError={fundingError}

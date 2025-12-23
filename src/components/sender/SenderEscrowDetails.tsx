@@ -5,9 +5,11 @@ import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
+import { FundingStatusBanner } from '@/components/sender/FundingStatusBanner';
 import { ForbiddenBanner } from '@/components/shared/ForbiddenBanner';
 import { formatDateTime } from '@/lib/format';
 import type { SenderEscrowSummary } from '@/types/api';
+import { isFundingTerminal } from '@/lib/escrowFunding';
 import { Badge } from '@/components/ui/Badge';
 import {
   mapAiRiskToBadge,
@@ -28,6 +30,9 @@ interface SenderEscrowDetailsProps {
   fundingSessionPending?: boolean;
   depositPending?: boolean;
   fundingProcessing?: boolean;
+  fundingElapsedMs?: number;
+  fundingRefreshPending?: boolean;
+  onFundingRefresh?: () => void;
   fundingError?: string | null;
   depositError?: string | null;
   fundingNote?: string | null;
@@ -55,6 +60,9 @@ export function SenderEscrowDetails({
   fundingSessionPending,
   depositPending,
   fundingProcessing,
+  fundingElapsedMs = 0,
+  fundingRefreshPending,
+  onFundingRefresh,
   fundingError,
   depositError,
   fundingNote,
@@ -70,11 +78,7 @@ export function SenderEscrowDetails({
   forbiddenCode,
   proofForm
 }: SenderEscrowDetailsProps) {
-  const escrowStatus = summary.escrow?.status?.toUpperCase();
-  const fundingComplete = Boolean(
-    escrowStatus &&
-      ['FUNDED', 'RELEASABLE', 'RELEASED', 'REFUNDED', 'CANCELLED'].includes(escrowStatus)
-  );
+  const fundingComplete = isFundingTerminal(summary);
   const canTriggerFunding = Boolean(onStartFundingSession && !fundingComplete);
   const fundingButtonsDisabled =
     Boolean(loading || processing || fundingSessionPending || depositPending);
@@ -134,11 +138,13 @@ export function SenderEscrowDetails({
               return <Badge variant={badge.variant}>{badge.label}</Badge>;
             })()}
           </div>
-          {fundingProcessing && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              Paiement en cours. Nous attendons la confirmation PSP.
-            </div>
-          )}
+          <FundingStatusBanner
+            isActive={Boolean(fundingProcessing)}
+            elapsedMs={fundingElapsedMs}
+            lastUpdatedAt={lastUpdatedAt}
+            isFetching={fundingRefreshPending}
+            onRefresh={onFundingRefresh}
+          />
           {fundingNote && (
             <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
               {fundingNote}
