@@ -28,6 +28,8 @@ import type {
   EscrowListItem,
   AuthLoginResponse,
   AuthUser,
+  Milestone,
+  MilestoneStatus,
   Payment,
   Proof,
   ProofStatus,
@@ -40,6 +42,7 @@ import { buildQueryString, normalizePaginatedItems } from './queryUtils';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
 const PENDING_PROOF_STATUSES = new Set(['PENDING', 'PENDING_REVIEW']);
+const ACTIVE_MILESTONE_STATUSES = new Set<MilestoneStatus>(['PENDING_REVIEW', 'PAYING']);
 
 function filterProofsByStatus(proofs: Proof[], status: ProofStatus) {
   const normalizedStatus = status.toUpperCase();
@@ -458,6 +461,125 @@ export function useSenderEscrowSummary(
   };
 
   return { ...query, polling };
+}
+
+async function listEscrowMilestones(escrowId: string) {
+  if (isDemoMode()) {
+    const summary = getDemoEscrowSummary(escrowId);
+    return new Promise<Milestone[]>((resolve, reject) => {
+      setTimeout(() => {
+        if (!summary) {
+          reject(new Error('Escrow not found in demo data'));
+          return;
+        }
+        resolve(summary.milestones ?? []);
+      }, 200);
+    });
+  }
+  const response = await apiClient.get<Milestone[]>(`/escrows/${escrowId}/milestones`);
+  return response.data;
+}
+
+async function getMilestone(milestoneId: string) {
+  if (isDemoMode()) {
+    const milestone = demoEscrows
+      .map((escrow) => getDemoEscrowSummary(escrow.id))
+      .flatMap((summary) => summary?.milestones ?? [])
+      .find((entry) => entry.id === milestoneId);
+    return new Promise<Milestone>((resolve, reject) => {
+      setTimeout(() => {
+        if (!milestone) {
+          reject(new Error('Milestone not found in demo data'));
+          return;
+        }
+        resolve(milestone);
+      }, 200);
+    });
+  }
+  const response = await apiClient.get<Milestone>(`/escrows/milestones/${milestoneId}`);
+  return response.data;
+}
+
+function isMilestoneInProgress(status?: MilestoneStatus | null) {
+  if (!status) return false;
+  return ACTIVE_MILESTONE_STATUSES.has(String(status).toUpperCase() as MilestoneStatus);
+}
+
+export function useEscrowMilestones(escrowId: string) {
+  const startTimeRef = useRef<number | null>(null);
+  const refetchHandledRef = useRef(false);
+  const query = useQuery<Milestone[]>({
+    queryKey: queryKeys.milestones.byEscrow(escrowId),
+    queryFn: () => listEscrowMilestones(escrowId),
+    enabled: Boolean(escrowId),
+    refetchInterval: (queryInstance) => {
+      if (!escrowId) return false;
+      const milestones = queryInstance.state.data ?? [];
+      const shouldPoll = milestones.some((milestone) =>
+        isMilestoneInProgress(milestone.status)
+      );
+      if (!shouldPoll) {
+        startTimeRef.current = null;
+        return false;
+      }
+      const startTime = startTimeRef.current ?? Date.now();
+      startTimeRef.current = startTime;
+      return makeRefetchInterval(
+        pollingProfiles.milestoneProgression,
+        () => Date.now() - startTime,
+        () => ({ milestones })
+      )();
+    },
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 403 || status === 404 || status === 410 || status === 409 || status === 422) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+
+  useEffect(() => {
+    if (!query.error || refetchHandledRef.current) return;
+    const status = normalizeApiError(query.error).status;
+    if (status === 409 || status === 422) {
+      refetchHandledRef.current = true;
+      query.refetch();
+    }
+  }, [query, query.error]);
+
+  return query;
+}
+
+export function useMilestoneDetail(milestoneId: string) {
+  const refetchHandledRef = useRef(false);
+  const query = useQuery<Milestone>({
+    queryKey: queryKeys.milestones.byId(milestoneId),
+    queryFn: () => getMilestone(milestoneId),
+    enabled: Boolean(milestoneId),
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 403 || status === 404 || status === 410 || status === 409 || status === 422) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+
+  useEffect(() => {
+    if (!query.error || refetchHandledRef.current) return;
+    const status = normalizeApiError(query.error).status;
+    if (status === 409 || status === 422) {
+      refetchHandledRef.current = true;
+      query.refetch();
+    }
+  }, [query, query.error]);
+
+  return query;
 }
 
 function useEscrowAction(
