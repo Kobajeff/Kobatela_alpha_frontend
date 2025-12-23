@@ -5,10 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Query } from '@tanstack/query-core';
 import { isAxiosError } from 'axios';
-import { useRouter } from 'next/navigation';
-import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClient';
+import { apiClient, extractErrorMessage } from '../apiClient';
 import { isNoAdvisorAvailable } from '../errors';
-import { clearAuthToken, setAuthToken } from '../auth';
+import { setAuthToken } from '../auth';
+import { resetSession } from '../sessionReset';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import { invalidateEscrowBundle, invalidateProofBundle } from '@/lib/invalidation';
 import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
@@ -165,13 +165,6 @@ export function useAuthMe() {
       return true;
     }
   });
-
-  useEffect(() => {
-    if (query.error && isUnauthorizedError(query.error)) {
-      clearAuthToken();
-      queryClient.clear();
-    }
-  }, [query.error, queryClient]);
 
   return query;
 }
@@ -656,14 +649,9 @@ export function useCreateProof() {
 
 export function useLogout() {
   const queryClient = useQueryClient();
-  const router = useRouter();
   return useMutation({
     mutationFn: async () => {
-      clearAuthToken();
-    },
-    onSuccess: () => {
-      queryClient.clear();
-      router.replace('/login');
+      resetSession(queryClient, { redirectTo: '/login' });
     }
   });
 }
