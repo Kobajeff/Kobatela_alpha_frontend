@@ -9,6 +9,7 @@ import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClien
 import { isNoAdvisorAvailable } from '../errors';
 import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
+import { afterProofUpload } from '@/lib/queryInvalidation';
 import {
   demoEscrows,
   demoAdvisorProfile,
@@ -347,8 +348,7 @@ export function useCreateProof() {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['escrowSummary', data.escrow_id] });
-      queryClient.invalidateQueries({ queryKey: ['senderDashboard'] });
+      afterProofUpload(queryClient, data.escrow_id);
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
