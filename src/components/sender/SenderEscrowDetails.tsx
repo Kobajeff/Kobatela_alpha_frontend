@@ -24,6 +24,8 @@ interface SenderEscrowDetailsProps {
   onReject: () => void;
   onCheckDeadline: () => void;
   loading?: boolean;
+  processing?: boolean;
+  lastUpdatedAt?: string | Date | null;
   forbidden?: boolean;
   forbiddenTitle?: string;
   forbiddenSubtitle?: string;
@@ -38,6 +40,8 @@ export function SenderEscrowDetails({
   onMarkDelivered,
   onReject,
   loading,
+  processing,
+  lastUpdatedAt,
   forbidden = false,
   forbiddenTitle,
   forbiddenSubtitle,
@@ -59,16 +63,16 @@ export function SenderEscrowDetails({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={onMarkDelivered} disabled={loading || forbidden}>
+            <Button onClick={onMarkDelivered} disabled={loading || forbidden || processing}>
               Marquer livré
             </Button>
-            <Button variant="secondary" onClick={onApprove} disabled={loading}>
+            <Button variant="secondary" onClick={onApprove} disabled={loading || processing}>
               Approuver
             </Button>
-            <Button variant="danger" onClick={onReject} disabled={loading || forbidden}>
+            <Button variant="danger" onClick={onReject} disabled={loading || forbidden || processing}>
               Rejeter
             </Button>
-            <Button variant="outline" onClick={onCheckDeadline} disabled={loading || forbidden}>
+            <Button variant="outline" onClick={onCheckDeadline} disabled={loading || forbidden || processing}>
               Vérifier l'échéance
             </Button>
           </div>
@@ -81,6 +85,9 @@ export function SenderEscrowDetails({
             Montant : {summary.escrow.amount} {summary.escrow.currency}
           </p>
           <p className="text-sm text-slate-500">Créé le {formatDateTime(summary.escrow.created_at)}</p>
+          {lastUpdatedAt && (
+            <p className="text-xs text-slate-500">Last updated : {formatDateTime(lastUpdatedAt)}</p>
+          )}
         </CardContent>
       </Card>
 

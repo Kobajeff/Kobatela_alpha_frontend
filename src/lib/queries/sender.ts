@@ -1,8 +1,9 @@
 "use client";
 
 // React Query hooks encapsulating sender-specific API calls.
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Query } from '@tanstack/query-core';
 import { isAxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 import { apiClient, extractErrorMessage, isUnauthorizedError } from '../apiClient';
@@ -10,6 +11,7 @@ import { isNoAdvisorAvailable } from '../errors';
 import { clearAuthToken, setAuthToken } from '../auth';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import { afterProofUpload } from '@/lib/queryInvalidation';
+import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
 import {
   demoEscrows,
   demoAdvisorProfile,
@@ -36,6 +38,7 @@ import {
   createQueryKey,
   normalizePaginatedItems
 } from './queryUtils';
+import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
 const PENDING_PROOF_STATUSES = new Set(['PENDING', 'PENDING_REVIEW']);
 
@@ -263,8 +266,80 @@ export function useSenderEscrows(params: { status?: string; limit?: number; offs
   });
 }
 
-export function useSenderEscrowSummary(escrowId: string) {
-  return useQuery<SenderEscrowSummary>({
+type SenderEscrowSummaryPollingState = {
+  fundingActive: boolean;
+  milestoneActive: boolean;
+  payoutActive: boolean;
+  timedOut: boolean;
+  blocked: boolean;
+};
+
+export function useSenderEscrowSummary(
+  escrowId: string,
+  options?: { fundingInProgress?: boolean }
+) {
+  const [pollingTimeouts, setPollingTimeouts] = useState<Record<string, boolean>>({
+    [pollingProfiles.fundingEscrow.name]: false,
+    [pollingProfiles.milestoneProgression.name]: false,
+    [pollingProfiles.payoutStatus.name]: false
+  });
+  const pollingTimeoutsRef = useRef(pollingTimeouts);
+  const [pollingBlocked, setPollingBlocked] = useState(false);
+  const pollingBlockedRef = useRef(pollingBlocked);
+  const startTimesRef = useRef<Record<string, number>>({});
+  const timeoutIdsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const fundingInProgress = options?.fundingInProgress;
+
+  useEffect(() => {
+    pollingTimeoutsRef.current = pollingTimeouts;
+  }, [pollingTimeouts]);
+
+  useEffect(() => {
+    pollingBlockedRef.current = pollingBlocked;
+  }, [pollingBlocked]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(timeoutIdsRef.current).forEach((timeoutId) => clearTimeout(timeoutId));
+      timeoutIdsRef.current = {};
+    };
+  }, []);
+
+  const refetchInterval = useCallback(
+    (query: Query<SenderEscrowSummary>) => {
+      if (!escrowId || pollingBlockedRef.current) return false;
+
+      const summary = query.state.data as SenderEscrowSummary | undefined;
+      const flags = getEscrowSummaryPollingFlags(summary, { fundingInProgress });
+      const activeProfiles = [
+        flags.fundingActive ? pollingProfiles.fundingEscrow : null,
+        flags.milestoneActive ? pollingProfiles.milestoneProgression : null,
+        flags.payoutActive ? pollingProfiles.payoutStatus : null
+      ].filter(Boolean) as Array<(typeof pollingProfiles)[keyof typeof pollingProfiles]>;
+
+      if (activeProfiles.length === 0) return false;
+
+      const intervals = activeProfiles
+        .map((profile) => {
+          if (pollingTimeoutsRef.current[profile.name]) return false;
+          const startTime = startTimesRef.current[profile.name] ?? Date.now();
+          startTimesRef.current[profile.name] = startTime;
+          return makeRefetchInterval(
+            profile,
+            () => Date.now() - startTimesRef.current[profile.name],
+            () => summary
+          )();
+        })
+        .filter((value): value is number => typeof value === 'number');
+
+      if (intervals.length === 0) return false;
+
+      return Math.min(...intervals);
+    },
+    [escrowId, fundingInProgress]
+  );
+
+  const query = useQuery<SenderEscrowSummary>({
     queryKey: ['escrowSummary', escrowId],
     queryFn: async () => {
       if (isDemoMode()) {
@@ -279,8 +354,80 @@ export function useSenderEscrowSummary(escrowId: string) {
       const response = await apiClient.get<SenderEscrowSummary>(`/escrows/${escrowId}/summary`);
       return response.data;
     },
-    enabled: Boolean(escrowId)
+    enabled: Boolean(escrowId),
+    refetchInterval,
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 403 || status === 404 || status === 410) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
   });
+
+  const pollingFlags = useMemo(
+    () => getEscrowSummaryPollingFlags(query.data, { fundingInProgress }),
+    [query.data, fundingInProgress]
+  );
+
+  useEffect(() => {
+    const status = isAxiosError(query.error) ? query.error.response?.status : null;
+    if (status === 403 || status === 404 || status === 410) {
+      setPollingBlocked(true);
+    } else {
+      setPollingBlocked(false);
+    }
+  }, [query.error]);
+
+  useEffect(() => {
+    const profiles = [
+      { profile: pollingProfiles.fundingEscrow, active: pollingFlags.fundingActive },
+      { profile: pollingProfiles.milestoneProgression, active: pollingFlags.milestoneActive },
+      { profile: pollingProfiles.payoutStatus, active: pollingFlags.payoutActive }
+    ];
+
+    profiles.forEach(({ profile, active }) => {
+      if (!active || pollingBlocked) {
+        if (timeoutIdsRef.current[profile.name]) {
+          clearTimeout(timeoutIdsRef.current[profile.name]);
+          delete timeoutIdsRef.current[profile.name];
+        }
+        if (startTimesRef.current[profile.name]) {
+          delete startTimesRef.current[profile.name];
+        }
+        if (pollingTimeoutsRef.current[profile.name]) {
+          setPollingTimeouts((prev) =>
+            prev[profile.name]
+              ? { ...prev, [profile.name]: false }
+              : prev
+          );
+        }
+        return;
+      }
+
+      if (!startTimesRef.current[profile.name]) {
+        startTimesRef.current[profile.name] = Date.now();
+      }
+
+      if (!timeoutIdsRef.current[profile.name]) {
+        timeoutIdsRef.current[profile.name] = setTimeout(() => {
+          setPollingTimeouts((prev) => ({ ...prev, [profile.name]: true }));
+        }, profile.maxDurationMs);
+      }
+    });
+  }, [pollingBlocked, pollingFlags.fundingActive, pollingFlags.milestoneActive, pollingFlags.payoutActive]);
+
+  const polling: SenderEscrowSummaryPollingState = {
+    fundingActive: pollingFlags.fundingActive,
+    milestoneActive: pollingFlags.milestoneActive,
+    payoutActive: pollingFlags.payoutActive,
+    timedOut: Object.values(pollingTimeouts).some(Boolean),
+    blocked: pollingBlocked
+  };
+
+  return { ...query, polling };
 }
 
 function useEscrowAction(

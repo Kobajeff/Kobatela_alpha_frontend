@@ -1,6 +1,7 @@
 'use client';
 
 // Admin view of a single escrow, showing milestones, proofs, and payments.
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { useAdminEscrowSummary } from '@/lib/queries/admin';
@@ -17,20 +18,28 @@ import {
   mapProofStatusToBadge
 } from '@/lib/uiMappings';
 import axios from 'axios';
+import { Button } from '@/components/ui/Button';
+import { invalidateEscrowSummary } from '@/lib/queryInvalidation';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function AdminEscrowDetailPage() {
   const params = useParams<{ id: string }>();
   const escrowId = params?.id ?? '';
   const query = useAdminEscrowSummary(escrowId);
+  const queryClient = useQueryClient();
 
   if (query.isLoading) {
     return <LoadingState label="Chargement du détail escrow..." />;
   }
 
   if (query.isError) {
+    const status = axios.isAxiosError(query.error) ? query.error.response?.status : null;
     const scopeMessage = (() => {
-      if (axios.isAxiosError(query.error) && query.error.response?.status === 403) {
+      if (status === 403) {
         return 'Accès refusé : votre compte ne dispose pas du scope requis pour consulter ce résumé.';
+      }
+      if (status === 404 || status === 410) {
+        return 'Ressource indisponible : cet escrow est introuvable ou archivé.';
       }
       return null;
     })();
@@ -48,6 +57,18 @@ export default function AdminEscrowDetailPage() {
   const payments = data?.payments ?? [];
   const formatOptionalDate = (value?: string | Date | null) =>
     value ? formatDateTime(value) : '—';
+  const lastUpdatedAt = query.dataUpdatedAt ? new Date(query.dataUpdatedAt) : null;
+  const polling = query.polling;
+  const refreshSummary = () => invalidateEscrowSummary(queryClient, escrowId);
+  const banners = useMemo(
+    () =>
+      [
+        polling?.fundingActive ? 'Traitement PSP' : null,
+        polling?.milestoneActive ? 'Mise à jour en cours' : null,
+        polling?.payoutActive ? 'Traitement payout' : null
+      ].filter((label): label is string => Boolean(label)),
+    [polling?.fundingActive, polling?.milestoneActive, polling?.payoutActive]
+  );
 
   if (!data) {
     return null;
@@ -55,6 +76,19 @@ export default function AdminEscrowDetailPage() {
 
   return (
     <div className="space-y-6">
+      {banners.map((label) => (
+        <div key={label} className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          {label}
+        </div>
+      ))}
+      {polling?.timedOut && (
+        <div className="flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
+          <span>La mise à jour automatique a été suspendue. Rafraîchissez pour obtenir le dernier statut.</span>
+          <Button variant="outline" onClick={refreshSummary}>
+            Refresh
+          </Button>
+        </div>
+      )}
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -70,7 +104,10 @@ export default function AdminEscrowDetailPage() {
               })()}
             </div>
           </div>
-          <p className="text-sm text-slate-500">Créé le {formatOptionalDate(escrow?.created_at)}</p>
+          <div className="text-right text-sm text-slate-500">
+            <p>Créé le {formatOptionalDate(escrow?.created_at)}</p>
+            {lastUpdatedAt && <p>Last updated : {formatOptionalDate(lastUpdatedAt)}</p>}
+          </div>
         </div>
         <p className="mt-2 text-slate-700">
           Montant : {escrow?.amount ?? '—'} {escrow?.currency ?? ''}
