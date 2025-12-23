@@ -26,6 +26,8 @@ interface SenderEscrowDetailsProps {
   loading?: boolean;
   processing?: boolean;
   lastUpdatedAt?: string | Date | null;
+  proofReviewActive?: boolean;
+  proofReviewError?: string | null;
   forbidden?: boolean;
   forbiddenTitle?: string;
   forbiddenSubtitle?: string;
@@ -42,6 +44,8 @@ export function SenderEscrowDetails({
   loading,
   processing,
   lastUpdatedAt,
+  proofReviewActive,
+  proofReviewError,
   forbidden = false,
   forbiddenTitle,
   forbiddenSubtitle,
@@ -119,6 +123,16 @@ export function SenderEscrowDetails({
           <CardTitle>Preuves</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
+          {proofReviewActive && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Analyse en cours
+            </div>
+          )}
+          {proofReviewError && (
+            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {proofReviewError}
+            </div>
+          )}
           {summary.proofs.length === 0 && <p className="text-slate-600">Aucune preuve pour le moment.</p>}
           {summary.proofs.map((proof) => (
             <div key={proof.id} className="rounded-md border border-slate-100 px-3 py-2">

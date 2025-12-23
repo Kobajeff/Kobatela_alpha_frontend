@@ -12,6 +12,7 @@ import {
   useClientApprove,
   useClientReject,
   useMarkDelivered,
+  useProofReviewPolling,
   useSenderEscrowSummary
 } from '@/lib/queries/sender';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -29,8 +30,10 @@ export default function SenderEscrowDetailsPage() {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('');
+  const [latestProofId, setLatestProofId] = useState<string | null>(null);
   const { showToast } = useToast();
   const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
+  const proofReview = useProofReviewPolling(latestProofId, escrowId);
 
   const markDelivered = useMarkDelivered(escrowId);
   const approve = useClientApprove(escrowId);
@@ -130,7 +133,11 @@ export default function SenderEscrowDetailsPage() {
           </select>
         </div>
       )}
-      <ProofForm escrowId={escrowId} milestoneId={selectedMilestoneId || undefined} />
+      <ProofForm
+        escrowId={escrowId}
+        milestoneId={selectedMilestoneId || undefined}
+        onProofCreated={setLatestProofId}
+      />
     </div>
   );
 
@@ -155,6 +162,8 @@ export default function SenderEscrowDetailsPage() {
         loading={loading}
         processing={hasProcessing}
         lastUpdatedAt={lastUpdatedAt}
+        proofReviewActive={proofReview.polling.active}
+        proofReviewError={proofReview.polling.errorMessage ?? null}
         onMarkDelivered={handleMarkDelivered}
         onApprove={handleApprove}
         onReject={handleReject}
