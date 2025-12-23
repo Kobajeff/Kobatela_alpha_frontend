@@ -98,6 +98,17 @@ When demo mode is on:
 - Sample data lives in `src/lib/demoData.ts`.
 - You can switch between demo sender and demo admin views from the header.
 
+## Provider isolation switch (dev only)
+
+If you need to isolate global providers to debug render loops in development, set the following
+flag in `.env.local` and restart the dev server:
+
+```
+NEXT_PUBLIC_DISABLE_PROVIDERS=true
+```
+
+When enabled, the app renders without wrapping providers. Production behavior is unchanged.
+
 ## Testing the local connection (Frontend ↔ Backend)
 
 Follow these steps to run the frontend against a locally running FastAPI backend.
