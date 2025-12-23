@@ -5,10 +5,11 @@ import { useEffect } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
-import { isUnauthorizedError } from '@/lib/apiClient';
+import { extractErrorMessage, isUnauthorizedError } from '@/lib/apiClient';
 import { useAuthMe } from '@/lib/queries/sender';
 import { LoadingState } from '@/components/common/LoadingState';
 import { AuthUser } from '@/types/api';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
 
@@ -19,10 +20,10 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
   const isUnauthorized = isError && isUnauthorizedError(error);
 
   useEffect(() => {
-    if (isUnauthorized || (isError && !isUnauthorized)) {
+    if (isUnauthorized) {
       router.replace('/login');
     }
-  }, [isError, isUnauthorized, router]);
+  }, [isUnauthorized, router]);
 
   useEffect(() => {
     if (user) {
@@ -36,6 +37,14 @@ export default function SenderLayout({ children }: { children: React.ReactNode }
 
   if (isLoading) {
     return <LoadingState label="Chargement de votre espace expéditeur..." />;
+  }
+
+  if (isError && !isUnauthorized) {
+    return (
+      <div className="p-4">
+        <ErrorAlert message={extractErrorMessage(error)} />
+      </div>
+    );
   }
 
   if (isUnauthorized || !user || (user.role !== 'sender' && user.role !== 'both')) {

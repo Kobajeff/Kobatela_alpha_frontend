@@ -7,14 +7,17 @@ import { useRouter } from 'next/navigation';
 import { getAuthToken } from '@/lib/auth';
 import { useAuthMe } from '@/lib/queries/sender';
 import { AuthUser } from '@/types/api';
+import { extractErrorMessage, isUnauthorizedError } from '@/lib/apiClient';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
 const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
 
 export default function HomePage() {
   const router = useRouter();
-  const { data, isLoading, isError } = useAuthMe();
+  const { data, isLoading, isError, error } = useAuthMe();
   const user = data as AuthUser | undefined;
+  const isUnauthorized = isError && isUnauthorizedError(error);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -27,14 +30,22 @@ export default function HomePage() {
     const token = getAuthToken();
     if (!token) return;
 
-    if (user?.role === 'admin') {
+    if (isUnauthorized) {
+      router.replace('/login');
+    } else if (user?.role === 'admin') {
       router.replace(adminDashboardPath as Route);
     } else if (user?.role) {
       router.replace(senderDashboardPath as Route);
-    } else if (isError) {
-      router.replace('/login');
     }
-  }, [isError, router, user]);
+  }, [isUnauthorized, router, user]);
+
+  if (isError && !isUnauthorized) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <ErrorAlert message={extractErrorMessage(error)} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full items-center justify-center">
