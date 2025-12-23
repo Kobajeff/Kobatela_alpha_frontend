@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
+import { ForbiddenBanner } from '@/components/shared/ForbiddenBanner';
 import { formatDateTime } from '@/lib/format';
 import type { SenderEscrowSummary } from '@/types/api';
 import { Badge } from '@/components/ui/Badge';
@@ -23,6 +24,10 @@ interface SenderEscrowDetailsProps {
   onReject: () => void;
   onCheckDeadline: () => void;
   loading?: boolean;
+  forbidden?: boolean;
+  forbiddenTitle?: string;
+  forbiddenSubtitle?: string;
+  forbiddenCode?: string;
   proofForm?: ReactNode;
 }
 
@@ -33,6 +38,10 @@ export function SenderEscrowDetails({
   onMarkDelivered,
   onReject,
   loading,
+  forbidden = false,
+  forbiddenTitle,
+  forbiddenSubtitle,
+  forbiddenCode,
   proofForm
 }: SenderEscrowDetailsProps) {
   return (
@@ -50,21 +59,24 @@ export function SenderEscrowDetails({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={onMarkDelivered} disabled={loading}>
+            <Button onClick={onMarkDelivered} disabled={loading || forbidden}>
               Marquer livré
             </Button>
             <Button variant="secondary" onClick={onApprove} disabled={loading}>
               Approuver
             </Button>
-            <Button variant="danger" onClick={onReject} disabled={loading}>
+            <Button variant="danger" onClick={onReject} disabled={loading || forbidden}>
               Rejeter
             </Button>
-            <Button variant="outline" onClick={onCheckDeadline} disabled={loading}>
+            <Button variant="outline" onClick={onCheckDeadline} disabled={loading || forbidden}>
               Vérifier l'échéance
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-2 text-slate-700">
+          {forbidden && (
+            <ForbiddenBanner title={forbiddenTitle} subtitle={forbiddenSubtitle} code={forbiddenCode} />
+          )}
           <p>
             Montant : {summary.escrow.amount} {summary.escrow.currency}
           </p>

@@ -13,9 +13,16 @@ interface AdminProofReviewTableProps {
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   processingId?: string;
+  actionsDisabled?: boolean;
 }
 
-export function AdminProofReviewTable({ items, onApprove, onReject, processingId }: AdminProofReviewTableProps) {
+export function AdminProofReviewTable({
+  items,
+  onApprove,
+  onReject,
+  processingId,
+  actionsDisabled = false
+}: AdminProofReviewTableProps) {
   const confirmAndApprove = (id: string) => {
     if (!window.confirm('Approuver cette preuve ?')) return;
     onApprove(id);
@@ -63,7 +70,7 @@ export function AdminProofReviewTable({ items, onApprove, onReject, processingId
                         type="button"
                         size="sm"
                         variant="secondary"
-                        disabled={processingId === item.id}
+                        disabled={processingId === item.id || actionsDisabled}
                         onClick={() => confirmAndApprove(item.id)}
                       >
                         Approuver
@@ -72,7 +79,7 @@ export function AdminProofReviewTable({ items, onApprove, onReject, processingId
                         type="button"
                         size="sm"
                         variant="danger"
-                        disabled={processingId === item.id}
+                        disabled={processingId === item.id || actionsDisabled}
                         onClick={() => confirmAndReject(item.id)}
                       >
                         Rejeter

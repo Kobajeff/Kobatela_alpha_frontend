@@ -16,6 +16,7 @@ import {
 import { useToast } from '@/components/ui/ToastProvider';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { useForbiddenAction } from '@/lib/hooks/useForbiddenAction';
 
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -24,6 +25,7 @@ export default function SenderEscrowDetailsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('');
   const { showToast } = useToast();
+  const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
 
   const markDelivered = useMarkDelivered(escrowId);
   const approve = useClientApprove(escrowId);
@@ -36,7 +38,8 @@ export default function SenderEscrowDetailsPage() {
       await action();
       showToast(successMessage, 'success');
     } catch (err) {
-      const message = extractErrorMessage(err);
+      const normalized = forbidWith(err);
+      const message = normalized.message ?? extractErrorMessage(err);
       setActionError(message);
       showToast(message, 'error');
     }
@@ -111,6 +114,9 @@ export default function SenderEscrowDetailsPage() {
         onApprove={handleApprove}
         onReject={handleReject}
         onCheckDeadline={() => handleAction(() => checkDeadline.mutateAsync(), 'Escrow updated successfully')}
+        forbidden={forbidden}
+        forbiddenTitle={forbiddenMessage}
+        forbiddenCode={forbiddenCode}
         proofForm={proofForm}
       />
     </div>
