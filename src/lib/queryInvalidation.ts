@@ -23,7 +23,11 @@ export function afterPayout(
   escrowId: string,
   _paymentId?: string
 ) {
+  invalidateEscrowSummary(queryClient, escrowId);
+  queryClient.invalidateQueries({ queryKey: ['senderDashboard'] });
+}
+
+export function invalidateEscrowSummary(queryClient: QueryClient, escrowId: string) {
   queryClient.invalidateQueries({ queryKey: ['escrowSummary', escrowId] });
   queryClient.invalidateQueries({ queryKey: ['adminEscrowSummary', escrowId] });
-  queryClient.invalidateQueries({ queryKey: ['senderDashboard'] });
 }
