@@ -2,6 +2,7 @@
 
 // Page showing all escrows for the logged-in sender.
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { SenderEscrowList } from '@/components/sender/SenderEscrowList';
 import { useSenderEscrows } from '@/lib/queries/sender';
@@ -23,6 +24,7 @@ const STATUS_OPTIONS: { label: string; value: '' | EscrowStatus }[] = [
 ];
 
 export default function SenderEscrowsPage() {
+  const router = useRouter();
   const [status, setStatus] = useState<'' | EscrowStatus>('');
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -56,6 +58,7 @@ export default function SenderEscrowsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Mes escrows</h1>
+        <Button onClick={() => router.push('/sender/escrows/create')}>Créer un escrow</Button>
       </div>
 
       <Card>

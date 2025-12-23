@@ -23,6 +23,7 @@ import {
 } from '@/lib/demoData';
 import type {
   CreateProofPayload,
+  EscrowCreatePayload,
   EscrowListItem,
   AuthLoginResponse,
   AuthUser,
@@ -256,6 +257,40 @@ export function useSenderEscrows(params: { status?: string; limit?: number; offs
       if (status) searchParams.append('status', status);
       const response = await apiClient.get<EscrowListItem[]>(`/escrows?${searchParams.toString()}`);
       return response.data;
+    }
+  });
+}
+
+export function useCreateEscrow() {
+  const queryClient = useQueryClient();
+  return useMutation<EscrowListItem, Error, EscrowCreatePayload>({
+    mutationFn: async (payload) => {
+      if (isDemoMode()) {
+        const now = new Date().toISOString();
+        return new Promise<EscrowListItem>((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                id: `demo-escrow-${Date.now()}`,
+                status: 'DRAFT',
+                amount: payload.amount,
+                currency: payload.currency,
+                created_at: now,
+                updated_at: now
+              }),
+            200
+          );
+        });
+      }
+      const response = await apiClient.post<EscrowListItem>('/escrows', payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.escrows.listBase() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sender.dashboard() });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
     }
   });
 }
