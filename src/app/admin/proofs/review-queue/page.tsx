@@ -9,6 +9,8 @@ import { useAdminProofDecision, useAdminProofReviewQueue } from '@/lib/queries/a
 import { useToast } from '@/components/ui/ToastProvider';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { ForbiddenBanner } from '@/components/shared/ForbiddenBanner';
+import { useForbiddenAction } from '@/lib/hooks/useForbiddenAction';
 
 export default function AdminProofReviewQueuePage() {
   const query = useAdminProofReviewQueue();
@@ -16,6 +18,7 @@ export default function AdminProofReviewQueuePage() {
   const [processingId, setProcessingId] = useState<string | undefined>();
   const [actionError, setActionError] = useState('');
   const { showToast } = useToast();
+  const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
 
   const getDecisionErrorMessage = (error: unknown) => {
     if (axios.isAxiosError(error)) {
@@ -44,7 +47,8 @@ export default function AdminProofReviewQueuePage() {
       await decision.mutateAsync({ proofId, payload: { decision: 'approve' } });
       showToast('Proof updated successfully', 'success');
     } catch (err) {
-      const message = getDecisionErrorMessage(err);
+      const normalized = forbidWith(err);
+      const message = normalized.message ?? getDecisionErrorMessage(err);
       setActionError(message);
       showToast(message, 'error');
     } finally {
@@ -59,7 +63,8 @@ export default function AdminProofReviewQueuePage() {
       await decision.mutateAsync({ proofId, payload: { decision: 'reject' } });
       showToast('Proof updated successfully', 'success');
     } catch (err) {
-      const message = getDecisionErrorMessage(err);
+      const normalized = forbidWith(err);
+      const message = normalized.message ?? getDecisionErrorMessage(err);
       setActionError(message);
       showToast(message, 'error');
     } finally {
@@ -87,12 +92,14 @@ export default function AdminProofReviewQueuePage() {
         <h1 className="text-2xl font-semibold text-slate-800">File d'approbation des preuves</h1>
         {actionError && <p className="text-sm text-rose-600">{actionError}</p>}
       </div>
+      {forbidden && <ForbiddenBanner title={forbiddenMessage} code={forbiddenCode} />}
       {data && data.length > 0 ? (
         <AdminProofReviewTable
           items={data}
           onApprove={handleApprove}
           onReject={handleReject}
           processingId={processingId}
+          actionsDisabled={forbidden}
         />
       ) : (
         <div className="rounded-md border border-slate-200 bg-white p-4 text-slate-600">Aucune preuve en attente.</div>
