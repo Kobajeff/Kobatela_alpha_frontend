@@ -3,6 +3,7 @@ import axios from 'axios';
 import type { ProofFileUploadResponse } from '@/types/api';
 import { normalizeApiError } from './apiError';
 import { getAuthToken } from './auth';
+import { recordNetworkError } from './networkHealth';
 import { getQueryClient } from './queryClient';
 import { resetSession } from './sessionReset';
 
@@ -27,10 +28,18 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = normalizeApiError(error).status;
+    const { status } = normalizeApiError(error);
     if (status === 401 && !isResettingSession) {
       isResettingSession = true;
       resetSession(getQueryClient());
+    }
+
+    if (status && status >= 500) {
+      recordNetworkError('server');
+    }
+
+    if (!status) {
+      recordNetworkError('network');
     }
     return Promise.reject(error);
   }
