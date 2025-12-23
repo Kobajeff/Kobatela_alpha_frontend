@@ -13,6 +13,7 @@ type ErrorPayload = {
   error?: { message?: string; code?: string; details?: unknown };
   message?: string;
   code?: string;
+  details?: unknown;
   detail?: unknown;
   status?: number;
 };
@@ -49,7 +50,7 @@ const normalizeFromPayload = (
       status,
       code: payload.code,
       message: payload.message,
-      details: payload
+      details: payload.details
     };
   }
 
