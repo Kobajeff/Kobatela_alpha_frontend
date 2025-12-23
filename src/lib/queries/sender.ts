@@ -502,6 +502,80 @@ export function useCheckDeadline(escrowId: string) {
   return useEscrowAction(escrowId, 'check-deadline');
 }
 
+export type FundingSessionResponse = unknown;
+
+export function useCreateFundingSession(escrowId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<FundingSessionResponse, Error, void>({
+    mutationFn: async () => {
+      if (isDemoMode()) {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve({}), 200);
+        });
+      }
+      const response = await apiClient.post<FundingSessionResponse>(
+        `/escrows/${escrowId}/funding-session`,
+        {}
+      );
+      return response.data;
+    },
+    retry: false,
+    onSuccess: () => {
+      invalidateEscrowBundle(queryClient, {
+        escrowId,
+        viewer: 'sender',
+        refetchSummary: true
+      });
+    }
+  });
+}
+
+export type EscrowDepositResponse = unknown;
+
+type DepositPayload = {
+  idempotencyKey: string;
+};
+
+export function useDepositEscrow(escrowId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<EscrowDepositResponse, Error, DepositPayload>({
+    mutationFn: async ({ idempotencyKey }) => {
+      if (isDemoMode()) {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve({}), 200);
+        });
+      }
+      const response = await apiClient.post<EscrowDepositResponse>(
+        `/escrows/${escrowId}/deposit`,
+        {},
+        {
+          headers: {
+            'Idempotency-Key': idempotencyKey
+          }
+        }
+      );
+      return response.data;
+    },
+    retry: (failureCount, error) => {
+      if (!isAxiosError(error)) return false;
+      if (failureCount >= 3) return false;
+      if (!error.response) return true;
+      return error.response.status === 500;
+    },
+    retryDelay: (attempt) => {
+      const delays = [1000, 2000, 4000];
+      return delays[Math.min(attempt - 1, delays.length - 1)];
+    },
+    onSuccess: () => {
+      invalidateEscrowBundle(queryClient, {
+        escrowId,
+        viewer: 'sender',
+        refetchSummary: true
+      });
+    }
+  });
+}
+
 type ProofReviewPollingState = {
   active: boolean;
   errorMessage?: string | null;

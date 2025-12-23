@@ -1,7 +1,7 @@
 'use client';
 
 // Detail page for a specific escrow, exposing lifecycle actions.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import axios from 'axios';
 import { SenderEscrowDetails } from '@/components/sender/SenderEscrowDetails';
@@ -11,6 +11,8 @@ import {
   useCheckDeadline,
   useClientApprove,
   useClientReject,
+  useCreateFundingSession,
+  useDepositEscrow,
   useMarkDelivered,
   useProofReviewPolling,
   useSenderEscrowSummary
@@ -21,19 +23,30 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { useForbiddenAction } from '@/lib/hooks/useForbiddenAction';
 import { Button } from '@/components/ui/Button';
 import { invalidateEscrowSummary } from '@/lib/queryInvalidation';
+import { invalidateEscrowBundle } from '@/lib/invalidation';
 import { useQueryClient } from '@tanstack/react-query';
+import { normalizeApiError } from '@/lib/apiError';
+import { isDirectDepositEnabled } from '@/lib/config';
 
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
   const escrowId = params?.id ?? '';
-  const query = useSenderEscrowSummary(escrowId);
+  const [fundingInProgress, setFundingInProgress] = useState(false);
+  const query = useSenderEscrowSummary(
+    escrowId,
+    fundingInProgress ? { fundingInProgress: true } : undefined
+  );
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [fundingError, setFundingError] = useState<string | null>(null);
+  const [depositError, setDepositError] = useState<string | null>(null);
+  const [fundingNote, setFundingNote] = useState<string | null>(null);
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('');
   const [latestProofId, setLatestProofId] = useState<string | null>(null);
   const { showToast } = useToast();
   const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
   const proofReview = useProofReviewPolling(latestProofId, escrowId);
+  const directDepositEnabled = isDirectDepositEnabled();
   const polling = query.polling;
   const banners = useMemo(
     () =>
@@ -49,6 +62,16 @@ export default function SenderEscrowDetailsPage() {
   const approve = useClientApprove(escrowId);
   const reject = useClientReject(escrowId);
   const checkDeadline = useCheckDeadline(escrowId);
+  const createFundingSession = useCreateFundingSession(escrowId);
+  const depositEscrow = useDepositEscrow(escrowId);
+  const escrowStatus = query.data?.escrow?.status?.toUpperCase();
+
+  useEffect(() => {
+    const terminalStatuses = ['FUNDED', 'RELEASABLE', 'RELEASED', 'REFUNDED', 'CANCELLED'];
+    if (escrowStatus && terminalStatuses.includes(escrowStatus)) {
+      setFundingInProgress(false);
+    }
+  }, [escrowStatus]);
 
   const handleAction = async (action: () => Promise<unknown>, successMessage: string) => {
     setActionError(null);
@@ -76,6 +99,78 @@ export default function SenderEscrowDetailsPage() {
   const handleReject = () => {
     if (!window.confirm('Are you sure you want to reject this escrow?')) return;
     return handleAction(() => reject.mutateAsync(), 'Escrow updated successfully');
+  };
+
+  const resolveFundingErrorMessage = (error: unknown) => {
+    const normalized = normalizeApiError(error);
+    if (normalized.status === 403) {
+      return 'Accès refusé : vous ne pouvez pas financer cet escrow.';
+    }
+    if (normalized.status === 404) {
+      return "Escrow introuvable. Vérifiez l'identifiant.";
+    }
+    if (normalized.status === 409) {
+      return 'Action déjà traitée. Le statut sera rafraîchi.';
+    }
+    if (normalized.status === 422) {
+      return 'Données invalides ou séquence non permise.';
+    }
+    if (normalized.status === 401) {
+      return 'Votre session a expiré. Merci de vous reconnecter.';
+    }
+    return normalized.message ?? extractErrorMessage(error);
+  };
+
+  const refreshEscrowBundle = () =>
+    invalidateEscrowBundle(queryClient, {
+      escrowId,
+      viewer: 'sender',
+      refetchSummary: true
+    });
+
+  const generateIdempotencyKey = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    throw new Error('Unable to generate idempotency key.');
+  };
+
+  const handleFundingSession = async () => {
+    setFundingError(null);
+    setDepositError(null);
+    setFundingNote(null);
+    setFundingInProgress(true);
+    try {
+      await createFundingSession.mutateAsync();
+      showToast('Session PSP créée. Suivez les instructions de paiement.', 'success');
+      setFundingNote('Session PSP créée. Suivez les instructions de paiement de votre PSP.');
+      refreshEscrowBundle();
+    } catch (error) {
+      const message = resolveFundingErrorMessage(error);
+      setFundingError(message);
+      showToast(message, 'error');
+      setFundingInProgress(false);
+      refreshEscrowBundle();
+    }
+  };
+
+  const handleDeposit = async () => {
+    setDepositError(null);
+    setFundingError(null);
+    setFundingNote(null);
+    setFundingInProgress(true);
+    try {
+      const idempotencyKey = generateIdempotencyKey();
+      await depositEscrow.mutateAsync({ idempotencyKey });
+      showToast('Dépôt envoyé. En attente de confirmation.', 'success');
+      refreshEscrowBundle();
+    } catch (error) {
+      const message = resolveFundingErrorMessage(error);
+      setDepositError(message);
+      showToast(message, 'error');
+      refreshEscrowBundle();
+      setFundingInProgress(false);
+    }
   };
 
   if (query.isLoading) {
@@ -161,6 +256,15 @@ export default function SenderEscrowDetailsPage() {
         summary={data}
         loading={loading}
         processing={hasProcessing}
+        fundingProcessing={Boolean(polling?.fundingActive || fundingInProgress)}
+        fundingSessionPending={createFundingSession.isPending}
+        depositPending={depositEscrow.isPending}
+        fundingError={fundingError}
+        depositError={depositError}
+        fundingNote={fundingNote}
+        showDirectDeposit={directDepositEnabled}
+        onStartFundingSession={handleFundingSession}
+        onDirectDeposit={directDepositEnabled ? handleDeposit : undefined}
         lastUpdatedAt={lastUpdatedAt}
         proofReviewActive={proofReview.polling.active}
         proofReviewError={proofReview.polling.errorMessage ?? null}

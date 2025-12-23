@@ -23,6 +23,15 @@ interface SenderEscrowDetailsProps {
   onApprove: () => void;
   onReject: () => void;
   onCheckDeadline: () => void;
+  onStartFundingSession?: () => void;
+  onDirectDeposit?: () => void;
+  fundingSessionPending?: boolean;
+  depositPending?: boolean;
+  fundingProcessing?: boolean;
+  fundingError?: string | null;
+  depositError?: string | null;
+  fundingNote?: string | null;
+  showDirectDeposit?: boolean;
   loading?: boolean;
   processing?: boolean;
   lastUpdatedAt?: string | Date | null;
@@ -41,6 +50,15 @@ export function SenderEscrowDetails({
   onCheckDeadline,
   onMarkDelivered,
   onReject,
+  onStartFundingSession,
+  onDirectDeposit,
+  fundingSessionPending,
+  depositPending,
+  fundingProcessing,
+  fundingError,
+  depositError,
+  fundingNote,
+  showDirectDeposit,
   loading,
   processing,
   lastUpdatedAt,
@@ -52,6 +70,15 @@ export function SenderEscrowDetails({
   forbiddenCode,
   proofForm
 }: SenderEscrowDetailsProps) {
+  const escrowStatus = summary.escrow?.status?.toUpperCase();
+  const fundingComplete = Boolean(
+    escrowStatus &&
+      ['FUNDED', 'RELEASABLE', 'RELEASED', 'REFUNDED', 'CANCELLED'].includes(escrowStatus)
+  );
+  const canTriggerFunding = Boolean(onStartFundingSession && !fundingComplete);
+  const fundingButtonsDisabled =
+    Boolean(loading || processing || fundingSessionPending || depositPending);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -91,6 +118,61 @@ export function SenderEscrowDetails({
           <p className="text-sm text-slate-500">Créé le {formatDateTime(summary.escrow.created_at)}</p>
           {lastUpdatedAt && (
             <p className="text-xs text-slate-500">Last updated : {formatDateTime(lastUpdatedAt)}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Funding</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-slate-700">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <span>Statut :</span>
+            {(() => {
+              const badge = mapEscrowStatusToBadge(summary.escrow.status);
+              return <Badge variant={badge.variant}>{badge.label}</Badge>;
+            })()}
+          </div>
+          {fundingProcessing && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Paiement en cours. Nous attendons la confirmation PSP.
+            </div>
+          )}
+          {fundingNote && (
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              {fundingNote}
+            </div>
+          )}
+          {fundingError && (
+            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {fundingError}
+            </div>
+          )}
+          {depositError && (
+            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {depositError}
+            </div>
+          )}
+          {canTriggerFunding ? (
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={onStartFundingSession} disabled={fundingButtonsDisabled}>
+                {fundingSessionPending ? 'Session PSP...' : 'Pay via PSP'}
+              </Button>
+              {showDirectDeposit && (
+                <Button
+                  variant="outline"
+                  onClick={onDirectDeposit}
+                  disabled={fundingButtonsDisabled}
+                >
+                  {depositPending ? 'Dépôt en cours...' : 'Direct deposit'}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Le financement est terminé ou en phase finale.
+            </p>
           )}
         </CardContent>
       </Card>

@@ -2,6 +2,10 @@ export function isDemoMode(): boolean {
   return process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 }
 
+export function isDirectDepositEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_DIRECT_DEPOSIT === 'true';
+}
+
 // We will also store which demo role is active in localStorage.
 const DEMO_ROLE_KEY = 'kobatela_demo_role';
 
