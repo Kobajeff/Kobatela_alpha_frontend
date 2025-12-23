@@ -469,6 +469,142 @@ export function useCheckDeadline(escrowId: string) {
   return useEscrowAction(escrowId, 'check-deadline');
 }
 
+type ProofReviewPollingState = {
+  active: boolean;
+  errorMessage?: string | null;
+};
+
+export function useProofReviewPolling(proofId: string | null, escrowId: string) {
+  const queryClient = useQueryClient();
+  const [stopPolling, setStopPolling] = useState(false);
+  const [serverErrorMessage, setServerErrorMessage] = useState<string | null>(null);
+  const [conflictRefetched, setConflictRefetched] = useState(false);
+  const startTimeRef = useRef<number | null>(null);
+  const refreshedSummaryRef = useRef(false);
+  const demoFetchCountRef = useRef(0);
+
+  useEffect(() => {
+    if (!proofId) {
+      setStopPolling(false);
+      setServerErrorMessage(null);
+      setConflictRefetched(false);
+      startTimeRef.current = null;
+      refreshedSummaryRef.current = false;
+      demoFetchCountRef.current = 0;
+      return;
+    }
+    setStopPolling(false);
+    setServerErrorMessage(null);
+    setConflictRefetched(false);
+    startTimeRef.current = null;
+    refreshedSummaryRef.current = false;
+    demoFetchCountRef.current = 0;
+  }, [proofId]);
+
+  useEffect(() => {
+    if (!proofId || stopPolling) return undefined;
+    const timeoutId = setTimeout(() => {
+      setStopPolling(true);
+    }, pollingProfiles.proofReview.maxDurationMs);
+    return () => clearTimeout(timeoutId);
+  }, [proofId, stopPolling]);
+
+  const query = useQuery<Proof, Error>({
+    queryKey: ['proof', proofId],
+    queryFn: async () => {
+      if (!proofId) {
+        throw new Error('Proof id is required');
+      }
+      if (isDemoMode()) {
+        demoFetchCountRef.current += 1;
+        const status = demoFetchCountRef.current < 2 ? 'PENDING' : 'APPROVED';
+        return {
+          id: proofId,
+          escrow_id: escrowId,
+          milestone_id: null,
+          description: 'Demo proof',
+          attachment_url: 'https://demo.kobatela.com/files/demo-proof.pdf',
+          file_id: 'demo-file-id',
+          status,
+          created_at: new Date().toISOString(),
+          ai_risk_level: null,
+          ai_score: null,
+          ai_explanation: null,
+          ai_checked_at: null
+        };
+      }
+      const response = await apiClient.get<Proof>(`/proofs/${proofId}`);
+      return response.data;
+    },
+    enabled: Boolean(proofId) && !stopPolling,
+    refetchInterval: (queryInstance) => {
+      if (!proofId || stopPolling) return false;
+      const startTime = startTimeRef.current ?? Date.now();
+      startTimeRef.current = startTime;
+      return makeRefetchInterval(
+        pollingProfiles.proofReview,
+        () => Date.now() - startTime,
+        () => queryInstance.state.data
+      )();
+    },
+    retry: (failureCount, error) => {
+      if (!isAxiosError(error)) return false;
+      const status = error.response?.status;
+      if (status && status >= 500) {
+        return failureCount < 3;
+      }
+      return false;
+    },
+    onError: (error) => {
+      if (!isAxiosError(error)) return;
+      const status = error.response?.status;
+      if (status && status >= 500) {
+        setServerErrorMessage(
+          "Le statut de la preuve ne peut pas être rafraîchi pour le moment. Réessayez plus tard."
+        );
+        setStopPolling(true);
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (!proofId || !query.data) return;
+    if (!pollingProfiles.proofReview.shouldContinue(query.data)) {
+      setStopPolling(true);
+      if (!refreshedSummaryRef.current) {
+        refreshedSummaryRef.current = true;
+        queryClient.invalidateQueries({ queryKey: ['escrowSummary', escrowId] });
+      }
+    }
+  }, [proofId, escrowId, query.data, queryClient]);
+
+  useEffect(() => {
+    if (!proofId || !query.error || conflictRefetched) return;
+    if (!isAxiosError(query.error)) return;
+    const status = query.error.response?.status;
+    if (status === 409) {
+      setConflictRefetched(true);
+      setStopPolling(true);
+      query.refetch();
+      if (!refreshedSummaryRef.current) {
+        refreshedSummaryRef.current = true;
+        queryClient.invalidateQueries({ queryKey: ['escrowSummary', escrowId] });
+      }
+    }
+  }, [proofId, escrowId, query, query.error, conflictRefetched, queryClient]);
+
+  const polling: ProofReviewPollingState = {
+    active:
+      Boolean(proofId) &&
+      !stopPolling &&
+      !serverErrorMessage &&
+      (query.data ? pollingProfiles.proofReview.shouldContinue(query.data) : true),
+    errorMessage: serverErrorMessage
+  };
+
+  return { ...query, polling };
+}
+
 export function useCreateProof() {
   const queryClient = useQueryClient();
   return useMutation<Proof, Error, CreateProofPayload>({
@@ -495,7 +631,7 @@ export function useCreateProof() {
       return response.data;
     },
     onSuccess: (data) => {
-      afterProofUpload(queryClient, data.escrow_id);
+      afterProofUpload(queryClient, data.escrow_id, data.id);
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));

@@ -13,9 +13,10 @@ import type { ProofFileUploadResponse } from '@/types/api';
 interface ProofFormProps {
   escrowId: string;
   milestoneId?: string;
+  onProofCreated?: (proofId: string) => void;
 }
 
-export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
+export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormProps) {
   const [description, setDescription] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -163,7 +164,8 @@ export function ProofForm({ escrowId, milestoneId }: ProofFormProps) {
         };
       }
 
-      await createProof.mutateAsync(payloadWithAttachment);
+      const createdProof = await createProof.mutateAsync(payloadWithAttachment);
+      onProofCreated?.(createdProof.id);
       setDescription('');
       setAttachmentUrl('');
       setSelectedFile(null);
