@@ -45,6 +45,13 @@ export type EscrowListItem = {
   domain?: string;
 };
 
+// TODO (docs/FRONTEND_BACKEND_COMPARATIVE_AUDIT.md): Extend payload fields once escrow creation contract is finalized.
+export type EscrowCreatePayload = {
+  amount: number;
+  currency: string;
+  description?: string;
+};
+
 export type CreateProofPayload = {
   escrow_id: string;
   milestone_id?: string;
