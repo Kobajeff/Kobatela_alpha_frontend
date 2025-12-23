@@ -2,6 +2,7 @@
 
 // Small form allowing a sender to attach a new proof to an escrow and optionally a milestone.
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useCreateProof } from '@/lib/queries/sender';
 import { extractErrorMessage, uploadProofFile } from '@/lib/apiClient';
 import { Input } from '@/components/ui/Input';
@@ -226,11 +227,16 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
             </div>
             {selectedFile.type.startsWith('image/') && previewUrl && (
               <div className="mt-2">
-                <img
-                  src={previewUrl}
-                  alt="Selected file preview"
-                  className="h-24 max-w-full rounded object-cover"
-                />
+                <div className="relative h-24 max-w-full">
+                  <Image
+                    src={previewUrl}
+                    alt="Selected file preview"
+                    fill
+                    unoptimized
+                    sizes="100vw"
+                    className="rounded object-cover"
+                  />
+                </div>
               </div>
             )}
             {selectedFile.type === 'application/pdf' && (
