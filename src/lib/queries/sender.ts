@@ -36,9 +36,11 @@ import type {
   AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
-  AuthMeResponse
+  AuthMeResponse,
+  MerchantSuggestion,
+  MerchantSuggestionCreatePayload
 } from '@/types/api';
-import { buildQueryString, normalizePaginatedItems } from './queryUtils';
+import { buildQueryString, getPaginatedLimitOffset, getPaginatedTotal, normalizePaginatedItems } from './queryUtils';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
 const PENDING_PROOF_STATUSES = new Set(['PENDING', 'PENDING_REVIEW']);
@@ -86,6 +88,71 @@ async function fetchProofsWithStatus({
     }
     throw error;
   }
+}
+
+function normalizeMerchantSuggestionList(
+  data: unknown,
+  fallbackLimit: number,
+  fallbackOffset: number
+) {
+  const items = normalizePaginatedItems<MerchantSuggestion>(data);
+  const total = getPaginatedTotal<MerchantSuggestion>(data);
+  const { limit, offset } = getPaginatedLimitOffset<MerchantSuggestion>(data);
+  return {
+    items,
+    total,
+    limit: typeof limit === 'number' ? limit : fallbackLimit,
+    offset: typeof offset === 'number' ? offset : fallbackOffset
+  };
+}
+
+export function useMerchantSuggestionsList(params: { limit?: number; offset?: number } = {}) {
+  const { limit = 10, offset = 0 } = params;
+  const queryParams = useMemo(() => ({ limit, offset }), [limit, offset]);
+  return useQuery({
+    queryKey: queryKeys.sender.merchantSuggestions.list(queryParams),
+    queryFn: async () => {
+      if (isDemoMode()) {
+        return {
+          items: [],
+          total: 0,
+          limit,
+          offset
+        };
+      }
+      const search = buildQueryString({ limit, offset });
+      const response = await apiClient.get(`/merchant-suggestions${search ? `?${search}` : ''}`);
+      return normalizeMerchantSuggestionList(response.data, limit, offset);
+    }
+  });
+}
+
+export function useMerchantSuggestion(id?: string) {
+  return useQuery<MerchantSuggestion>({
+    queryKey: queryKeys.sender.merchantSuggestions.byId(id),
+    queryFn: async () => {
+      if (!id) throw new Error('Missing merchant suggestion id');
+      const response = await apiClient.get<MerchantSuggestion>(`/merchant-suggestions/${id}`);
+      return response.data;
+    },
+    enabled: Boolean(id)
+  });
+}
+
+export function useCreateMerchantSuggestion() {
+  const queryClient = useQueryClient();
+  return useMutation<MerchantSuggestion, Error, MerchantSuggestionCreatePayload>({
+    mutationFn: async (payload) => {
+      const response = await apiClient.post<MerchantSuggestion>('/merchant-suggestions', payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sender.merchantSuggestions.listBase() });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
 }
 
 export function useLogin() {

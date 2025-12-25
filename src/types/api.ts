@@ -8,6 +8,18 @@ export interface PaginatedResponse<T> {
   offset: number;
 }
 
+export type MerchantSuggestionStatus = string;
+
+export type MerchantSuggestion = {
+  id: string;
+  status?: MerchantSuggestionStatus;
+  created_at?: string;
+  updated_at?: string;
+  payload?: Record<string, unknown>;
+};
+
+export type MerchantSuggestionCreatePayload = Record<string, unknown>;
+
 export interface User {
   id: string;
   email: string;
