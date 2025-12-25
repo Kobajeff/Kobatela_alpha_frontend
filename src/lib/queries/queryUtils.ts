@@ -26,3 +26,12 @@ export function getPaginatedTotal<T>(data: unknown): number {
   if (typeof total === 'number') return total;
   return normalizePaginatedItems<T>(data).length;
 }
+
+export function getPaginatedLimitOffset<T>(
+  data: unknown
+): { limit?: number; offset?: number } {
+  const response = data as PaginatedResponse<T>;
+  const limit = typeof response?.limit === 'number' ? response.limit : undefined;
+  const offset = typeof response?.offset === 'number' ? response.offset : undefined;
+  return { limit, offset };
+}

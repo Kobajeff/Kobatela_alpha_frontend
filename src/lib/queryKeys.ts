@@ -32,7 +32,12 @@ export const queryKeys = {
   },
   sender: {
     dashboard: () => ['senderDashboard', { scope: 'canonical' }] as const,
-    myAdvisor: () => ['myAdvisor'] as const
+    myAdvisor: () => ['myAdvisor'] as const,
+    merchantSuggestions: {
+      listBase: () => ['merchantSuggestions', 'list'] as const,
+      list: (params: Record<string, unknown>) => ['merchantSuggestions', 'list', params] as const,
+      byId: (id?: string | null) => ['merchantSuggestions', id] as const
+    }
   },
   admin: {
     dashboardStats: () => ['adminDashboardStats', { scope: 'canonical' }] as const,

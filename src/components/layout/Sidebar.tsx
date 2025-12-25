@@ -10,6 +10,7 @@ const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
 const links = [
   { href: senderDashboardPath, label: 'Dashboard' },
   { href: '/sender/escrows', label: 'Escrows' },
+  { href: '/sender/merchant-suggestions', label: 'Merchant suggestions' },
   { href: '/sender/profile', label: 'Mon profil' }
 ];
 
