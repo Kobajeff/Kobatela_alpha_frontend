@@ -1016,8 +1016,21 @@ export function useRequestAdvisorReview() {
           setTimeout(() => resolve({}), 200);
         });
       }
-      const response = await apiClient.post(`/proofs/${proofId}/request_advisor_review`, {});
-      return response.data;
+      try {
+        const response = await apiClient.post(`/proofs/${proofId}/request_advisor_review`, {});
+        return response.data;
+      } catch (error) {
+        const normalized = normalizeApiError(error);
+        if (normalized.status === 401) {
+          resetSession(queryClient, { redirectTo: '/login' });
+        }
+
+        const enrichedError = new Error(normalized.message ?? extractErrorMessage(error));
+        (enrichedError as Error & { status?: number }).status = normalized.status;
+        (enrichedError as Error & { code?: string }).code = normalized.code;
+        (enrichedError as Error & { details?: unknown }).details = normalized.details;
+        throw enrichedError;
+      }
     },
     retry: (failureCount, error) => {
       const status = normalizeApiError(error).status;
