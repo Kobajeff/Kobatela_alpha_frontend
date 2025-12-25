@@ -13,7 +13,7 @@ import { resetSession } from '../sessionReset';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import { invalidateEscrowBundle, invalidateProofBundle } from '@/lib/invalidation';
 import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
-import { queryKeys } from '@/lib/queryKeys';
+import { queryKeys, type EscrowSummaryViewer } from '@/lib/queryKeys';
 import {
   demoEscrows,
   demoAdvisorProfile,
@@ -1004,6 +1004,7 @@ export function useCreateProof() {
 type RequestAdvisorReviewPayload = {
   proofId: string;
   escrowId: string;
+  viewer?: EscrowSummaryViewer;
 };
 
 export function useRequestAdvisorReview() {
@@ -1018,13 +1019,19 @@ export function useRequestAdvisorReview() {
       const response = await apiClient.post(`/proofs/${proofId}/request_advisor_review`, {});
       return response.data;
     },
-    retry: false,
+    retry: (failureCount, error) => {
+      const status = normalizeApiError(error).status;
+      if (status && [401, 403, 409, 422].includes(status)) {
+        return false;
+      }
+      return failureCount < 2;
+    },
     onSettled: (_data, _error, variables) => {
       if (!variables) return;
       invalidateProofBundle(queryClient, {
         proofId: variables.proofId,
         escrowId: variables.escrowId,
-        viewer: 'sender'
+        viewer: variables.viewer ?? 'sender'
       });
     }
   });

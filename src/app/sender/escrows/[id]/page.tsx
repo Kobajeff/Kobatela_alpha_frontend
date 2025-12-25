@@ -1,7 +1,7 @@
 'use client';
 
 // Detail page for a specific escrow, exposing lifecycle actions.
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Route } from 'next';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
@@ -30,6 +30,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { normalizeApiError } from '@/lib/apiError';
 import { isDirectDepositEnabled } from '@/lib/config';
 import { isFundingInProgress, isFundingTerminal } from '@/lib/escrowFunding';
+import {
+  canRequestAdvisorReview,
+  shouldStopAdvisorReviewPolling
+} from '@/lib/proofAdvisorReview';
 
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -60,6 +64,19 @@ export default function SenderEscrowDetailsPage() {
     text: string;
   } | null>(null);
   const [proofRequestPendingId, setProofRequestPendingId] = useState<string | null>(null);
+  const [locallyRequestedProofIds, setLocallyRequestedProofIds] = useState<Set<string>>(
+    new Set()
+  );
+  const locallyRequestedProofIdsRef = useRef(locallyRequestedProofIds);
+  const advisorPollingRef = useRef<{
+    intervalId: ReturnType<typeof setInterval> | null;
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    targetProofId: string | null;
+  }>({
+    intervalId: null,
+    timeoutId: null,
+    targetProofId: null
+  });
   const { showToast } = useToast();
   const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
   const proofReview = useProofReviewPolling(latestProofId, escrowId);
@@ -85,6 +102,43 @@ export default function SenderEscrowDetailsPage() {
   const isFundingTerminalState = isFundingTerminal(query.data);
   const isFundingActiveState = isFundingInProgress(query.data) || fundingInProgress;
   const PSP_RETURN_TIMEOUT_MS = 60_000;
+
+  const stopAdvisorReviewPolling = useCallback(() => {
+    const { intervalId, timeoutId } = advisorPollingRef.current;
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    advisorPollingRef.current = {
+      intervalId: null,
+      timeoutId: null,
+      targetProofId: null
+    };
+  }, []);
+
+  const startAdvisorReviewPolling = useCallback(
+    (targetProofId: string) => {
+      stopAdvisorReviewPolling();
+      advisorPollingRef.current.targetProofId = targetProofId;
+
+      const runRefetch = async () => {
+        const result = await query.refetch();
+        const proof = result.data?.proofs?.find(
+          (entry) => String(entry.id) === String(targetProofId)
+        );
+        if (shouldStopAdvisorReviewPolling(proof, locallyRequestedProofIdsRef.current)) {
+          stopAdvisorReviewPolling();
+        }
+      };
+
+      void runRefetch();
+      advisorPollingRef.current.intervalId = setInterval(runRefetch, 10_000);
+      advisorPollingRef.current.timeoutId = setTimeout(stopAdvisorReviewPolling, 60_000);
+    },
+    [query, stopAdvisorReviewPolling]
+  );
 
   useEffect(() => {
     const hasReturnParam = searchParams.get('return_from_psp');
@@ -168,6 +222,25 @@ export default function SenderEscrowDetailsPage() {
     setPspReturnTimedOut(true);
   }, [pspReturnElapsedMs, pspReturnMode]);
 
+  useEffect(() => {
+    locallyRequestedProofIdsRef.current = locallyRequestedProofIds;
+  }, [locallyRequestedProofIds]);
+
+  useEffect(() => {
+    return () => {
+      stopAdvisorReviewPolling();
+    };
+  }, [stopAdvisorReviewPolling]);
+
+  useEffect(() => {
+    const targetId = advisorPollingRef.current.targetProofId;
+    if (!targetId) return;
+    const proof = query.data?.proofs?.find((entry) => String(entry.id) === String(targetId));
+    if (shouldStopAdvisorReviewPolling(proof, locallyRequestedProofIdsRef.current)) {
+      stopAdvisorReviewPolling();
+    }
+  }, [query.data, stopAdvisorReviewPolling]);
+
   const handleAction = async (action: () => Promise<unknown>, successMessage: string) => {
     setActionError(null);
     try {
@@ -200,10 +273,17 @@ export default function SenderEscrowDetailsPage() {
     setProofRequestMessage(null);
     setProofRequestPendingId(proofId);
     try {
-      await requestAdvisorReview.mutateAsync({ proofId, escrowId });
+      await requestAdvisorReview.mutateAsync({ proofId, escrowId, viewer: 'sender' });
+      setLocallyRequestedProofIds((prev) => {
+        const next = new Set(prev);
+        next.add(proofId);
+        return next;
+      });
       const successMessage = 'Advisor review requested.';
       setProofRequestMessage({ tone: 'success', text: successMessage });
       showToast(successMessage, 'success');
+      await query.refetch();
+      startAdvisorReviewPolling(proofId);
     } catch (error) {
       const normalized = normalizeApiError(error);
       const message = (() => {
@@ -218,6 +298,9 @@ export default function SenderEscrowDetailsPage() {
         }
         if (normalized.status === 401) {
           return 'Your session has expired. Please sign in again.';
+        }
+        if (normalized.status === 422) {
+          return normalized.message ?? extractErrorMessage(error);
         }
         return normalized.message ?? extractErrorMessage(error);
       })();
@@ -424,6 +507,7 @@ export default function SenderEscrowDetailsPage() {
         forbidden={forbidden}
         forbiddenTitle={forbiddenMessage}
         forbiddenCode={forbiddenCode}
+        locallyRequestedProofIds={locallyRequestedProofIds}
         proofForm={proofForm}
       />
     </div>
