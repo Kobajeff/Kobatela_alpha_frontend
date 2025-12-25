@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
+import { clearEscrowDraft, getEscrowDraft, type EscrowDraftPrefill } from '@/lib/prefill/escrowDraft';
 import { useCreateEscrow } from '@/lib/queries/sender';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -18,6 +19,29 @@ export default function SenderCreateEscrowPage() {
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [description, setDescription] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [draftInfo, setDraftInfo] = useState<EscrowDraftPrefill | null>(null);
+  const [prefillApplied, setPrefillApplied] = useState(false);
+
+  useEffect(() => {
+    if (prefillApplied) return;
+    const draft = getEscrowDraft();
+    if (!draft) {
+      setPrefillApplied(true);
+      return;
+    }
+    const payload = draft.payload ?? {};
+    if (typeof payload.amount === 'number' || typeof payload.amount === 'string') {
+      setAmount(String(payload.amount));
+    }
+    if (typeof payload.currency === 'string') {
+      setCurrency(payload.currency);
+    }
+    if (typeof payload.description === 'string') {
+      setDescription(payload.description);
+    }
+    setDraftInfo(draft);
+    setPrefillApplied(true);
+  }, [prefillApplied]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -37,6 +61,7 @@ export default function SenderCreateEscrowPage() {
         currency: normalizedCurrency,
         description: description.trim() || undefined
       });
+      clearEscrowDraft();
       router.push(`/sender/escrows/${created.id}`);
     } catch (error) {
       setErrorMessage(extractErrorMessage(error));
@@ -57,6 +82,30 @@ export default function SenderCreateEscrowPage() {
           <CardTitle className="text-lg">Détails de l&apos;escrow</CardTitle>
         </CardHeader>
         <CardContent>
+          {draftInfo && (
+            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p>
+                  Formulaire pré-rempli depuis mandate{' '}
+                  <span className="font-mono">{String(draftInfo.mandate_id)}</span>.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    clearEscrowDraft();
+                    setDraftInfo(null);
+                    setAmount('');
+                    setCurrency(DEFAULT_CURRENCY);
+                    setDescription('');
+                  }}
+                >
+                  Effacer
+                </Button>
+              </div>
+            </div>
+          )}
           <form className="space-y-4" onSubmit={handleSubmit}>
             {errorMessage && <ErrorAlert message={errorMessage} />}
             <div>
