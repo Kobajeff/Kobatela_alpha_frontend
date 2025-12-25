@@ -19,6 +19,7 @@ import {
   mapPaymentStatusToBadge,
   mapProofStatusToBadge
 } from '@/lib/uiMappings';
+import { canRequestAdvisorReview } from '@/lib/proofAdvisorReview';
 
 interface SenderEscrowDetailsProps {
   summary: SenderEscrowSummary;
@@ -50,6 +51,7 @@ interface SenderEscrowDetailsProps {
   forbiddenTitle?: string;
   forbiddenSubtitle?: string;
   forbiddenCode?: string;
+  locallyRequestedProofIds?: Set<string>;
   proofForm?: ReactNode;
 }
 
@@ -83,6 +85,7 @@ export function SenderEscrowDetails({
   forbiddenTitle,
   forbiddenSubtitle,
   forbiddenCode,
+  locallyRequestedProofIds,
   proofForm
 }: SenderEscrowDetailsProps) {
   const router = useRouter();
@@ -289,12 +292,12 @@ export function SenderEscrowDetails({
                       onClick={() => onRequestAdvisorReview(proof.id)}
                       disabled={
                         proofRequestPendingId === proof.id ||
-                        proof.status !== 'PENDING'
+                        !canRequestAdvisorReview(proof, locallyRequestedProofIds)
                       }
                     >
                       {proofRequestPendingId === proof.id
                         ? 'Requesting...'
-                        : 'Request advisor review'}
+                        : 'Demander revue conseiller'}
                     </Button>
                   </div>
                 )}

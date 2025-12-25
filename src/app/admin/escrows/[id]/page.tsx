@@ -1,14 +1,14 @@
 'use client';
 
 // Admin view of a single escrow, showing milestones, proofs, and payments.
-import { useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
 import { useAdminEscrowSummary, useCreateMilestone } from '@/lib/queries/admin';
-import { useEscrowMilestones } from '@/lib/queries/sender';
+import { useEscrowMilestones, useAuthMe, useRequestAdvisorReview } from '@/lib/queries/sender';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { formatDateTime } from '@/lib/format';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -26,6 +26,10 @@ import { Button } from '@/components/ui/Button';
 import { invalidateEscrowSummary } from '@/lib/queryInvalidation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/ToastProvider';
+import {
+  canRequestAdvisorReview,
+  shouldStopAdvisorReviewPolling
+} from '@/lib/proofAdvisorReview';
 
 export default function AdminEscrowDetailPage() {
   const params = useParams<{ id: string }>();
@@ -35,10 +39,30 @@ export default function AdminEscrowDetailPage() {
   const createMilestone = useCreateMilestone(escrowId);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { data: authUser } = useAuthMe();
+  const requestAdvisorReview = useRequestAdvisorReview();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [payloadJson, setPayloadJson] = useState('{\n\n}');
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+  const [proofRequestMessage, setProofRequestMessage] = useState<{
+    tone: 'success' | 'info' | 'error';
+    text: string;
+  } | null>(null);
+  const [proofRequestPendingId, setProofRequestPendingId] = useState<string | null>(null);
+  const [locallyRequestedProofIds, setLocallyRequestedProofIds] = useState<Set<string>>(
+    new Set()
+  );
+  const locallyRequestedProofIdsRef = useRef(locallyRequestedProofIds);
+  const advisorPollingRef = useRef<{
+    intervalId: ReturnType<typeof setInterval> | null;
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    targetProofId: string | null;
+  }>({
+    intervalId: null,
+    timeoutId: null,
+    targetProofId: null
+  });
   const polling = query.polling;
   const banners = useMemo(
     () =>
@@ -49,6 +73,60 @@ export default function AdminEscrowDetailPage() {
       ].filter((label): label is string => Boolean(label)),
     [polling?.fundingActive, polling?.milestoneActive, polling?.payoutActive]
   );
+  const canRequestAdvisorAction =
+    authUser?.role === 'support' || authUser?.role === 'both';
+
+  const stopAdvisorReviewPolling = useCallback(() => {
+    const { intervalId, timeoutId } = advisorPollingRef.current;
+    if (intervalId) clearInterval(intervalId);
+    if (timeoutId) clearTimeout(timeoutId);
+    advisorPollingRef.current = {
+      intervalId: null,
+      timeoutId: null,
+      targetProofId: null
+    };
+  }, []);
+
+  const startAdvisorReviewPolling = useCallback(
+    (targetProofId: string) => {
+      stopAdvisorReviewPolling();
+      advisorPollingRef.current.targetProofId = targetProofId;
+
+      const runRefetch = async () => {
+        const result = await query.refetch();
+        const proof = result.data?.proofs?.find(
+          (entry) => String(entry.id) === String(targetProofId)
+        );
+        if (shouldStopAdvisorReviewPolling(proof, locallyRequestedProofIdsRef.current)) {
+          stopAdvisorReviewPolling();
+        }
+      };
+
+      void runRefetch();
+      advisorPollingRef.current.intervalId = setInterval(runRefetch, 10_000);
+      advisorPollingRef.current.timeoutId = setTimeout(stopAdvisorReviewPolling, 60_000);
+    },
+    [query, stopAdvisorReviewPolling]
+  );
+
+  useEffect(() => {
+    locallyRequestedProofIdsRef.current = locallyRequestedProofIds;
+  }, [locallyRequestedProofIds]);
+
+  useEffect(() => {
+    return () => {
+      stopAdvisorReviewPolling();
+    };
+  }, [stopAdvisorReviewPolling]);
+
+  useEffect(() => {
+    const targetId = advisorPollingRef.current.targetProofId;
+    if (!targetId) return;
+    const proof = query.data?.proofs?.find((entry) => String(entry.id) === String(targetId));
+    if (shouldStopAdvisorReviewPolling(proof, locallyRequestedProofIdsRef.current)) {
+      stopAdvisorReviewPolling();
+    }
+  }, [query.data, stopAdvisorReviewPolling]);
 
   if (query.isLoading) {
     return <LoadingState label="Chargement du détail escrow..." />;
@@ -86,6 +164,52 @@ export default function AdminEscrowDetailPage() {
   const refreshMilestones = () => milestonesQuery.refetch();
   const paymentDetailPath = (paymentId: string) =>
     ['', 'admin', 'payments', paymentId].join('/') as Route;
+
+  const handleRequestAdvisorReview = async (proofId: string) => {
+    if (!canRequestAdvisorAction) return;
+    setProofRequestMessage(null);
+    setProofRequestPendingId(proofId);
+    try {
+      await requestAdvisorReview.mutateAsync({ proofId, escrowId, viewer: 'admin' });
+      setLocallyRequestedProofIds((prev) => {
+        const next = new Set(prev);
+        next.add(proofId);
+        return next;
+      });
+      const successMessage = 'Demande de revue conseiller envoyée.';
+      setProofRequestMessage({ tone: 'success', text: successMessage });
+      showToast(successMessage, 'success');
+      await query.refetch();
+      startAdvisorReviewPolling(proofId);
+    } catch (error) {
+      const normalized = normalizeApiError(error);
+      const message = (() => {
+        if (normalized.status === 409) {
+          return 'Revue conseiller déjà demandée.';
+        }
+        if (normalized.status === 403) {
+          return "Accès refusé : vous ne pouvez pas demander cette revue.";
+        }
+        if (normalized.status === 404) {
+          return 'Preuve introuvable.';
+        }
+        if (normalized.status === 401) {
+          return 'Session expirée. Merci de vous reconnecter.';
+        }
+        if (normalized.status === 422) {
+          return normalized.message ?? extractErrorMessage(error);
+        }
+        return normalized.message ?? extractErrorMessage(error);
+      })();
+      setProofRequestMessage({
+        tone: normalized.status === 409 ? 'info' : 'error',
+        text: message
+      });
+      showToast(message, normalized.status === 409 ? 'info' : 'error');
+    } finally {
+      setProofRequestPendingId(null);
+    }
+  };
 
   const handleCreateMilestone = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -296,6 +420,19 @@ export default function AdminEscrowDetailPage() {
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-3 text-lg font-semibold">Preuves</h3>
         <div className="space-y-3">
+          {proofRequestMessage && (
+            <div
+              className={
+                proofRequestMessage.tone === 'success'
+                  ? 'rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800'
+                  : proofRequestMessage.tone === 'info'
+                    ? 'rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900'
+                    : 'rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700'
+              }
+            >
+              {proofRequestMessage.text}
+            </div>
+          )}
           {proofs.length === 0 && <p className="text-slate-600">Aucune preuve enregistrée.</p>}
           {proofs.map((proof) => (
             <div key={proof.id} className="rounded-md border border-slate-100 p-3">
@@ -333,6 +470,23 @@ export default function AdminEscrowDetailPage() {
               })()}
               <div className="mt-2 space-y-2">
                 <ProofAiStatus proof={proof} />
+                {canRequestAdvisorAction && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRequestAdvisorReview(proof.id)}
+                      disabled={
+                        proofRequestPendingId === proof.id ||
+                        !canRequestAdvisorReview(proof, locallyRequestedProofIds)
+                      }
+                    >
+                      {proofRequestPendingId === proof.id
+                        ? 'Requesting...'
+                        : 'Demander revue conseiller'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
