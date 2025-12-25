@@ -14,6 +14,7 @@ import { LogoutButton } from './LogoutButton';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
 const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
+const advisorQueuePath = ['', 'advisor', 'queue'].join('/');
 
 export function Header() {
   const router = useRouter();
@@ -21,11 +22,13 @@ export function Header() {
   const { showToast } = useToast();
   const { data } = useAuthMe();
   const user = data as AuthUser | undefined;
-  const isAdmin = user?.role === 'admin' || user?.role === 'both';
+  const isAdmin = user?.role === 'admin' || user?.role === 'both' || user?.role === 'support';
   const isSender = user?.role === 'sender' || user?.role === 'both';
+  const isAdvisor = user?.role === 'advisor';
   const displayName = user?.full_name ?? user?.email ?? 'Chargement...';
   const demoMode = isDemoMode();
   const currentDemoRole = demoMode ? getDemoRole() : null;
+  const homePath = isAdmin ? adminDashboardPath : isAdvisor ? advisorQueuePath : senderDashboardPath;
 
   const handleSwitchToSender = () => {
     setDemoRole('sender');
@@ -46,7 +49,7 @@ export function Header() {
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
       <Link
-        href={senderDashboardPath as Route}
+        href={homePath as Route}
         className="flex items-center gap-2 text-lg font-semibold"
       >
         <span className="rounded-md bg-indigo-600 px-2 py-1 text-white">KCT</span>
@@ -94,6 +97,22 @@ export function Header() {
           >
             Mon profil
           </Link>
+        )}
+        {isAdvisor && (
+          <>
+            <Link
+              href="/advisor/queue"
+              className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100"
+            >
+              Advisor
+            </Link>
+            <Link
+              href="/advisor/profile"
+              className="rounded-md px-2 py-1 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+            >
+              Mon profil
+            </Link>
+          </>
         )}
         {user && <span className="font-medium text-slate-800">{displayName}</span>}
         {user && <LogoutButton />}

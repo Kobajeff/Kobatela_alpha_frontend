@@ -27,6 +27,10 @@ export const queryKeys = {
     adminList: <T extends ListFilters>(filters: T) => ['payments', 'admin', filters] as const,
     byId: (paymentId: string) => ['payments', paymentId] as const
   },
+  advisor: {
+    assignedProofs: <T extends ListFilters>(filters: T) => ['advisor', 'proofs', filters] as const,
+    profile: () => ['advisor', 'profile'] as const
+  },
   uploads: {
     proof: (sha256: string) => ['uploads', 'proof', sha256] as const
   },

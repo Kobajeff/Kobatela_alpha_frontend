@@ -12,6 +12,7 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
 const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
+const advisorQueuePath = ['', 'advisor', 'queue'].join('/');
 
 export default function HomePage() {
   const router = useRouter();
@@ -34,6 +35,8 @@ export default function HomePage() {
       router.replace('/login');
     } else if (user?.role === 'admin') {
       router.replace(adminDashboardPath as Route);
+    } else if (user?.role === 'advisor') {
+      router.replace(advisorQueuePath as Route);
     } else if (user?.role) {
       router.replace(senderDashboardPath as Route);
     }
