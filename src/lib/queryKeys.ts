@@ -37,6 +37,9 @@ export const queryKeys = {
   sender: {
     dashboard: () => ['senderDashboard', { scope: 'canonical' }] as const,
     myAdvisor: () => ['myAdvisor'] as const,
+    mandates: {
+      base: () => ['mandates'] as const
+    },
     merchantSuggestions: {
       listBase: () => ['merchantSuggestions', 'list'] as const,
       list: (params: Record<string, unknown>) => ['merchantSuggestions', 'list', params] as const,

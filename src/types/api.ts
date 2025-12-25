@@ -31,6 +31,38 @@ export type MerchantSuggestionListResponse =
 
 export type MerchantSuggestionCreatePayload = Record<string, unknown>;
 
+export type PayoutDestinationType = 'BENEFICIARY_PROVIDER' | 'MERCHANT';
+
+export type MerchantSuggestionPayload = {
+  name: string;
+  country_code: string;
+};
+
+export type UsageMandateCreate = {
+  sender_id?: number;
+  beneficiary_id: number;
+  total_amount: string;
+  currency: string;
+  expires_at: string;
+  payout_destination_type?: PayoutDestinationType;
+  merchant_registry_id?: string;
+  merchant_suggestion?: MerchantSuggestionPayload;
+};
+
+export type UsageMandateRead = {
+  id: string | number;
+  sender_id?: number;
+  beneficiary_id?: number;
+  total_amount?: string | number;
+  currency?: string;
+  expires_at?: string;
+  payout_destination_type?: PayoutDestinationType;
+  merchant_registry_id?: string | null;
+  merchant_suggestion_id?: string | null;
+  merchant_suggestion?: MerchantSuggestionPayload | null;
+  created_at?: string;
+} & Record<string, unknown>;
+
 export interface User {
   id: string;
   email: string;
