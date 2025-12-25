@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -8,12 +9,14 @@ import { Select } from '@/components/ui/Select';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
+import { createEscrowDraftFromMandate, setEscrowDraft } from '@/lib/prefill/escrowDraft';
 import { useCleanupMandates, useCreateMandate } from '@/lib/queries/sender';
 import type { PayoutDestinationType, UsageMandateCreate, UsageMandateRead } from '@/types/api';
 
 const DEFAULT_CURRENCY = 'USD';
 
 export default function SenderMandatesPage() {
+  const router = useRouter();
   const createMandate = useCreateMandate();
   const cleanupMandates = useCleanupMandates();
 
@@ -361,6 +364,23 @@ export default function SenderMandatesPage() {
                     </Button>
                     {copySuccess && <span className="text-xs text-green-800">{copySuccess}</span>}
                   </div>
+                </div>
+                <div className="rounded-md border border-green-200 bg-white p-3 text-green-900">
+                  <p className="text-sm font-medium">Créer un escrow à partir de ce mandate</p>
+                  <p className="mt-1 text-xs text-green-800">
+                    Pré-remplira l&apos;écran de création d&apos;escrow. Vous pourrez modifier avant validation.
+                  </p>
+                  <Button
+                    type="button"
+                    className="mt-3"
+                    onClick={() => {
+                      const draft = createEscrowDraftFromMandate(createdMandate);
+                      setEscrowDraft(draft);
+                      router.push('/sender/escrows/create');
+                    }}
+                  >
+                    Créer un escrow à partir de ce mandate
+                  </Button>
                 </div>
                 <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-slate-900 p-3 text-xs text-slate-100">
                   {JSON.stringify(createdMandate, null, 2)}
