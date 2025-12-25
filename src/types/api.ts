@@ -15,8 +15,19 @@ export type MerchantSuggestion = {
   status?: MerchantSuggestionStatus;
   created_at?: string;
   updated_at?: string;
+  promotion_registry_id?: string | null;
+  review_reason?: string | null;
   payload?: Record<string, unknown>;
-};
+} & Record<string, unknown>;
+
+export type MerchantSuggestionListResponse =
+  | {
+      items: MerchantSuggestion[];
+      total: number;
+      limit: number;
+      offset: number;
+    }
+  | MerchantSuggestion[];
 
 export type MerchantSuggestionCreatePayload = Record<string, unknown>;
 

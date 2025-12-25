@@ -31,6 +31,8 @@ import type {
   AdvisorSenderItem,
   AdminEscrowSummary,
   ApiKey,
+  MerchantSuggestion,
+  MerchantSuggestionListResponse,
   MilestoneCreatePayload,
   PaginatedResponse,
   Payment,
@@ -86,6 +88,20 @@ function normalizeArrayResponse<T>(data: unknown): T[] {
     return (data as PaginatedResponse<T>).items;
   }
   return [];
+}
+
+function normalizeMerchantSuggestionList(
+  data: MerchantSuggestionListResponse
+): { items: MerchantSuggestion[]; total: number; limit?: number; offset?: number } {
+  if (Array.isArray(data)) {
+    return { items: data, total: data.length };
+  }
+  return {
+    items: Array.isArray(data.items) ? data.items : [],
+    total: typeof data.total === 'number' ? data.total : normalizeArrayResponse(data).length,
+    limit: data.limit,
+    offset: data.offset
+  };
 }
 
 const PENDING_PROOF_STATUSES = new Set(['PENDING', 'PENDING_REVIEW']);
@@ -173,6 +189,20 @@ export type AdminPaymentsResponse = {
   total: number;
 };
 
+export interface AdminMerchantSuggestionParams extends QueryParams {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  q?: string;
+}
+
+export type AdminMerchantSuggestionList = {
+  items: MerchantSuggestion[];
+  total: number;
+  limit?: number;
+  offset?: number;
+};
+
 async function fetchAdminPayments(params: AdminPaymentsParams) {
   const query = buildQueryString(params);
   const response = await apiClient.get(`/admin/payments?${query}`);
@@ -180,6 +210,14 @@ async function fetchAdminPayments(params: AdminPaymentsParams) {
     items: normalizePaginatedItems<Payment>(response.data),
     total: getPaginatedTotal<Payment>(response.data)
   };
+}
+
+async function fetchAdminMerchantSuggestions(params: AdminMerchantSuggestionParams) {
+  const query = buildQueryString(params);
+  const response = await apiClient.get<MerchantSuggestionListResponse>(
+    query ? `/admin/merchant-suggestions?${query}` : '/admin/merchant-suggestions'
+  );
+  return normalizeMerchantSuggestionList(response.data);
 }
 
 async function postProofDecision(proofId: string, payload: ProofDecisionRequest) {
@@ -294,6 +332,28 @@ export function useAdminPayments(
   });
 }
 
+export function useAdminMerchantSuggestions(
+  params: AdminMerchantSuggestionParams = {},
+  options?: { enabled?: boolean }
+) {
+  const { limit = 50, offset = 0, status, q } = params;
+  const filters = useMemo(() => ({ limit, offset, status, q }), [limit, offset, q, status]);
+  return useQuery<AdminMerchantSuggestionList>({
+    queryKey: queryKeys.admin.merchantSuggestions.list(filters),
+    queryFn: async () => fetchAdminMerchantSuggestions(filters),
+    enabled: options?.enabled,
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 403 || statusCode === 404) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+}
+
 export function useExecutePayment() {
   const queryClient = useQueryClient();
   return useMutation<Payment, unknown, { paymentId: string }>({
@@ -309,6 +369,69 @@ export function useExecutePayment() {
       if (payment?.escrow_id) {
         invalidateEscrowSummary(queryClient, payment.escrow_id);
       }
+    }
+  });
+}
+
+export function useApproveMerchantSuggestion() {
+  const queryClient = useQueryClient();
+  return useMutation<void, unknown, { id: string }>({
+    mutationFn: async ({ id }) => {
+      await apiClient.post(`/admin/merchant-suggestions/${id}/approve`);
+    },
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 403 || status === 404 || status === 409 || status === 422) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.merchantSuggestions.listBase() });
+    }
+  });
+}
+
+export function useRejectMerchantSuggestion() {
+  const queryClient = useQueryClient();
+  return useMutation<void, unknown, { id: string }>({
+    mutationFn: async ({ id }) => {
+      await apiClient.post(`/admin/merchant-suggestions/${id}/reject`);
+    },
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 403 || status === 404 || status === 409 || status === 422) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.merchantSuggestions.listBase() });
+    }
+  });
+}
+
+export function usePromoteMerchantSuggestion() {
+  const queryClient = useQueryClient();
+  return useMutation<void, unknown, { id: string }>({
+    mutationFn: async ({ id }) => {
+      await apiClient.post(`/admin/merchant-suggestions/${id}/promote`);
+    },
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 403 || status === 404 || status === 409 || status === 422) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.merchantSuggestions.listBase() });
     }
   });
 }
