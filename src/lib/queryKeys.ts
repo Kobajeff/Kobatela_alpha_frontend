@@ -70,6 +70,16 @@ export const queryKeys = {
     settings: {
       aiProof: () => ['admin', 'settings', 'ai-proof'] as const
     },
-    senders: () => ['admin-senders'] as const
+    senders: () => ['admin-senders'] as const,
+    pricing: {
+      base: () => ['admin', 'pricing'] as const,
+      referenceImport: () => ['admin', 'pricing', 'reference-import'] as const,
+      inflation: {
+        listBase: () => ['admin', 'pricing', 'inflation'] as const,
+        list: <T extends ListFilters>(filters: T) =>
+          ['admin', 'pricing', 'inflation', filters] as const,
+        byId: (id?: string | number | null) => ['admin', 'pricing', 'inflation', id] as const
+      }
+    }
   }
 };

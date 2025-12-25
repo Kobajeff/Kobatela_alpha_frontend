@@ -4,23 +4,39 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
+import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
+import { userHasScope } from '@/lib/scopes';
+import type { AuthUser } from '@/types/api';
 import { Header } from './Header';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
 const adminSendersPath = ['', 'admin', 'senders'].join('/');
 const adminReviewQueuePath = ['', 'admin', 'proofs', 'review-queue'].join('/');
 
-const adminLinks = [
-  { href: adminDashboardPath, label: 'Dashboard' },
-  { href: adminSendersPath, label: 'Senders' },
-  { href: adminReviewQueuePath, label: 'Proof review queue' },
-  { href: '/admin/advisors', label: 'Advisors' },
-  { href: '/admin/settings/ai-proof', label: 'AI proof settings' }
-];
+type AdminShellProps = {
+  children: ReactNode;
+  user?: AuthUser;
+};
 
-export function AdminShell({ children }: { children: ReactNode }) {
+export function AdminShell({ children, user }: AdminShellProps) {
   const pathname = usePathname();
+  const hasPricingScope = useMemo(() => userHasScope(user, 'pricing_admin'), [user]);
+
+  const adminLinks = useMemo(
+    () =>
+      [
+        { href: adminDashboardPath, label: 'Dashboard' },
+        { href: adminSendersPath, label: 'Senders' },
+        { href: adminReviewQueuePath, label: 'Proof review queue' },
+        { href: '/admin/advisors', label: 'Advisors' },
+        { href: '/admin/settings/ai-proof', label: 'AI proof settings' },
+        hasPricingScope
+          ? { href: '/admin/pricing', label: 'Pricing' }
+          : null
+      ].filter(Boolean) as Array<{ href: string; label: string }>,
+    [hasPricingScope]
+  );
 
   return (
     <div className="min-h-screen bg-slate-100">
