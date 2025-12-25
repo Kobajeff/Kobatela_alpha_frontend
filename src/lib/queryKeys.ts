@@ -58,6 +58,11 @@ export const queryKeys = {
       detail: (advisorId: number) => ['admin', 'advisor', advisorId] as const,
       senders: (advisorId: number) => ['admin', 'advisor', advisorId, 'senders'] as const
     },
+    merchantSuggestions: {
+      listBase: () => ['admin', 'merchantSuggestions'] as const,
+      list: <T extends ListFilters>(filters: T) => ['admin', 'merchantSuggestions', filters] as const,
+      byId: (suggestionId?: string) => ['admin', 'merchantSuggestions', suggestionId] as const
+    },
     settings: {
       aiProof: () => ['admin', 'settings', 'ai-proof'] as const
     },
