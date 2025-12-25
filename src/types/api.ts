@@ -116,6 +116,11 @@ export type ProofDecisionResponse = Proof;
 
 export type PaymentStatus = 'PENDING' | 'SENT' | 'SETTLED' | 'ERROR' | 'REFUNDED';
 
+export type AdvisorProofItem = Proof & {
+  milestone_name?: string;
+  sender_email?: string;
+};
+
 export type MilestoneStatus =
   | 'WAITING'
   | 'PENDING_REVIEW'

@@ -11,6 +11,7 @@ import { LoadingState } from '@/components/common/LoadingState';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
 const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
+const advisorQueuePath = ['', 'advisor', 'queue'].join('/');
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,6 +27,8 @@ export default function LoginPage() {
       const role = response.user.role;
       if (role === 'admin') {
         router.push(adminDashboardPath as Route);
+      } else if (role === 'advisor') {
+        router.push(advisorQueuePath as Route);
       } else {
         router.push(senderDashboardPath as Route);
       }
