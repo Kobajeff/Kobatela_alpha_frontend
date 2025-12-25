@@ -44,6 +44,10 @@ export interface User {
 export interface AuthUser extends Omit<User, 'id'> {
   id: number | string;
   full_name?: string;
+  scopes?: string[];
+  api_scopes?: string[];
+  scope?: string | string[];
+  permissions?: string[];
 }
 
 export type EscrowStatus =
@@ -164,6 +168,28 @@ export type SenderDashboard = {
   pending_proofs: Proof[];
   recent_payments: Payment[];
 };
+
+export type InflationAdjustment = {
+  id: string | number;
+  name?: string;
+  label?: string;
+  created_at?: string;
+  updated_at?: string;
+  active?: boolean;
+  payload?: Record<string, unknown> | null;
+} & Record<string, unknown>;
+
+export type InflationAdjustmentListResponse =
+  | {
+      items: InflationAdjustment[];
+      total: number;
+      limit?: number;
+      offset?: number;
+    }
+  | InflationAdjustment[];
+
+export type InflationAdjustmentCreatePayload = Record<string, unknown>;
+export type InflationAdjustmentUpdatePayload = Record<string, unknown>;
 
 export interface AuthLoginResponse {
   access_token?: string;
