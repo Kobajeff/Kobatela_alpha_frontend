@@ -38,7 +38,9 @@ import type {
   SenderEscrowSummary,
   AuthMeResponse,
   MerchantSuggestion,
-  MerchantSuggestionCreatePayload
+  MerchantSuggestionCreatePayload,
+  UsageMandateCreate,
+  UsageMandateRead
 } from '@/types/api';
 import { buildQueryString, getPaginatedLimitOffset, getPaginatedTotal, normalizePaginatedItems } from './queryUtils';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
@@ -136,6 +138,30 @@ export function useMerchantSuggestion(id?: string) {
       return response.data;
     },
     enabled: Boolean(id)
+  });
+}
+
+export function useCreateMandate() {
+  return useMutation<UsageMandateRead, Error, UsageMandateCreate>({
+    mutationFn: async (payload) => {
+      const response = await apiClient.post<UsageMandateRead>('/mandates', payload);
+      return response.data;
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
+}
+
+export function useCleanupMandates() {
+  return useMutation<{ expired_count?: number }, Error, void>({
+    mutationFn: async () => {
+      const response = await apiClient.post<{ expired_count?: number }>('/mandates/cleanup', {});
+      return response.data;
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
   });
 }
 
