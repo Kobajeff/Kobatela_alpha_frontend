@@ -27,6 +27,7 @@ export function AdminShell({ children, user }: AdminShellProps) {
     () =>
       [
         { href: adminDashboardPath, label: 'Dashboard' },
+        { href: '/admin/users', label: 'Users' },
         { href: adminSendersPath, label: 'Senders' },
         { href: adminReviewQueuePath, label: 'Proof review queue' },
         { href: '/admin/advisors', label: 'Advisors' },

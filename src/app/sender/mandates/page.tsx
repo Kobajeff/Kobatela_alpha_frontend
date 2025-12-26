@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { isAxiosError } from 'axios';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -10,13 +11,16 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
 import { createEscrowDraftFromMandate, setEscrowDraft } from '@/lib/prefill/escrowDraft';
-import { useCleanupMandates, useCreateMandate } from '@/lib/queries/sender';
-import type { PayoutDestinationType, UsageMandateCreate, UsageMandateRead } from '@/types/api';
+import { useAdminUsers } from '@/lib/queries/admin';
+import { normalizePaginatedItems } from '@/lib/queries/queryUtils';
+import { useAuthMe, useCleanupMandates, useCreateMandate } from '@/lib/queries/sender';
+import type { AuthUser, PayoutDestinationType, UsageMandateCreate, UsageMandateRead, User } from '@/types/api';
 
 const DEFAULT_CURRENCY = 'USD';
 
 export default function SenderMandatesPage() {
   const router = useRouter();
+  const { data: authUser } = useAuthMe();
   const createMandate = useCreateMandate();
   const cleanupMandates = useCleanupMandates();
 
@@ -37,6 +41,24 @@ export default function SenderMandatesPage() {
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
   const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [lastCleanupRun, setLastCleanupRun] = useState<string | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
+
+  const pickerAllowedRoles = new Set<AuthUser['role']>(['admin', 'both']);
+  const canPickBeneficiary = authUser?.role ? pickerAllowedRoles.has(authUser.role) : false;
+
+  const adminUsersQuery = useAdminUsers(
+    { limit: 50, offset: 0, q: pickerSearch || undefined },
+    { enabled: isPickerOpen && canPickBeneficiary }
+  );
+  const adminUsers = useMemo<User[]>(
+    () => normalizePaginatedItems<User>(adminUsersQuery.data),
+    [adminUsersQuery.data]
+  );
+  const adminUsersForbidden =
+    adminUsersQuery.isError &&
+    isAxiosError(adminUsersQuery.error) &&
+    adminUsersQuery.error.response?.status === 403;
 
   const payoutOptions: Array<{ value: PayoutDestinationType; label: string }> = useMemo(
     () => [
@@ -196,17 +218,33 @@ export default function SenderMandatesPage() {
                   disabled={createMandate.isPending}
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <label className="block text-sm font-medium text-slate-700">Beneficiary ID</label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={beneficiaryId}
-                  onChange={(event) => setBeneficiaryId(event.target.value)}
-                  placeholder="456"
-                  required
-                  disabled={createMandate.isPending}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={beneficiaryId}
+                    onChange={(event) => setBeneficiaryId(event.target.value)}
+                    placeholder="456"
+                    required
+                    disabled={createMandate.isPending}
+                    className="md:w-56"
+                  />
+                  {canPickBeneficiary && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsPickerOpen(true)}
+                      disabled={createMandate.isPending}
+                    >
+                      Choisir un bénéficiaire
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">
+                  Vous pouvez trouver l&apos;ID dans Admin → Users (colonne User ID).
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">Montant total</label>
@@ -412,6 +450,89 @@ export default function SenderMandatesPage() {
           )}
         </CardContent>
       </Card>
+
+      {isPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-3xl space-y-4 rounded-lg bg-white p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Sélectionner un bénéficiaire</h2>
+                <p className="text-xs text-slate-500">Disponible pour les rôles admin/both.</p>
+              </div>
+              <button
+                type="button"
+                className="rounded-md border px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                onClick={() => setIsPickerOpen(false)}
+              >
+                Fermer
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                className="w-64 rounded-md border px-3 py-2 text-sm"
+                placeholder="Rechercher par email..."
+                value={pickerSearch}
+                onChange={(event) => setPickerSearch(event.target.value)}
+              />
+              <button
+                type="button"
+                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                onClick={() => adminUsersQuery.refetch()}
+                disabled={adminUsersQuery.isFetching}
+              >
+                {adminUsersQuery.isFetching ? 'Recherche...' : 'Rechercher'}
+              </button>
+            </div>
+
+            {adminUsersQuery.isLoading && (
+              <p className="text-sm text-slate-600">Chargement des utilisateurs...</p>
+            )}
+
+            {adminUsersForbidden && (
+              <ErrorAlert message="Access denied (admin scope required) pour l'annuaire utilisateurs." />
+            )}
+
+            {adminUsersQuery.isError && !adminUsersForbidden && (
+              <ErrorAlert message={extractErrorMessage(adminUsersQuery.error)} />
+            )}
+
+            {!adminUsersQuery.isLoading && !adminUsersQuery.isError && adminUsers.length === 0 && (
+              <p className="text-sm text-slate-600">Aucun utilisateur trouvé.</p>
+            )}
+
+            {!adminUsersQuery.isLoading && !adminUsersQuery.isError && adminUsers.length > 0 && (
+              <div className="max-h-96 overflow-auto rounded-md border">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">User ID</th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">Email</th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">Rôle</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {adminUsers.map((user) => (
+                      <tr
+                        key={user.id}
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => {
+                          setBeneficiaryId(String(user.id));
+                          setIsPickerOpen(false);
+                        }}
+                      >
+                        <td className="px-4 py-2 font-mono text-xs">{user.id}</td>
+                        <td className="px-4 py-2">{user.email}</td>
+                        <td className="px-4 py-2 capitalize">{user.role}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
