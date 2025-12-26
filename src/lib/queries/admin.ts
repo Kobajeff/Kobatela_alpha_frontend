@@ -443,6 +443,30 @@ export interface AdminSendersParams {
   active?: boolean;
 }
 
+export interface AdminUsersParams {
+  role?: string;
+  limit?: number;
+  offset?: number;
+  q?: string;
+  active?: boolean;
+}
+
+export function useAdminUsers(params: AdminUsersParams = {}, options?: { enabled?: boolean }) {
+  const { role, limit = 50, offset = 0, q, active } = params;
+  const filters = useMemo(
+    () => ({ role, limit, offset, q, active }),
+    [active, limit, offset, q, role]
+  );
+
+  return useQuery({
+    queryKey: queryKeys.admin.users.list(filters),
+    queryFn: async () => {
+      return getAdminUsers({ role, limit, offset, q, active });
+    },
+    enabled: options?.enabled ?? true
+  });
+}
+
 export function useAdminSenders(params: AdminSendersParams = {}) {
   const { limit = 50, offset = 0, q, active } = params;
   const filters = useMemo(
@@ -459,6 +483,16 @@ export function useAdminSenders(params: AdminSendersParams = {}) {
 }
 
 export function useAdminSenderProfile(userId?: string) {
+  return useQuery<User>({
+    queryKey: queryKeys.admin.users.byId(userId),
+    queryFn: async () => {
+      return getAdminUserById(String(userId));
+    },
+    enabled: !!userId
+  });
+}
+
+export function useAdminUserProfile(userId?: string) {
   return useQuery<User>({
     queryKey: queryKeys.admin.users.byId(userId),
     queryFn: async () => {

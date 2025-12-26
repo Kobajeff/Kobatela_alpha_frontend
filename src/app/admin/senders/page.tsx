@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
 import { extractErrorMessage } from '@/lib/apiClient';
@@ -22,6 +23,12 @@ export default function AdminSendersPage() {
         <div>
           <h1 className="text-xl font-semibold">Senders</h1>
           <p className="text-sm text-muted-foreground">Gérez les comptes expéditeurs et hybrides.</p>
+          <Link
+            href="/admin/users"
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            Ouvrir le répertoire complet →
+          </Link>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
