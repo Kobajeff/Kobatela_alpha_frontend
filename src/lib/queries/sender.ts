@@ -9,6 +9,7 @@ import { apiClient, extractErrorMessage } from '../apiClient';
 import { normalizeApiError } from '../apiError';
 import { isNoAdvisorAvailable } from '../errors';
 import { setAuthToken } from '../auth';
+import { getAuthToken } from '../auth';
 import { resetSession } from '../sessionReset';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import { invalidateEscrowBundle, invalidateProofBundle } from '@/lib/invalidation';
@@ -22,6 +23,7 @@ import {
   getDemoEscrowSummary,
   getDemoUserByRole
 } from '@/lib/demoData';
+import { normalizeAuthUser, type NormalizedAuthUser } from '../authIdentity';
 import type {
   CreateProofPayload,
   EscrowCreatePayload,
@@ -243,25 +245,28 @@ export function useMyAdvisor() {
 }
 
 export function useAuthMe() {
-  const queryClient = useQueryClient();
-  const query = useQuery<AuthUser, Error>({
+  const enabled = isDemoMode() || Boolean(getAuthToken());
+  const query = useQuery<NormalizedAuthUser, Error>({
     queryKey: queryKeys.auth.me(),
     queryFn: async () => {
       if (isDemoMode()) {
         const role = getDemoRole();
         const user = getDemoUserByRole(role);
         return new Promise((resolve) => {
-          setTimeout(() => resolve(user), 200);
+          setTimeout(() => resolve(normalizeAuthUser(user)), 200);
         });
       }
       const response = await apiClient.get<AuthMeResponse>('/auth/me');
-      return response.data.user;
+      return normalizeAuthUser(response.data.user);
     },
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
     retry: (failureCount, error) => {
-      const message = extractErrorMessage(error);
-      if (message && failureCount > 1) return false;
-      return true;
-    }
+      const status = normalizeApiError(error).status;
+      if (status === 401 || status === 403) return false;
+      return failureCount < 1;
+    },
+    enabled
   });
 
   return query;
