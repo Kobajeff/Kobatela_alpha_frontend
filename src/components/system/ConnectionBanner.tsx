@@ -1,14 +1,10 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { getSnapshot, setOnline, subscribe } from '@/lib/networkHealth';
 
 export function ConnectionBanner() {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  const [online, setLocalOnline] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    return window.navigator.onLine;
-  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -16,17 +12,10 @@ export function ConnectionBanner() {
       console.info('[dev] ConnectionBanner mounted');
     }
     const initialOnline = window.navigator.onLine;
-    setLocalOnline((prev) => (prev === initialOnline ? prev : initialOnline));
     setOnline(initialOnline);
 
-    const handleOnline = () => {
-      setLocalOnline((prev) => (prev === true ? prev : true));
-      setOnline(true);
-    };
-    const handleOffline = () => {
-      setLocalOnline((prev) => (prev === false ? prev : false));
-      setOnline(false);
-    };
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -37,11 +26,11 @@ export function ConnectionBanner() {
     };
   }, []);
 
-  if (online && !snapshot.unstable) {
+  if (snapshot.online && !snapshot.unstable) {
     return null;
   }
 
-  const message = online
+  const message = snapshot.online
     ? 'Connexion instable, tentative en cours'
     : 'Vous êtes hors ligne.';
 
