@@ -1,9 +1,9 @@
 'use client';
 
 // Landing page redirects users to the correct dashboard based on authentication.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Route } from 'next';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { getAuthToken, getAuthTokenEventName, setAuthNotice } from '@/lib/auth';
 import { getPortalDestination } from '@/lib/authIdentity';
 import { useAuthMe } from '@/lib/queries/sender';
@@ -16,14 +16,25 @@ import { LoadingState } from '@/components/common/LoadingState';
 
 export default function HomePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data, isLoading, isError, error } = useAuthMe();
   const destination = getPortalDestination(data);
   const [mounted, setMounted] = useState(false);
   const [hasToken, setHasToken] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const didRedirectRef = useRef(false);
+  const didResetRef = useRef(false);
   const normalizedError = error ? normalizeApiError(error) : null;
   const isUnauthorized = normalizedError?.status === 401 || normalizedError?.status === 404;
   const isForbidden = normalizedError?.status === 403;
+  const isAtDestination =
+    Boolean(destination?.path) && Boolean(pathname) && pathname.startsWith(destination.path);
+  const shouldRedirectToLogin = mounted && !hasToken;
+  const shouldRedirectToPortal =
+    mounted && hasToken && Boolean(destination?.path) && !isAtDestination;
+  const shouldRedirectForForbidden =
+    mounted && isForbidden && Boolean(destination?.path) && !isAtDestination;
+  const shouldRedirect =
+    shouldRedirectToLogin || shouldRedirectToPortal || shouldRedirectForForbidden;
 
   useEffect(() => {
     setMounted(true);
@@ -46,14 +57,9 @@ export default function HomePage() {
   useEffect(() => {
     if (!mounted) return;
 
-    if (!hasToken) {
-      setIsRedirecting(true);
-      router.replace('/login');
-      return;
-    }
-
     if (isUnauthorized) {
-      setIsRedirecting(true);
+      if (didResetRef.current) return;
+      didResetRef.current = true;
       setAuthNotice({
         message: 'Session expirée. Veuillez vous reconnecter.',
         variant: 'error'
@@ -62,8 +68,15 @@ export default function HomePage() {
       return;
     }
 
-    if (isForbidden && destination) {
-      setIsRedirecting(true);
+    if (!shouldRedirect || didRedirectRef.current) return;
+    didRedirectRef.current = true;
+
+    if (shouldRedirectToLogin) {
+      router.replace('/login');
+      return;
+    }
+
+    if (shouldRedirectForForbidden && destination) {
       setAuthNotice({
         message: `Portée insuffisante pour cette page. Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`,
         variant: 'info'
@@ -72,11 +85,19 @@ export default function HomePage() {
       return;
     }
 
-    if (destination) {
-      setIsRedirecting(true);
+    if (shouldRedirectToPortal && destination) {
       router.replace(destination.path as Route);
     }
-  }, [destination, hasToken, isForbidden, isUnauthorized, mounted, router]);
+  }, [
+    destination,
+    isUnauthorized,
+    mounted,
+    router,
+    shouldRedirect,
+    shouldRedirectForForbidden,
+    shouldRedirectToLogin,
+    shouldRedirectToPortal
+  ]);
 
   if (!mounted) {
     return <LoadingState label="Loading…" />;
@@ -90,7 +111,5 @@ export default function HomePage() {
     );
   }
 
-  return (
-    <LoadingState label={isRedirecting ? 'Redirection…' : 'Loading…'} />
-  );
+  return <LoadingState label={shouldRedirect ? 'Redirection…' : 'Loading…'} />;
 }

@@ -1,9 +1,9 @@
 'use client';
 
 // Login page allowing the sender to request a token via email.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Route } from 'next';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { getPortalDestination } from '@/lib/authIdentity';
 import { getAuthToken, getAuthTokenEventName } from '@/lib/auth';
@@ -13,15 +13,20 @@ import { LoadingState } from '@/components/common/LoadingState';
 
 export default function LoginPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const login = useLogin();
   const { data: user, isLoading: isAuthLoading } = useAuthMe();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [hasToken, setHasToken] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const didRedirectRef = useRef(false);
 
   const destination = getPortalDestination(user);
+  const isAtDestination =
+    Boolean(destination?.path) && Boolean(pathname) && pathname.startsWith(destination.path);
+  const shouldRedirect =
+    mounted && hasToken && Boolean(user) && Boolean(destination?.path) && !isAtDestination;
 
   useEffect(() => {
     setMounted(true);
@@ -42,14 +47,12 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (!mounted || !hasToken || !user || !destination) {
+    if (!shouldRedirect || !destination || didRedirectRef.current) {
       return;
     }
-    setIsRedirecting(true);
-    if (destination) {
-      router.replace(destination.path as Route);
-    }
-  }, [destination, hasToken, mounted, router, user]);
+    didRedirectRef.current = true;
+    router.replace(destination.path as Route);
+  }, [destination, router, shouldRedirect]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -65,7 +68,7 @@ export default function LoginPage() {
     return <LoadingState label="Loading…" fullHeight={false} />;
   }
 
-  if (isRedirecting) {
+  if (shouldRedirect) {
     return <LoadingState label="Redirection…" fullHeight={false} />;
   }
 
