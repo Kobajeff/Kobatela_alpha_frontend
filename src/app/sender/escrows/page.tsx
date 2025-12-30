@@ -56,7 +56,7 @@ export default function SenderEscrowsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold">Mes escrows</h1>
         <Button onClick={() => router.push('/sender/escrows/create')}>Créer un escrow</Button>
       </div>
