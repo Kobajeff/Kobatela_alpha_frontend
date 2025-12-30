@@ -1,3 +1,5 @@
+import type { EscrowCreatePayload } from '@/types/api';
+
 const STORAGE_KEY = 'kobatela:escrowDraft';
 const TTL_MINUTES = 30;
 
@@ -6,13 +8,13 @@ export type EscrowDraftPrefill = {
   mandate_id: string | number;
   created_at: string;
   expires_at: string;
-  payload: Record<string, unknown>;
+  payload: Partial<EscrowCreatePayload>;
 };
 
 const isBrowser = () => typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';
 
 export const buildEscrowDraftFromMandate = (mandate: Record<string, unknown>) => {
-  const payload: Record<string, unknown> = {};
+  const payload: Partial<EscrowCreatePayload> = {};
   const totalAmount = mandate.total_amount ?? mandate.totalAmount;
   if (typeof totalAmount === 'number') {
     // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 1.1 — amount_total

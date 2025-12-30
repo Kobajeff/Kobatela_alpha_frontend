@@ -6,7 +6,9 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { clearEscrowDraft, createEscrowDraftFromMandate, getEscrowDraft, type EscrowDraftPrefill } from '@/lib/prefill/escrowDraft';
 import { useCreateEscrow, useCreateEscrowMilestones, useEscrowMilestones, useMandate } from '@/lib/queries/sender';
 import type {
+  EscrowDestination,
   EscrowCreatePayload,
+  EscrowRead,
   EscrowReleaseConditionMilestone,
   EscrowReleaseConditions,
   MilestoneCreatePayload
@@ -16,28 +18,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { MilestonesEditor } from '@/components/sender/milestones/MilestonesEditor';
+import { EscrowDestinationSelector } from '@/components/sender/escrows/EscrowDestinationSelector';
 
 const DEFAULT_CURRENCY = 'EUR';
 const DEFAULT_DOMAIN: 'private' = 'private';
-
-type BeneficiaryForm = {
-  full_name: string;
-  email: string;
-  phone_number: string;
-  address_line1: string;
-  address_country_code: string;
-  bank_account: string;
-  national_id_number?: string;
-};
-
-const emptyBeneficiary: BeneficiaryForm = {
-  full_name: '',
-  email: '',
-  phone_number: '',
-  address_line1: '',
-  address_country_code: '',
-  bank_account: ''
-};
+const ALLOWED_CURRENCIES = ['USD', 'EUR'] as const;
 
 export default function SenderCreateEscrowPage() {
   const router = useRouter();
@@ -54,13 +39,12 @@ export default function SenderCreateEscrowPage() {
   const [domain, setDomain] = useState<'private' | 'public' | 'aid'>(DEFAULT_DOMAIN);
   const [requiresProof, setRequiresProof] = useState(true);
   const [milestoneDrafts, setMilestoneDrafts] = useState<MilestoneCreatePayload[]>([]);
-  const [participantMode, setParticipantMode] = useState<'provider' | 'beneficiary' | null>(null);
-  const [providerUserId, setProviderUserId] = useState('');
-  const [beneficiary, setBeneficiary] = useState<BeneficiaryForm>(emptyBeneficiary);
+  const [destination, setDestination] = useState<EscrowDestination | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [milestoneCreationError, setMilestoneCreationError] = useState<string | null>(null);
   const [draftInfo, setDraftInfo] = useState<EscrowDraftPrefill | null>(null);
   const [prefillApplied, setPrefillApplied] = useState(false);
+  const [createdEscrow, setCreatedEscrow] = useState<EscrowRead | null>(null);
   const [createdEscrowId, setCreatedEscrowId] = useState<string | number | null>(null);
 
   const createdMilestonesQuery = useEscrowMilestones(createdEscrowId ? String(createdEscrowId) : '');
@@ -78,9 +62,10 @@ export default function SenderCreateEscrowPage() {
     }
     if (typeof payload.provider_user_id === 'number' || typeof payload.provider_user_id === 'string') {
       // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — provider_user_id
-      setParticipantMode('provider');
-      setProviderUserId(String(payload.provider_user_id));
-      setBeneficiary(emptyBeneficiary);
+      setDestination({
+        type: 'provider',
+        provider_user_id: String(payload.provider_user_id)
+      });
     }
     setDraftInfo(draft);
   };
@@ -119,15 +104,16 @@ export default function SenderCreateEscrowPage() {
     setDraftInfo(null);
     setAmountTotal('');
     setCurrency(DEFAULT_CURRENCY);
-    setProviderUserId('');
-    setParticipantMode(null);
-    setBeneficiary(emptyBeneficiary);
+    setDestination(null);
+    setCreatedEscrow(null);
+    setCreatedEscrowId(null);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
     setMilestoneCreationError(null);
+    setCreatedEscrow(null);
     setCreatedEscrowId(null);
 
     const normalizedAmount = amountTotal.trim();
@@ -138,13 +124,17 @@ export default function SenderCreateEscrowPage() {
     }
 
     const normalizedCurrency = currency.trim().toUpperCase() || DEFAULT_CURRENCY;
+    if (!ALLOWED_CURRENCIES.includes(normalizedCurrency as (typeof ALLOWED_CURRENCIES)[number])) {
+      setErrorMessage('La devise doit être USD ou EUR.');
+      return;
+    }
     if (!deadlineAt) {
       setErrorMessage('La date limite est requise.');
       return;
     }
     const deadlineIso = new Date(deadlineAt).toISOString();
 
-    if (!participantMode) {
+    if (!destination) {
       setErrorMessage('Sélectionnez un destinataire (prestataire ou bénéficiaire).');
       return;
     }
@@ -204,16 +194,24 @@ export default function SenderCreateEscrowPage() {
       domain
     };
 
-    if (participantMode === 'provider') {
-      const parsedProviderId = Number(providerUserId);
-      if (!providerUserId || !Number.isFinite(parsedProviderId) || parsedProviderId <= 0) {
+    if (destination.type === 'provider') {
+      const trimmedProviderId = destination.provider_user_id.trim();
+      const parsedProviderId = Number(trimmedProviderId);
+      if (!trimmedProviderId || !Number.isFinite(parsedProviderId) || parsedProviderId <= 0) {
         setErrorMessage('Identifiant prestataire invalide.');
         return;
       }
       payload.provider_user_id = parsedProviderId; // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — provider_user_id
     } else {
-      const { full_name, email, phone_number, address_line1, address_country_code, bank_account, national_id_number } =
-        beneficiary;
+      const { beneficiary } = destination;
+      const full_name = beneficiary.full_name.trim();
+      const email = beneficiary.email.trim();
+      const phone_number = beneficiary.phone_number.trim();
+      const address_line1 = beneficiary.address_line1.trim();
+      const address_country_code = beneficiary.address_country_code.trim();
+      const bank_account = beneficiary.bank_account.trim();
+      const national_id_number = beneficiary.national_id_number?.trim();
+
       if (!full_name || !email || !phone_number || !address_line1 || !address_country_code || !bank_account) {
         setErrorMessage('Tous les champs bénéficiaire sont requis (sauf identifiant national).');
         return;
@@ -232,13 +230,14 @@ export default function SenderCreateEscrowPage() {
         // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — bank_account
         bank_account,
         // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — national_id_number
-        national_id_number: national_id_number?.trim() || undefined
+        national_id_number: national_id_number || undefined
       };
     }
 
     try {
       const created = await createEscrow.mutateAsync(payload);
       clearEscrowDraft();
+      setCreatedEscrow(created);
       setCreatedEscrowId(created.id);
 
       if (hasMilestones) {
@@ -248,14 +247,10 @@ export default function SenderCreateEscrowPage() {
             milestones: milestoneDrafts
           });
           await createdMilestonesQuery.refetch();
-          return;
         } catch (error) {
           setMilestoneCreationError(extractErrorMessage(error));
-          return;
         }
       }
-
-      router.push(`/sender/escrows/${created.id}`);
     } catch (error) {
       setErrorMessage(extractErrorMessage(error));
     }
@@ -307,13 +302,18 @@ export default function SenderCreateEscrowPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">Devise</label>
-                <Input
-                  type="text"
+                <select
+                  className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                   value={currency}
-                  onChange={(event) => setCurrency(event.target.value)}
-                  placeholder={DEFAULT_CURRENCY}
+                  onChange={(event) => setCurrency(event.target.value as typeof currency)}
                   required
-                />
+                >
+                  {ALLOWED_CURRENCIES.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -341,155 +341,11 @@ export default function SenderCreateEscrowPage() {
               </div>
             </div>
 
-            <div className="space-y-3 rounded-md border border-slate-200 p-4">
-              <p className="text-sm font-medium text-slate-800">Destinataire</p>
-              <div className="flex flex-wrap items-center gap-4">
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="participant-mode"
-                    value="provider"
-                    checked={participantMode === 'provider'}
-                    onChange={() => {
-                      setParticipantMode('provider');
-                      setBeneficiary(emptyBeneficiary);
-                    }}
-                  />
-                  Prestataire sur la plateforme
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="participant-mode"
-                    value="beneficiary"
-                    checked={participantMode === 'beneficiary'}
-                    onChange={() => {
-                      setParticipantMode('beneficiary');
-                      setProviderUserId('');
-                    }}
-                  />
-                  Bénéficiaire hors plateforme
-                </label>
-              </div>
-
-              {participantMode === 'provider' && (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Identifiant utilisateur prestataire
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={providerUserId}
-                    onChange={(event) => setProviderUserId(event.target.value)}
-                    placeholder="ID utilisateur"
-                    required
-                  />
-                </div>
-              )}
-
-              {participantMode === 'beneficiary' && (
-                <div className="mt-2 space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700">Nom complet</label>
-                    <Input
-                      type="text"
-                      value={beneficiary.full_name}
-                      onChange={(event) =>
-                        setBeneficiary((prev) => ({ ...prev, full_name: event.target.value }))
-                      }
-                      placeholder="Nom et prénom"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">Email</label>
-                      <Input
-                        type="email"
-                        value={beneficiary.email}
-                        onChange={(event) =>
-                          setBeneficiary((prev) => ({ ...prev, email: event.target.value }))
-                        }
-                        placeholder="beneficiaire@example.com"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">Téléphone</label>
-                      <Input
-                        type="tel"
-                        value={beneficiary.phone_number}
-                        onChange={(event) =>
-                          setBeneficiary((prev) => ({ ...prev, phone_number: event.target.value }))
-                        }
-                        placeholder="+2507..."
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">Adresse (ligne 1)</label>
-                      <Input
-                        type="text"
-                        value={beneficiary.address_line1}
-                        onChange={(event) =>
-                          setBeneficiary((prev) => ({ ...prev, address_line1: event.target.value }))
-                        }
-                        placeholder="123 Rue Exemple"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">Code pays (adresse)</label>
-                      <Input
-                        type="text"
-                        value={beneficiary.address_country_code}
-                        onChange={(event) =>
-                          setBeneficiary((prev) => ({
-                            ...prev,
-                            address_country_code: event.target.value
-                          }))
-                        }
-                        placeholder="FR"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">Compte bancaire / IBAN</label>
-                      <Input
-                        type="text"
-                        value={beneficiary.bank_account}
-                        onChange={(event) =>
-                          setBeneficiary((prev) => ({ ...prev, bank_account: event.target.value }))
-                        }
-                        placeholder="FR76..."
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">
-                        Numéro d&apos;identité (optionnel)
-                      </label>
-                      <Input
-                        type="text"
-                        value={beneficiary.national_id_number ?? ''}
-                        onChange={(event) =>
-                          setBeneficiary((prev) => ({
-                            ...prev,
-                            national_id_number: event.target.value
-                          }))
-                        }
-                        placeholder="ID national / passeport"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <EscrowDestinationSelector
+              destination={destination}
+              onChange={setDestination}
+              disabled={createEscrow.isPending || createEscrowMilestones.isPending}
+            />
 
             <div className="space-y-3 rounded-md border border-slate-200 p-4">
               <div className="flex items-center justify-between">
@@ -530,6 +386,55 @@ export default function SenderCreateEscrowPage() {
           </form>
         </CardContent>
       </Card>
+
+      {createdEscrow && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Escrow créé</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+              Création réussie. Certaines informations bénéficiaire peuvent être masquées côté backend conformément aux règles de redaction.
+            </div>
+            <ul className="space-y-2 text-sm text-slate-800">
+              <li>
+                <span className="font-medium">ID:</span>{' '}
+                <span className="font-mono">{String(createdEscrow.id)}</span>
+              </li>
+              <li>
+                <span className="font-medium">Montant:</span> {createdEscrow.amount_total} {createdEscrow.currency}
+              </li>
+              <li>
+                <span className="font-medium">Échéance:</span>{' '}
+                {createdEscrow.deadline_at
+                  ? new Date(createdEscrow.deadline_at).toLocaleString()
+                  : 'Non renseignée'}
+              </li>
+              <li>
+                <span className="font-medium">Destinataire:</span>{' '}
+                {createdEscrow.provider_user_id
+                  ? `Prestataire #${createdEscrow.provider_user_id}`
+                  : createdEscrow.beneficiary_profile
+                    ? `${createdEscrow.beneficiary_profile.full_name ?? 'Profil bénéficiaire'}${
+                        createdEscrow.beneficiary_profile.masked ? ' (données masquées)' : ''
+                      }`
+                    : 'Profil bénéficiaire indisponible ou masqué'}
+              </li>
+            </ul>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => router.push(`/sender/escrows/${createdEscrow.id}`)}>
+                Voir l&apos;escrow
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/sender/escrows/${createdEscrow.id}#milestones`)}
+              >
+                Ajouter des milestones
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {createdEscrowId && milestoneDrafts.length > 0 && (
         <Card>

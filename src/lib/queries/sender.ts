@@ -28,6 +28,7 @@ import type {
   CreateProofPayload,
   EscrowCreatePayload,
   EscrowListItem,
+  EscrowRead,
   AuthLoginResponse,
   AuthUser,
   MilestoneCreatePayload,
@@ -366,11 +367,11 @@ export function useSenderEscrows(params: { status?: string; limit?: number; offs
 
 export function useCreateEscrow() {
   const queryClient = useQueryClient();
-  return useMutation<EscrowListItem, Error, EscrowCreatePayload>({
+  return useMutation<EscrowRead, Error, EscrowCreatePayload>({
     mutationFn: async (payload) => {
       if (isDemoMode()) {
         const now = new Date().toISOString();
-        return new Promise<EscrowListItem>((resolve) => {
+        return new Promise<EscrowRead>((resolve) => {
           setTimeout(
             () =>
               resolve({
@@ -384,7 +385,7 @@ export function useCreateEscrow() {
           );
         });
       }
-      const response = await apiClient.post<EscrowListItem>('/escrows', payload);
+      const response = await apiClient.post<EscrowRead>('/escrows', payload);
       return response.data;
     },
     onSuccess: () => {
