@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthMe } from '@/lib/queries/sender';
@@ -14,7 +14,7 @@ import {
   hasScope,
   type NormalizedAuthUser
 } from '@/lib/authIdentity';
-import { getAuthToken, getAuthUser, setAuthNotice } from '@/lib/auth';
+import { getAuthToken, getAuthTokenEventName, setAuthNotice } from '@/lib/auth';
 import { getQueryClient } from '@/lib/queryClient';
 import { resetSession } from '@/lib/sessionReset';
 import type { UserRole } from '@/types/api';
@@ -40,14 +40,16 @@ export function RequireScope({
   const { data: user, isLoading, isError, error } = useAuthMe();
   const router = useRouter();
   const pathname = usePathname();
+  const didResetRef = useRef(false);
+  const didRedirectRef = useRef(false);
+  const [mounted, setMounted] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const hasToken = Boolean(getAuthToken());
   const normalizedError = error ? normalizeApiError(error) : null;
   const status = normalizedError?.status;
   const isUnauthorized = status === 401 || status === 404;
   const isForbidden = status === 403;
-  const storedUser = useMemo(() => getAuthUser(), []);
-  const destination = getPortalDestination(user ?? storedUser);
+  const destination = getPortalDestination(user ?? null);
   const hasAllowedRole = allowRoles.length === 0 || allowRoles.includes(user?.role as UserRole);
   const hasAllowedScope =
     anyScopes.length === 0 || (user ? anyScopes.some((scope) => hasScope(user, scope)) : false);
@@ -59,21 +61,45 @@ export function RequireScope({
     !pathname.startsWith(destination?.path ?? '');
 
   useEffect(() => {
-    const token = getAuthToken();
+    setMounted(true);
 
-    if (!token && !isLoading) {
+    const updateTokenState = () => {
+      setHasToken(Boolean(getAuthToken()));
+    };
+
+    updateTokenState();
+
+    const tokenEventName = getAuthTokenEventName();
+    window.addEventListener(tokenEventName, updateTokenState);
+    window.addEventListener('storage', updateTokenState);
+    return () => {
+      window.removeEventListener(tokenEventName, updateTokenState);
+      window.removeEventListener('storage', updateTokenState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (!hasToken && !isLoading) {
+      if (didResetRef.current) return;
+      didResetRef.current = true;
       setAuthNotice({ message: SESSION_EXPIRED_MESSAGE, variant: 'error' });
       resetSession(getQueryClient());
       return;
     }
 
     if (isUnauthorized) {
+      if (didResetRef.current) return;
+      didResetRef.current = true;
       setAuthNotice({ message: SESSION_EXPIRED_MESSAGE, variant: 'error' });
       resetSession(getQueryClient());
       return;
     }
 
     if (isForbidden && destination && pathname && !pathname.startsWith(destination.path)) {
+      if (didRedirectRef.current) return;
+      didRedirectRef.current = true;
       setIsRedirecting(true);
       setAuthNotice({
         message: `Portée insuffisante pour cette page. Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`,
@@ -81,20 +107,29 @@ export function RequireScope({
       });
       router.replace(destination.path as Route);
     }
-  }, [destination, isForbidden, isLoading, isUnauthorized, pathname, router]);
+  }, [destination, hasToken, isForbidden, isLoading, isUnauthorized, mounted, pathname, router]);
 
   useEffect(() => {
-    if (!needsPortalRedirect || !destination) return;
+    if (!mounted || !needsPortalRedirect || !destination || didRedirectRef.current) return;
+    didRedirectRef.current = true;
     setIsRedirecting(true);
     setAuthNotice({
       message: `Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`,
       variant: 'info'
     });
     router.replace(destination.path as Route);
-  }, [destination, needsPortalRedirect, router]);
+  }, [destination, mounted, needsPortalRedirect, router]);
 
-  if (isLoading || isRedirecting || (!hasToken && !isLoading)) {
-    return <LoadingState label={loadingLabel ?? 'Chargement...'} />;
+  if (!mounted) {
+    return <LoadingState label="Loading…" />;
+  }
+
+  if (isRedirecting) {
+    return <LoadingState label="Redirection…" />;
+  }
+
+  if (isLoading || (!hasToken && !isLoading)) {
+    return <LoadingState label={loadingLabel ?? 'Loading…'} />;
   }
 
   if (isError && isUnauthorized) {

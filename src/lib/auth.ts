@@ -8,6 +8,7 @@ const TOKEN_KEY = 'kobatela_token';
 const USER_KEY = 'kobatela_user';
 const NOTICE_KEY = 'kobatela_auth_notice';
 const NOTICE_EVENT = 'kobatela:auth-notice';
+const TOKEN_EVENT = 'kobatela:auth-token';
 
 export type AuthNotice = {
   message: string;
@@ -26,6 +27,7 @@ export function isBrowser(): boolean {
 export function setAuthToken(token: string): void {
   if (!isBrowser()) return;
   window.localStorage.setItem(TOKEN_KEY, token);
+  window.dispatchEvent(new CustomEvent(TOKEN_EVENT));
 }
 
 export function getAuthToken(): string | null {
@@ -36,6 +38,7 @@ export function getAuthToken(): string | null {
 export function clearAuthToken(): void {
   if (!isBrowser()) return;
   window.localStorage.removeItem(TOKEN_KEY);
+  window.dispatchEvent(new CustomEvent(TOKEN_EVENT));
 }
 
 export function setAuthUser(user: AuthUser): void {
@@ -97,4 +100,8 @@ export function consumeAuthNotice(): AuthNotice | null {
 
 export function getAuthNoticeEventName(): string {
   return NOTICE_EVENT;
+}
+
+export function getAuthTokenEventName(): string {
+  return TOKEN_EVENT;
 }

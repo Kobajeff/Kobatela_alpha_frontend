@@ -8,7 +8,7 @@ import { isAxiosError } from 'axios';
 import { apiClient, extractErrorMessage } from '../apiClient';
 import { normalizeApiError } from '../apiError';
 import { isNoAdvisorAvailable } from '../errors';
-import { getAuthToken, setAuthToken, setAuthUser } from '../auth';
+import { getAuthToken, getAuthTokenEventName, setAuthToken, setAuthUser } from '../auth';
 import { resetSession } from '../sessionReset';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import { invalidateEscrowBundle, invalidateProofBundle } from '@/lib/invalidation';
@@ -244,7 +244,30 @@ export function useMyAdvisor() {
 }
 
 export function useAuthMe() {
-  const enabled = isDemoMode() || Boolean(getAuthToken());
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    if (isDemoMode()) {
+      setHasToken(true);
+      return;
+    }
+
+    const updateTokenState = () => {
+      setHasToken(Boolean(getAuthToken()));
+    };
+
+    updateTokenState();
+
+    const tokenEventName = getAuthTokenEventName();
+    window.addEventListener(tokenEventName, updateTokenState);
+    window.addEventListener('storage', updateTokenState);
+    return () => {
+      window.removeEventListener(tokenEventName, updateTokenState);
+      window.removeEventListener('storage', updateTokenState);
+    };
+  }, []);
+
+  const enabled = isDemoMode() || hasToken;
   const query = useQuery<NormalizedAuthUser, Error>({
     queryKey: queryKeys.auth.me(),
     queryFn: async () => {
