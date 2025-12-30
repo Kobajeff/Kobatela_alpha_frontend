@@ -122,6 +122,31 @@ export interface User {
   is_active?: boolean;
 }
 
+export type NationalIdType = 'ID_CARD' | 'PASSPORT';
+
+export interface UserProfile {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
+  country_code?: string | null;
+  bank_account?: string | null;
+  national_id_type?: NationalIdType | null;
+  national_id_number?: string | null;
+  spoken_languages?: string[] | null;
+  residence_region?: string | null;
+  habitual_send_region?: string | null;
+  masked?: boolean;
+}
+
+export type UserProfileUpdatePayload = Partial<
+  Omit<UserProfile, 'masked'>
+>;
+
 export interface AuthUser extends Omit<User, 'id'> {
   id: number | string;
   full_name?: string;
@@ -417,16 +442,16 @@ export interface AdminUserCreatePayload {
 }
 
 export interface UserCreatePayload {
-  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — username
+  // Contract: docs/Backend_info/API_GUIDE (8).md — UserCreate — username
   username: string;
-  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — email
+  // Contract: docs/Backend_info/API_GUIDE (8).md — UserCreate — email
   email: string;
-  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — is_active
-  is_active: boolean;
-  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — role
-  role: UserRole;
-  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — payout_channel
-  payout_channel: PayoutChannel;
+  // Contract: docs/Backend_info/API_GUIDE (8).md — UserCreate — is_active
+  is_active?: boolean;
+  // Contract: docs/Backend_info/API_GUIDE (8).md — UserCreate — role
+  role?: UserRole;
+  // Contract: docs/Backend_info/API_GUIDE (8).md — UserCreate — payout_channel
+  payout_channel?: PayoutChannel;
 }
 
 export interface AdminUserCreateResponse {
@@ -524,22 +549,48 @@ export type ExternalEscrowSummary = {
 export interface AdvisorProfile {
   id: string;
   user_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
+  advisor_id?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  country?: string | null;
+  language?: string | null;
+  profile_photo?: string | null;
+  short_description?: string | null;
+  advisor_grade?: string | null;
+  advisor_review?: number | null;
   blocked: boolean;
   sender_managed: number;
   total_number_of_case_managed: number;
   subscribe_date: string;
   is_active: boolean;
-  languages?: string[] | null;
-  specialties?: string[] | null;
-  country?: string | null;
   load_stats?: {
     open_proofs?: number;
     active_senders?: number;
   };
 }
+
+export interface AdvisorProfileCreatePayload {
+  user_id: number;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  country?: string | null;
+  language?: string | null;
+  profile_photo?: string | null;
+  short_description?: string | null;
+  advisor_grade?: string | null;
+  is_active?: boolean | null;
+  blocked?: boolean | null;
+}
+
+export type AdvisorProfileUpdatePayload = Partial<
+  Omit<AdvisorProfileCreatePayload, 'user_id'>
+> & {
+  advisor_review?: number | null;
+};
 
 export interface AdminAdvisorSummary {
   advisor_id: string;
@@ -553,19 +604,19 @@ export interface AdminAdvisorSummary {
 export interface AdminAdvisorListItem {
   id: string;
   user_id: string;
-  display_name?: string | null;
-  first_name: string;
-  last_name: string;
-  email: string;
+  advisor_id?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
   blocked: boolean;
   is_active: boolean;
   sender_managed: number;
   total_number_of_case_managed: number;
   country?: string | null;
-  languages?: string[] | null;
-  specialties?: string[] | null;
+  language?: string | null;
+  advisor_grade?: string | null;
   open_proofs?: number;
-  grade?: string | null;
 }
 
 export interface AdvisorSenderItem {

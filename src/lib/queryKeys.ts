@@ -37,6 +37,7 @@ export const queryKeys = {
   sender: {
     dashboard: () => ['senderDashboard', { scope: 'canonical' }] as const,
     myAdvisor: () => ['myAdvisor'] as const,
+    profile: () => ['senderProfile'] as const,
     mandates: {
       base: () => ['mandates'] as const,
       byId: (mandateId?: string | null) => ['mandates', mandateId] as const

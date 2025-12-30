@@ -30,7 +30,8 @@ export function AdvisorsTable({ advisors, onToggleActive, onToggleBlocked, isUpd
               <th className="px-3 py-2">Advisor</th>
               <th className="px-3 py-2">Email</th>
               <th className="px-3 py-2">Country</th>
-              <th className="px-3 py-2">Languages</th>
+              <th className="px-3 py-2">Language</th>
+              <th className="px-3 py-2">Grade</th>
               <th className="px-3 py-2">Senders</th>
               <th className="px-3 py-2">Open proofs</th>
               <th className="px-3 py-2">Status</th>
@@ -39,15 +40,17 @@ export function AdvisorsTable({ advisors, onToggleActive, onToggleBlocked, isUpd
           </thead>
           <tbody>
             {advisors.map((advisor) => {
-              const displayName = advisor.display_name || `${advisor.first_name} ${advisor.last_name}`;
+              const displayName = `${advisor.first_name ?? ''} ${advisor.last_name ?? ''}`.trim();
+              const fallbackName = displayName || advisor.email || advisor.advisor_id || 'Advisor';
               return (
                 <tr key={advisor.id} className="border-b last:border-0">
-                  <td className="px-3 py-3 text-sm font-semibold text-slate-800">{displayName}</td>
-                  <td className="px-3 py-3 text-xs text-muted-foreground">{advisor.email}</td>
+                  <td className="px-3 py-3 text-sm font-semibold text-slate-800">{fallbackName}</td>
+                  <td className="px-3 py-3 text-xs text-muted-foreground">{advisor.email ?? '—'}</td>
                   <td className="px-3 py-3 text-xs text-slate-700">{advisor.country || '—'}</td>
                   <td className="px-3 py-3 text-xs text-slate-700">
-                    {advisor.languages?.length ? advisor.languages.join(', ') : '—'}
+                    {advisor.language || '—'}
                   </td>
+                  <td className="px-3 py-3 text-xs text-slate-700">{advisor.advisor_grade || '—'}</td>
                   <td className="px-3 py-3 text-xs text-slate-700">{advisor.sender_managed}</td>
                   <td className="px-3 py-3 text-xs text-slate-700">{advisor.open_proofs ?? 0}</td>
                   <td className="px-3 py-3">

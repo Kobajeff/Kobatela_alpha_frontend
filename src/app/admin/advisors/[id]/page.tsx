@@ -77,13 +77,14 @@ export default function AdminAdvisorDetailPage() {
     );
   };
 
-  const fullname = `${advisor.first_name} ${advisor.last_name}`;
+  const fullname = `${advisor.first_name ?? ''} ${advisor.last_name ?? ''}`.trim();
+  const displayName = fullname || advisor.email || advisor.advisor_id || 'Advisor';
 
   return (
     <div className="space-y-6 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">{fullname}</h1>
+          <h1 className="text-xl font-semibold">{displayName}</h1>
           <p className="text-sm text-muted-foreground">Advisor profile and workload overview.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -121,15 +122,32 @@ export default function AdminAdvisorDetailPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-slate-700">
             <p>
-              <span className="font-semibold">Email:</span> {advisor.email}
+              <span className="font-semibold">Advisor ID:</span> {advisor.advisor_id ?? '—'}
             </p>
             <p>
-              <span className="font-semibold">Languages:</span>{' '}
-              {advisor.languages?.length ? advisor.languages.join(', ') : '—'}
+              <span className="font-semibold">Email:</span> {advisor.email ?? '—'}
             </p>
             <p>
-              <span className="font-semibold">Specialties:</span>{' '}
-              {advisor.specialties?.length ? advisor.specialties.join(', ') : '—'}
+              <span className="font-semibold">Phone:</span> {advisor.phone ?? '—'}
+            </p>
+            <p>
+              <span className="font-semibold">Country:</span> {advisor.country ?? '—'}
+            </p>
+            <p>
+              <span className="font-semibold">Language:</span> {advisor.language ?? '—'}
+            </p>
+            <p>
+              <span className="font-semibold">Advisor grade:</span> {advisor.advisor_grade ?? '—'}
+            </p>
+            <p>
+              <span className="font-semibold">Short description:</span>{' '}
+              {advisor.short_description ?? '—'}
+            </p>
+            <p>
+              <span className="font-semibold">Review score:</span>{' '}
+              {advisor.advisor_review !== null && advisor.advisor_review !== undefined
+                ? advisor.advisor_review
+                : '—'}
             </p>
             <p className="text-xs text-muted-foreground">
               Subscribed since {new Date(advisor.subscribe_date).toLocaleDateString()}

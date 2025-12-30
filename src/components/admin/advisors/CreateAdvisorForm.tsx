@@ -6,18 +6,13 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage } from '@/lib/apiClient';
+import type { AdvisorProfileCreatePayload } from '@/types/api';
 
-const selectClasses =
+const fieldClasses =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200';
 
 interface CreateAdvisorFormProps {
-  onSubmit: (payload: {
-    user_id: number;
-    display_name?: string;
-    country?: string;
-    languages?: string[];
-    grade?: string;
-  }) => void;
+  onSubmit: (payload: AdvisorProfileCreatePayload) => void;
   isLoading?: boolean;
   error?: unknown;
   isSuccess?: boolean;
@@ -25,19 +20,33 @@ interface CreateAdvisorFormProps {
 
 export function CreateAdvisorForm({ onSubmit, isLoading, error, isSuccess }: CreateAdvisorFormProps) {
   const [userId, setUserId] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('');
-  const [languages, setLanguages] = useState('');
-  const [grade, setGrade] = useState('JUNIOR');
+  const [language, setLanguage] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [advisorGrade, setAdvisorGrade] = useState('');
+  const [isActive, setIsActive] = useState(true);
+  const [blocked, setBlocked] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isSuccess && !isLoading) {
       setUserId('');
-      setDisplayName('');
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setPhone('');
       setCountry('');
-      setLanguages('');
-      setGrade('JUNIOR');
+      setLanguage('');
+      setProfilePhoto('');
+      setShortDescription('');
+      setAdvisorGrade('');
+      setIsActive(true);
+      setBlocked(false);
     }
   }, [isSuccess, isLoading]);
 
@@ -51,17 +60,19 @@ export function CreateAdvisorForm({ onSubmit, isLoading, error, isSuccess }: Cre
       return;
     }
 
-    const normalizedLanguages = languages
-      .split(',')
-      .map((lang) => lang.trim())
-      .filter(Boolean);
-
     onSubmit({
       user_id: id,
-      display_name: displayName || undefined,
+      first_name: firstName || undefined,
+      last_name: lastName || undefined,
+      email: email || undefined,
+      phone: phone || undefined,
       country: country || undefined,
-      languages: normalizedLanguages.length ? normalizedLanguages : undefined,
-      grade: grade || undefined
+      language: language || undefined,
+      profile_photo: profilePhoto || undefined,
+      short_description: shortDescription || undefined,
+      advisor_grade: advisorGrade || undefined,
+      is_active: isActive,
+      blocked
     });
   };
 
@@ -71,7 +82,10 @@ export function CreateAdvisorForm({ onSubmit, isLoading, error, isSuccess }: Cre
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Create advisor</CardTitle>
-        <p className="text-sm text-muted-foreground">Attach an admin user to the concierge team.</p>
+        <p className="text-sm text-muted-foreground">
+          Attach an advisor profile to an existing advisor user (user_id required). Missing name/email
+          will default to the user record.
+        </p>
       </CardHeader>
       <CardContent>
         {submitError && <ErrorAlert message={submitError} />}
@@ -93,41 +107,84 @@ export function CreateAdvisorForm({ onSubmit, isLoading, error, isSuccess }: Cre
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700">Display name</label>
+            <label className="text-xs font-semibold text-slate-700">First name</label>
+            <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Fatou" />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">Last name</label>
+            <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Kouadio" />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">Email</label>
             <Input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Fatou K."
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="advisor@example.com"
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">Phone</label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+2250102030405" />
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-700">Country</label>
+            <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="CI" />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">Language</label>
+            <Input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="fr" />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">Advisor grade</label>
+            <Input value={advisorGrade} onChange={(e) => setAdvisorGrade(e.target.value)} placeholder="Senior" />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">Profile photo URL</label>
             <Input
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              placeholder="CI"
+              value={profilePhoto}
+              onChange={(e) => setProfilePhoto(e.target.value)}
+              placeholder="https://cdn.example.com/avatar.jpg"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700">Languages</label>
-            <Input
-              value={languages}
-              onChange={(e) => setLanguages(e.target.value)}
-              placeholder="fr, en"
+            <label className="text-xs font-semibold text-slate-700">Short description</label>
+            <textarea
+              value={shortDescription}
+              onChange={(e) => setShortDescription(e.target.value)}
+              placeholder="Advisor background and focus areas."
+              className={fieldClasses}
+              rows={3}
             />
-            <p className="text-xs text-muted-foreground">Comma-separated list, e.g., "fr, en".</p>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700">Grade</label>
-            <select className={selectClasses} value={grade} onChange={(e) => setGrade(e.target.value)}>
-              <option value="JUNIOR">Junior</option>
-              <option value="SENIOR">Senior</option>
-              <option value="LEAD">Lead</option>
-            </select>
-          </div>
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Active advisor
+          </label>
+
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={blocked}
+              onChange={(e) => setBlocked(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Blocked
+          </label>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'Creating advisor...' : 'Create advisor'}
