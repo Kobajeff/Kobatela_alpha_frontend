@@ -937,7 +937,6 @@ type ProofReviewPollingState = {
 type ProofLookupParams = {
   proofId: string;
 };
-}
 
 async function fetchProofById({ proofId }: ProofLookupParams) {
   const response = await apiClient.get<Proof>(`/proofs/${proofId}`);
