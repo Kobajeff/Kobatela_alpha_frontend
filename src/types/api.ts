@@ -200,38 +200,38 @@ export type MilestoneStatus =
 export type MilestoneProofRequirements = Record<string, unknown>;
 
 export type MilestoneCreatePayload = {
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — label
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — label
   label: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — amount
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — amount
   amount: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — currency
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — currency
   currency: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — sequence_index
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — sequence_index
   sequence_index: number;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — proof_kind
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — proof_kind
   proof_kind?: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — proof_requirements
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — proof_requirements
   proof_requirements?: MilestoneProofRequirements;
 };
 
 export type Milestone = {
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — id
-  id: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — escrow_id
-  escrow_id?: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — label
-  label?: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — amount
-  amount?: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — currency
-  currency?: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — sequence_index
-  sequence_index?: number;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — status
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — id
+  id: number | string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — escrow_id
+  escrow_id: number | string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — label
+  label: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — amount
+  amount: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — currency
+  currency: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — sequence_index
+  sequence_index: number;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — status
   status: MilestoneStatus;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — proof_kind
-  proof_kind?: string;
-  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — proof_requirements
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — proof_kind
+  proof_kind?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneRead — proof_requirements
   proof_requirements?: MilestoneProofRequirements;
   // Deprecated UI fields kept for compatibility with existing renders.
   name?: string;
