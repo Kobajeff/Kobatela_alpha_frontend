@@ -6,6 +6,7 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { getPortalDestination } from '@/lib/authIdentity';
+import { getAuthToken, getAuthTokenEventName } from '@/lib/auth';
 import { useAuthMe, useLogin } from '@/lib/queries/sender';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -16,14 +17,39 @@ export default function LoginPage() {
   const { data: user, isLoading: isAuthLoading } = useAuthMe();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const destination = getPortalDestination(user);
 
   useEffect(() => {
+    setMounted(true);
+
+    const updateTokenState = () => {
+      setHasToken(Boolean(getAuthToken()));
+    };
+
+    updateTokenState();
+
+    const tokenEventName = getAuthTokenEventName();
+    window.addEventListener(tokenEventName, updateTokenState);
+    window.addEventListener('storage', updateTokenState);
+    return () => {
+      window.removeEventListener(tokenEventName, updateTokenState);
+      window.removeEventListener('storage', updateTokenState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !hasToken || !user || !destination) {
+      return;
+    }
+    setIsRedirecting(true);
     if (destination) {
       router.replace(destination.path as Route);
     }
-  }, [destination, router]);
+  }, [destination, hasToken, mounted, router, user]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -35,6 +61,14 @@ export default function LoginPage() {
     }
   };
 
+  if (!mounted) {
+    return <LoadingState label="Loading…" fullHeight={false} />;
+  }
+
+  if (isRedirecting) {
+    return <LoadingState label="Redirection…" fullHeight={false} />;
+  }
+
   return (
     <main>
       <div className="container max-w-md space-y-6 rounded-lg bg-white p-8 shadow">
@@ -42,8 +76,8 @@ export default function LoginPage() {
           <h1 className="text-2xl font-semibold">Connexion</h1>
           <p className="text-slate-600">Accédez à votre espace expéditeur Kobatela.</p>
         </div>
-        {(login.isPending || isAuthLoading) && (
-          <LoadingState label="Connexion en cours..." fullHeight={false} />
+        {(login.isPending || (hasToken && isAuthLoading)) && (
+          <LoadingState label="Loading…" fullHeight={false} />
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium text-slate-700">
