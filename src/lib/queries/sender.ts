@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Query } from '@tanstack/query-core';
 import { isAxiosError } from 'axios';
+import { usePathname, useRouter } from 'next/navigation';
 import { apiClient, extractErrorMessage } from '../apiClient';
 import { normalizeApiError } from '../apiError';
 import { isNoAdvisorAvailable } from '../errors';
@@ -22,7 +23,7 @@ import {
   getDemoEscrowSummary,
   getDemoUserByRole
 } from '@/lib/demoData';
-import { normalizeAuthUser, type NormalizedAuthUser } from '../authIdentity';
+import { getPortalDestination, normalizeAuthUser, type NormalizedAuthUser } from '../authIdentity';
 import type {
   CreateProofPayload,
   EscrowCreatePayload,
@@ -481,8 +482,9 @@ type SenderEscrowSummaryPollingState = {
 
 export function useSenderEscrowSummary(
   escrowId: string,
-  options?: { fundingInProgress?: boolean }
+  options?: { fundingInProgress?: boolean; viewer?: EscrowSummaryViewer }
 ) {
+  const viewer = options?.viewer ?? 'sender';
   const [pollingTimeouts, setPollingTimeouts] = useState<Record<string, boolean>>({
     [pollingProfiles.fundingEscrow.name]: false,
     [pollingProfiles.milestoneProgression.name]: false,
@@ -545,7 +547,7 @@ export function useSenderEscrowSummary(
   );
 
   const query = useQuery<SenderEscrowSummary>({
-    queryKey: queryKeys.escrows.summary(escrowId, 'sender'),
+    queryKey: queryKeys.escrows.summary(escrowId, viewer),
     queryFn: async () => {
       if (isDemoMode()) {
         const summary = getDemoEscrowSummary(escrowId);
@@ -900,40 +902,32 @@ type ProofReviewPollingState = {
 
 type ProofLookupParams = {
   proofId: string;
-  escrowId?: string;
 };
-
-const PROOF_POLLING_LIST_LIMIT = 100;
-
-function createProofStatusError(message: string, status: number) {
-  const error = new Error(message) as Error & { status?: number };
-  error.status = status;
-  return error;
 }
 
-async function fetchProofViaList({ proofId }: ProofLookupParams) {
-  const query = buildQueryString({
-    mine: true,
-    limit: PROOF_POLLING_LIST_LIMIT,
-    offset: 0
-  });
-  const response = await apiClient.get(`/proofs?${query}`);
-  const proofs = normalizePaginatedItems<Proof>(response.data);
-  const match = proofs.find((proof) => String(proof.id) === String(proofId));
-  if (!match) {
-    throw createProofStatusError('Preuve introuvable', 404);
-  }
-  return match;
+async function fetchProofById({ proofId }: ProofLookupParams) {
+  const response = await apiClient.get<Proof>(`/proofs/${proofId}`);
+  return response.data;
 }
 
-export function useProofReviewPolling(proofId: string | null, escrowId: string) {
+export function useProofReviewPolling(
+  proofId: string | null,
+  escrowId: string,
+  viewer: EscrowSummaryViewer = 'sender'
+) {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { data: authUser } = useAuthMe();
   const [stopPolling, setStopPolling] = useState(false);
   const [serverErrorMessage, setServerErrorMessage] = useState<string | null>(null);
   const [conflictRefetched, setConflictRefetched] = useState(false);
   const startTimeRef = useRef<number | null>(null);
   const refreshedSummaryRef = useRef(false);
   const demoFetchCountRef = useRef(0);
+  const [isTabVisible, setIsTabVisible] = useState(
+    typeof document === 'undefined' ? true : document.visibilityState === 'visible'
+  );
 
   useEffect(() => {
     if (!proofId) {
@@ -952,6 +946,14 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
     refreshedSummaryRef.current = false;
     demoFetchCountRef.current = 0;
   }, [proofId]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      setIsTabVisible(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   useEffect(() => {
     if (!proofId || stopPolling) return undefined;
@@ -973,8 +975,10 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
         return {
           id: proofId,
           escrow_id: escrowId,
-          description: 'Demo proof',
-          attachment_url: 'https://demo.kobatela.com/files/demo-proof.pdf',
+          type: 'DOCUMENT',
+          storage_key: 'proofs/demo-proof.pdf',
+          storage_url: 'https://demo.kobatela.com/files/demo-proof.pdf',
+          sha256: 'demo-sha',
           file_id: 'demo-file-id',
           status,
           created_at: new Date().toISOString(),
@@ -984,11 +988,11 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
           ai_checked_at: null
         };
       }
-      return fetchProofViaList({ proofId, escrowId });
+      return fetchProofById({ proofId });
     },
     enabled: Boolean(proofId) && !stopPolling,
     refetchInterval: (queryInstance) => {
-      if (!proofId || stopPolling) return false;
+      if (!proofId || stopPolling || !isTabVisible) return false;
       const startTime = startTimeRef.current ?? Date.now();
       startTimeRef.current = startTime;
       return makeRefetchInterval(
@@ -1020,10 +1024,14 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
       setStopPolling(true);
     }
     if (status === 403) {
-      setServerErrorMessage('Accès refusé.');
+      setServerErrorMessage('Accès refusé : portée insuffisante.');
       setStopPolling(true);
+      const destination = getPortalDestination(authUser ?? null);
+      if (destination?.path && pathname && !pathname.startsWith(destination.path)) {
+        router.replace(destination.path);
+      }
     }
-  }, [query.error]);
+  }, [authUser, pathname, query.error, router]);
 
   useEffect(() => {
     if (!proofId || !query.data) return;
@@ -1032,11 +1040,11 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
       if (!refreshedSummaryRef.current) {
         refreshedSummaryRef.current = true;
         queryClient.invalidateQueries({
-          queryKey: queryKeys.escrows.summary(escrowId, 'sender')
+          queryKey: queryKeys.escrows.summary(escrowId, viewer)
         });
       }
     }
-  }, [proofId, escrowId, query.data, queryClient]);
+  }, [proofId, escrowId, query.data, queryClient, viewer]);
 
   useEffect(() => {
     if (!proofId || !query.error || conflictRefetched) return;
@@ -1048,11 +1056,11 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
       if (!refreshedSummaryRef.current) {
         refreshedSummaryRef.current = true;
         queryClient.invalidateQueries({
-          queryKey: queryKeys.escrows.summary(escrowId, 'sender')
+          queryKey: queryKeys.escrows.summary(escrowId, viewer)
         });
       }
     }
-  }, [proofId, escrowId, query, query.error, conflictRefetched, queryClient]);
+  }, [proofId, escrowId, query, query.error, conflictRefetched, queryClient, viewer]);
 
   const polling: ProofReviewPollingState = {
     active:
@@ -1066,20 +1074,23 @@ export function useProofReviewPolling(proofId: string | null, escrowId: string) 
   return { ...query, polling };
 }
 
-export function useCreateProof() {
+export function useCreateProof(options?: { viewer?: EscrowSummaryViewer }) {
   const queryClient = useQueryClient();
+  const viewer = options?.viewer ?? 'sender';
   return useMutation<Proof, Error, CreateProofPayload>({
     mutationFn: async (payload) => {
       if (isDemoMode()) {
         const now = new Date().toISOString();
-        const attachment = payload.attachment_url ?? 'https://example.com/demo-proof';
         return {
           id: `demo-proof-${Date.now()}`,
           escrow_id: payload.escrow_id,
-          milestone_id: payload.milestone_id,
-          description: payload.description,
-          attachment_url: attachment,
-          file_id: payload.file_id ?? 'demo-file-id',
+          milestone_idx: payload.milestone_idx,
+          type: payload.type,
+          storage_key: payload.storage_key,
+          storage_url: payload.storage_url,
+          sha256: payload.sha256,
+          metadata: payload.metadata,
+          file_id: 'demo-file-id',
           status: 'PENDING',
           created_at: now,
           ai_risk_level: null,
@@ -1097,7 +1108,7 @@ export function useCreateProof() {
         proofId: data.id,
         escrowId: data.escrow_id,
         milestoneId: data.milestone_id,
-        viewer: 'sender'
+        viewer
       });
     },
     onError: (error) => {

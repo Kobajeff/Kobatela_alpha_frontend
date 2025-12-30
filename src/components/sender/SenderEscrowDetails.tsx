@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 import { FundingStatusBanner } from '@/components/sender/FundingStatusBanner';
 import { ForbiddenBanner } from '@/components/shared/ForbiddenBanner';
 import { formatDateTime } from '@/lib/format';
@@ -13,7 +12,6 @@ import type { SenderEscrowSummary } from '@/types/api';
 import { isFundingTerminal } from '@/lib/escrowFunding';
 import { Badge } from '@/components/ui/Badge';
 import {
-  mapAiRiskToBadge,
   mapEscrowStatusToBadge,
   mapMilestoneStatusToBadge,
   mapPaymentStatusToBadge,
@@ -211,7 +209,9 @@ export function SenderEscrowDetails({
               className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2"
             >
               <div>
-                <p className="font-medium">{milestone.name}</p>
+                <p className="font-medium">
+                  {milestone.label ?? milestone.name ?? `Jalon ${milestone.sequence_index}`}
+                </p>
                 <p className="text-sm text-slate-500">Échéance : {milestone.due_date ?? 'N/A'}</p>
               </div>
               {(() => {
@@ -261,29 +261,19 @@ export function SenderEscrowDetails({
                     const badge = mapProofStatusToBadge(proof.status);
                     return <Badge variant={badge.variant}>{badge.label}</Badge>;
                   })()}
-                  {proof.ai_checked_at && (() => {
-                    const aiBadge = mapAiRiskToBadge(proof.ai_risk_level);
-                    return <Badge variant={aiBadge.variant}>{aiBadge.label}</Badge>;
-                  })()}
                 </div>
               </div>
               <p className="text-xs text-slate-500">{formatDateTime(proof.created_at)}</p>
               {(() => {
-                const attachmentLink = proof.attachment_url ?? proof.file_url;
-                if (!attachmentLink) return null;
-                return (
-                  <a
-                    href={attachmentLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-sm text-indigo-600 hover:underline"
-                  >
-                    Consulter la pièce jointe
-                  </a>
-                );
+                const hasFile =
+                  Boolean(proof.storage_key) ||
+                  Boolean(proof.storage_url) ||
+                  Boolean(proof.attachment_url) ||
+                  Boolean(proof.file_url);
+                if (!hasFile) return null;
+                return <p className="text-sm text-slate-600">Fichier reçu.</p>;
               })()}
               <div className="mt-2 space-y-2">
-                <ProofAiStatus proof={proof} />
                 {onRequestAdvisorReview && (
                   <div className="flex flex-wrap gap-2">
                     <Button

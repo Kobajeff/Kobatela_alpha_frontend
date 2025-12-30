@@ -455,7 +455,8 @@ export default function AdminEscrowDetailPage() {
               </div>
               <p className="text-xs text-slate-500">{formatOptionalDate(proof.created_at)}</p>
               {(() => {
-                const attachmentLink = proof.attachment_url ?? proof.file_url;
+                const attachmentLink =
+                  proof.storage_url ?? proof.attachment_url ?? proof.file_url ?? undefined;
                 if (!attachmentLink) return null;
                 return (
                   <a

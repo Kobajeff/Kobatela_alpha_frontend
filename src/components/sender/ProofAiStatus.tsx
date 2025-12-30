@@ -2,6 +2,8 @@ import { Badge } from '@/components/ui/Badge';
 import { formatDateTime } from '@/lib/format';
 import type { AiAnalysis } from '@/types/api';
 import { mapAiRiskToBadge } from '@/lib/uiMappings';
+import { useAuthMe } from '@/lib/queries/sender';
+import { hasScope } from '@/lib/authIdentity';
 
 type Props = {
   proof: AiAnalysis & { status?: string };
@@ -14,6 +16,17 @@ const formatScore = (value: AiAnalysis['ai_score']): string => {
 };
 
 export function ProofAiStatus({ proof, compact = false }: Props) {
+  const { data: user } = useAuthMe();
+  const canViewAi =
+    user?.role === 'admin' ||
+    user?.role === 'support' ||
+    hasScope(user ?? undefined, 'ADMIN') ||
+    hasScope(user ?? undefined, 'SUPPORT');
+
+  if (!canViewAi) {
+    return null;
+  }
+
   if (!proof.ai_checked_at) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">

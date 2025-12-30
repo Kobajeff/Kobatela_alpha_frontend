@@ -13,6 +13,7 @@ export function afterProofUpload(
   queryClient.invalidateQueries({ queryKey: queryKeys.milestones.byEscrow(escrowId) });
   queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
   queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
+  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'provider') });
   queryClient.invalidateQueries({ queryKey: queryKeys.admin.proofReviewQueueBase() });
   queryClient.invalidateQueries({ queryKey: queryKeys.sender.dashboard() });
 }
@@ -21,6 +22,7 @@ export function afterProofDecision(queryClient: QueryClient, escrowId: string) {
   queryClient.invalidateQueries({ queryKey: queryKeys.admin.proofReviewQueueBase() });
   queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
   queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
+  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'provider') });
   queryClient.invalidateQueries({ queryKey: queryKeys.sender.dashboard() });
 }
 
@@ -36,5 +38,6 @@ export function afterPayout(
 export function invalidateEscrowSummary(queryClient: QueryClient, escrowId: string) {
   queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
   queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
+  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'provider') });
   queryClient.invalidateQueries({ queryKey: queryKeys.milestones.byEscrow(escrowId) });
 }
