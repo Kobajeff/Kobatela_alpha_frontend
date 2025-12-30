@@ -1,5 +1,7 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
-export type UserRole = 'sender' | 'admin' | 'both' | 'advisor' | 'support';
+export type UserRole = 'sender' | 'provider' | 'admin' | 'both' | 'advisor' | 'support';
+
+export type PayoutChannel = 'off_platform' | 'stripe_connect';
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -402,6 +404,19 @@ export interface AdminUserCreatePayload {
   email: string;
   role: UserRole;
   issue_api_key?: boolean;
+}
+
+export interface UserCreatePayload {
+  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — username
+  username: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — email
+  email: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — is_active
+  is_active: boolean;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — role
+  role: UserRole;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — UserCreate — payout_channel
+  payout_channel: PayoutChannel;
 }
 
 export interface AdminUserCreateResponse {
