@@ -9,6 +9,7 @@ import {
   useState
 } from 'react';
 import { Card, CardContent, CardTitle } from './Card';
+import { consumeAuthNotice, getAuthNoticeEventName } from '@/lib/auth';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 
@@ -40,6 +41,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     );
     return () => timers.forEach((timer) => clearTimeout(timer));
   }, [toasts]);
+
+  useEffect(() => {
+    const eventName = getAuthNoticeEventName();
+    const handleNotice = () => {
+      const notice = consumeAuthNotice();
+      if (notice) {
+        showToast(notice.message, notice.variant ?? 'info');
+      }
+    };
+
+    handleNotice();
+    window.addEventListener(eventName, handleNotice);
+    return () => window.removeEventListener(eventName, handleNotice);
+  }, [showToast]);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
 

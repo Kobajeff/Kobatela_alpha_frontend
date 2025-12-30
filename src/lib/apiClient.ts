@@ -2,7 +2,7 @@
 import axios from 'axios';
 import type { ProofFileUploadResponse } from '@/types/api';
 import { normalizeApiError } from './apiError';
-import { getAuthToken } from './auth';
+import { getAuthToken, setAuthNotice } from './auth';
 import { recordNetworkError } from './networkHealth';
 import { getQueryClient } from './queryClient';
 import { resetSession } from './sessionReset';
@@ -22,6 +22,12 @@ apiClient.interceptors.request.use((config) => {
     config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (process.env.NODE_ENV === 'development') {
+    const method = config.method?.toUpperCase() ?? 'GET';
+    const url = config.url ?? '';
+    const tokenPrefix = token ? `${token.slice(0, 6)}…` : 'none';
+    console.info(`[api] ${method} ${url} auth=${tokenPrefix}`);
+  }
   return config;
 });
 
@@ -31,6 +37,10 @@ apiClient.interceptors.response.use(
     const { status } = normalizeApiError(error);
     if (status === 401 && !isResettingSession) {
       isResettingSession = true;
+      setAuthNotice({
+        message: 'Session expirée. Veuillez vous reconnecter.',
+        variant: 'error'
+      });
       resetSession(getQueryClient());
     }
 

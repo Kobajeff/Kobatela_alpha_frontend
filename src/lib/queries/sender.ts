@@ -8,8 +8,7 @@ import { isAxiosError } from 'axios';
 import { apiClient, extractErrorMessage } from '../apiClient';
 import { normalizeApiError } from '../apiError';
 import { isNoAdvisorAvailable } from '../errors';
-import { setAuthToken } from '../auth';
-import { getAuthToken } from '../auth';
+import { getAuthToken, setAuthToken, setAuthUser } from '../auth';
 import { resetSession } from '../sessionReset';
 import { getDemoRole, isDemoMode } from '@/lib/config';
 import { invalidateEscrowBundle, invalidateProofBundle } from '@/lib/invalidation';
@@ -266,7 +265,10 @@ export function useAuthMe() {
       if (status === 401 || status === 403) return false;
       return failureCount < 1;
     },
-    enabled
+    enabled,
+    onSuccess: (data) => {
+      setAuthUser(data);
+    }
   });
 
   return query;

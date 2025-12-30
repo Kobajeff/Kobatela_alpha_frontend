@@ -1,37 +1,35 @@
 'use client';
 
 // Login page allowing the sender to request a token via email.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { useLogin } from '@/lib/queries/sender';
+import { getPortalDestination } from '@/lib/authIdentity';
+import { useAuthMe, useLogin } from '@/lib/queries/sender';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
-
-const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
-const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
-const advisorQueuePath = ['', 'advisor', 'queue'].join('/');
 
 export default function LoginPage() {
   const router = useRouter();
   const login = useLogin();
+  const { data: user, isLoading: isAuthLoading } = useAuthMe();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const destination = getPortalDestination(user);
+
+  useEffect(() => {
+    if (destination) {
+      router.replace(destination.path as Route);
+    }
+  }, [destination, router]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
     try {
-      const response = await login.mutateAsync({ email });
-      const role = response.user.role;
-      if (role === 'admin') {
-        router.push(adminDashboardPath as Route);
-      } else if (role === 'advisor') {
-        router.push(advisorQueuePath as Route);
-      } else {
-        router.push(senderDashboardPath as Route);
-      }
+      await login.mutateAsync({ email });
     } catch (err) {
       setError(extractErrorMessage(err));
     }
@@ -44,7 +42,9 @@ export default function LoginPage() {
           <h1 className="text-2xl font-semibold">Connexion</h1>
           <p className="text-slate-600">Accédez à votre espace expéditeur Kobatela.</p>
         </div>
-        {login.isPending && <LoadingState label="Connexion en cours..." fullHeight={false} />}
+        {(login.isPending || isAuthLoading) && (
+          <LoadingState label="Connexion en cours..." fullHeight={false} />
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium text-slate-700">
             Adresse email
