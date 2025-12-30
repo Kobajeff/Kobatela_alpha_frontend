@@ -29,8 +29,8 @@ export default function SenderProfilePage() {
     return null;
   }
 
-  const createdAt = data.created_at ? new Date(data.created_at).toLocaleDateString() : 'N/A';
-  const activationLabel = data.is_active === undefined ? 'N/A' : data.is_active ? 'Actif' : 'Inactif';
+  const scopeLabel =
+    data.scopeList && data.scopeList.length > 0 ? data.scopeList.join(', ') : 'Non disponible (MVP)';
 
   return (
     <div className="space-y-6">
@@ -41,6 +41,12 @@ export default function SenderProfilePage() {
 
       <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
+            <dt className="text-sm font-medium text-slate-600">Identifiant</dt>
+            <dd className="text-base font-semibold text-slate-900">
+              {data.userId ?? data.id ?? 'Non disponible (MVP)'}
+            </dd>
+          </div>
           <div>
             <dt className="text-sm font-medium text-slate-600">Email</dt>
             <dd className="text-base font-semibold text-slate-900">{data.email ?? 'N/A'}</dd>
@@ -53,19 +59,26 @@ export default function SenderProfilePage() {
             <dt className="text-sm font-medium text-slate-600">Rôle</dt>
             <dd className="text-base font-semibold capitalize text-slate-900">{data.role}</dd>
           </div>
+          {data.payout_channel ? (
+            <div>
+              <dt className="text-sm font-medium text-slate-600">Canal de paiement</dt>
+              <dd className="text-base font-semibold text-slate-900">{data.payout_channel}</dd>
+            </div>
+          ) : null}
           <div>
-            <dt className="text-sm font-medium text-slate-600">Canal de paiement</dt>
-            <dd className="text-base font-semibold text-slate-900">{data.payout_channel ?? 'N/A'}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-slate-600">Date de création</dt>
-            <dd className="text-base font-semibold text-slate-900">{createdAt}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-slate-600">Statut</dt>
-            <dd className="text-base font-semibold text-slate-900">{activationLabel}</dd>
+            <dt className="text-sm font-medium text-slate-600">Scopes</dt>
+            <dd className="text-base font-semibold text-slate-900">{scopeLabel}</dd>
           </div>
         </dl>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
+        <p className="font-medium text-slate-800">Informations non disponibles (MVP)</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>Date de création du compte</li>
+          <li>Statut d&apos;activation</li>
+          <li>Adresse et informations personnelles avancées</li>
+        </ul>
       </div>
     </div>
   );

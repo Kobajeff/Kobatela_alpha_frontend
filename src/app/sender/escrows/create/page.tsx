@@ -389,7 +389,7 @@ export default function SenderCreateEscrowPage() {
                 currency={currency}
               />
               <p className="text-xs text-slate-600">
-                Les milestones sont créées après l&apos;escrow via l&apos;endpoint dédié (POST /escrows/{{id}}/milestones) accessible à l&apos;expéditeur tant que l&apos;escrow est en brouillon.
+                Les milestones sont créées après l&apos;escrow via l&apos;endpoint dédié (POST /escrows/{'{id}'}/milestones) accessible à l&apos;expéditeur tant que l&apos;escrow est en brouillon.
               </p>
             </div>
 
