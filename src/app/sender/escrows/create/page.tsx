@@ -6,6 +6,7 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { clearEscrowDraft, createEscrowDraftFromMandate, getEscrowDraft, type EscrowDraftPrefill } from '@/lib/prefill/escrowDraft';
 import { useCreateEscrow, useCreateEscrowMilestones, useEscrowMilestones, useMandate } from '@/lib/queries/sender';
 import type {
+  BeneficiaryCreate,
   EscrowDestination,
   EscrowCreatePayload,
   EscrowRead,
@@ -65,6 +66,28 @@ export default function SenderCreateEscrowPage() {
       setDestination({
         type: 'provider',
         provider_user_id: String(payload.provider_user_id)
+      });
+    }
+    if (payload.beneficiary && typeof payload.beneficiary === 'object') {
+      const beneficiary = payload.beneficiary as BeneficiaryCreate;
+      setDestination({
+        type: 'beneficiary',
+        beneficiary: {
+          // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — full_name
+          full_name: beneficiary.full_name ?? '',
+          // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — email
+          email: beneficiary.email ?? '',
+          // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — phone_number
+          phone_number: beneficiary.phone_number ?? '',
+          // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — address_line1
+          address_line1: beneficiary.address_line1 ?? '',
+          // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — address_country_code
+          address_country_code: beneficiary.address_country_code ?? '',
+          // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — bank_account
+          bank_account: beneficiary.bank_account ?? '',
+          // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — national_id_number
+          national_id_number: beneficiary.national_id_number ?? ''
+        }
       });
     }
     setDraftInfo(draft);
@@ -210,10 +233,10 @@ export default function SenderCreateEscrowPage() {
       const address_line1 = beneficiary.address_line1.trim();
       const address_country_code = beneficiary.address_country_code.trim();
       const bank_account = beneficiary.bank_account.trim();
-      const national_id_number = beneficiary.national_id_number?.trim();
+      const national_id_number = beneficiary.national_id_number.trim();
 
-      if (!full_name || !email || !phone_number || !address_line1 || !address_country_code || !bank_account) {
-        setErrorMessage('Tous les champs bénéficiaire sont requis (sauf identifiant national).');
+      if (!full_name || !email || !phone_number || !address_line1 || !address_country_code || !bank_account || !national_id_number) {
+        setErrorMessage('Tous les champs bénéficiaire sont requis.');
         return;
       }
       payload.beneficiary = {
@@ -230,7 +253,7 @@ export default function SenderCreateEscrowPage() {
         // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — bank_account
         bank_account,
         // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — national_id_number
-        national_id_number: national_id_number || undefined
+        national_id_number
       };
     }
 
@@ -430,6 +453,12 @@ export default function SenderCreateEscrowPage() {
                 onClick={() => router.push(`/sender/escrows/${createdEscrow.id}#milestones`)}
               >
                 Ajouter des milestones
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/sender/escrows/${createdEscrow.id}`)}
+              >
+                Uploader une preuve
               </Button>
             </div>
           </CardContent>
