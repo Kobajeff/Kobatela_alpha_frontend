@@ -1,7 +1,7 @@
 'use client';
 
 // Login page allowing the sender to request a token via email.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
@@ -10,27 +10,26 @@ import { getAuthToken, getAuthTokenEventName } from '@/lib/auth';
 import { useAuthMe, useLogin } from '@/lib/queries/sender';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
+import { resetSession } from '@/lib/sessionReset';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function LoginPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const login = useLogin();
-  const { data: user, isLoading: isAuthLoading } = useAuthMe();
+  const { data: user, isLoading: isAuthLoading, isError, error: authError } = useAuthMe();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [hasToken, setHasToken] = useState(false);
-  const didRedirectRef = useRef(false);
 
   const destination = getPortalDestination(user);
+  const isAuthenticated = hasToken && Boolean(user);
   const isAtDestination =
     Boolean(destination?.path) && Boolean(pathname) && pathname.startsWith(destination.path);
-  const shouldRedirect =
-    mounted && hasToken && Boolean(user) && Boolean(destination?.path) && !isAtDestination;
+  const canContinue = Boolean(destination?.path) && !isAtDestination;
 
   useEffect(() => {
-    setMounted(true);
-
     const updateTokenState = () => {
       setHasToken(Boolean(getAuthToken()));
     };
@@ -46,31 +45,20 @@ export default function LoginPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!shouldRedirect || !destination || didRedirectRef.current) {
-      return;
-    }
-    didRedirectRef.current = true;
-    router.replace(destination.path as Route);
-  }, [destination, router, shouldRedirect]);
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
     try {
-      await login.mutateAsync({ email });
+      const response = await login.mutateAsync({ email });
+      const loginDestination = getPortalDestination(response.user ?? null);
+      const fallbackDestination = loginDestination?.path ?? '/sender/dashboard';
+      router.replace(fallbackDestination as Route);
     } catch (err) {
       setError(extractErrorMessage(err));
     }
   };
 
-  if (!mounted) {
-    return <LoadingState label="Loading…" fullHeight={false} />;
-  }
-
-  if (shouldRedirect) {
-    return <LoadingState label="Redirection…" fullHeight={false} />;
-  }
+  const authErrorMessage = isError ? extractErrorMessage(authError) : null;
 
   return (
     <main>
@@ -79,6 +67,38 @@ export default function LoginPage() {
           <h1 className="text-2xl font-semibold">Connexion</h1>
           <p className="text-slate-600">Accédez à votre espace expéditeur Kobatela.</p>
         </div>
+        {isAuthenticated && (
+          <div className="space-y-3 rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
+            <p>
+              Vous êtes déjà connecté en tant que{' '}
+              <span className="font-semibold">
+                {user?.email || user?.username} ({user?.role})
+              </span>
+              .
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!canContinue}
+                onClick={() => {
+                  if (destination?.path) {
+                    router.replace(destination.path as Route);
+                  }
+                }}
+                className="rounded-md bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500 disabled:opacity-50"
+              >
+                Continuer vers mon espace
+              </button>
+              <button
+                type="button"
+                onClick={() => resetSession(queryClient, { redirectTo: '/login' })}
+                className="rounded-md border border-indigo-200 px-3 py-2 text-indigo-900 hover:bg-indigo-100"
+              >
+                Se déconnecter / Changer de compte
+              </button>
+            </div>
+          </div>
+        )}
         {(login.isPending || (hasToken && isAuthLoading)) && (
           <LoadingState label="Loading…" fullHeight={false} />
         )}
@@ -90,10 +110,12 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={login.isPending}
               className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:outline-none"
               placeholder="vous@example.com"
             />
           </label>
+          {authErrorMessage && <ErrorAlert message={authErrorMessage} />}
           {error && <ErrorAlert message={error} />}
           <button
             type="submit"

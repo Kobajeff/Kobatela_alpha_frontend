@@ -12,6 +12,6 @@ export function resetSession(
   if (!isBrowser()) return;
   const redirectTo = options.redirectTo ?? '/login';
   if (window.location.pathname !== redirectTo) {
-    window.location.assign(redirectTo);
+    window.location.replace(redirectTo);
   }
 }
