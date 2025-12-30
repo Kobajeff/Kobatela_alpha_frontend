@@ -48,6 +48,31 @@ export type BeneficiaryOffPlatformCreate = {
   national_id_number?: string;
 };
 
+export type BeneficiaryProfilePublicRead = {
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — id
+  id?: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — full_name
+  full_name?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — email
+  email?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — phone_number
+  phone_number?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — address_line1
+  address_line1?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — address_country_code
+  address_country_code?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — bank_account (masked in public view)
+  bank_account?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — national_id_number (masked in public view)
+  national_id_number?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — masked
+  masked?: boolean;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — created_at
+  created_at?: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryProfilePublicRead — updated_at
+  updated_at?: string;
+} & Record<string, unknown>;
+
 export type UsageMandateCreate = {
   beneficiary_id?: number;
   beneficiary?: BeneficiaryOffPlatformCreate;
@@ -134,13 +159,34 @@ export type EscrowReleaseConditions = {
 export type BeneficiaryCreate = BeneficiaryOffPlatformCreate;
 
 export type EscrowCreatePayload = {
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.3 Create Escrow — provider_user_id XOR beneficiary
   provider_user_id?: number;
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.3 Create Escrow — beneficiary
   beneficiary?: BeneficiaryCreate;
   amount_total: string;
   currency: 'USD' | 'EUR' | string;
   release_conditions: EscrowReleaseConditions;
   deadline_at: string;
   domain?: 'private' | 'public' | 'aid';
+};
+
+export type EscrowDestination =
+  | { type: 'provider'; provider_user_id: string }
+  | { type: 'beneficiary'; beneficiary: BeneficiaryCreate };
+
+export type EscrowRead = EscrowListItem & {
+  // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — sender_user_id
+  sender_user_id?: number | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — client_id (alias)
+  client_id?: number | string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — beneficiary_id
+  beneficiary_id?: number | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — beneficiary_profile
+  beneficiary_profile?: BeneficiaryProfilePublicRead | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — release_conditions_json
+  release_conditions_json?: EscrowReleaseConditions | Record<string, unknown> | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — deadline_at
+  deadline_at?: string | null;
 };
 
 export type CreateProofPayload = {
@@ -248,7 +294,7 @@ export type Payment = {
 };
 
 export type SenderEscrowSummary = {
-  escrow: EscrowListItem;
+  escrow: EscrowRead;
   milestones: Milestone[];
   proofs: Proof[];
   payments: Payment[];
