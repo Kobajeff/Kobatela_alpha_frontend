@@ -1,8 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAxiosError } from 'axios';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -11,20 +10,22 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
 import { createEscrowDraftFromMandate, setEscrowDraft } from '@/lib/prefill/escrowDraft';
-import { useAdminUsers } from '@/lib/queries/admin';
-import { normalizePaginatedItems } from '@/lib/queries/queryUtils';
-import { useAuthMe, useCleanupMandates, useCreateMandate } from '@/lib/queries/sender';
-import type { AuthUser, PayoutDestinationType, UsageMandateCreate, UsageMandateRead, User } from '@/types/api';
+import { useCleanupMandates, useCreateMandate } from '@/lib/queries/sender';
+import type {
+  BeneficiaryOffPlatformCreate,
+  PayoutDestinationType,
+  UsageMandateCreate,
+  UsageMandateRead
+} from '@/types/api';
 
 const DEFAULT_CURRENCY = 'USD';
 
 export default function SenderMandatesPage() {
   const router = useRouter();
-  const { data: authUser } = useAuthMe();
   const createMandate = useCreateMandate();
   const cleanupMandates = useCleanupMandates();
 
-  const [senderId, setSenderId] = useState('');
+  const [targetType, setTargetType] = useState<'on-platform' | 'off-platform'>('on-platform');
   const [beneficiaryId, setBeneficiaryId] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
@@ -41,32 +42,20 @@ export default function SenderMandatesPage() {
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
   const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [lastCleanupRun, setLastCleanupRun] = useState<string | null>(null);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [pickerSearch, setPickerSearch] = useState('');
+  const [beneficiaryOffPlatform, setBeneficiaryOffPlatform] = useState<BeneficiaryOffPlatformCreate>({
+    full_name: '',
+    email: '',
+    phone_number: '',
+    address_line1: '',
+    address_country_code: '',
+    bank_account: '',
+    national_id_number: ''
+  });
 
-  const pickerAllowedRoles = new Set<AuthUser['role']>(['admin', 'both']);
-  const canPickBeneficiary = authUser?.role ? pickerAllowedRoles.has(authUser.role) : false;
-
-  const adminUsersQuery = useAdminUsers(
-    { limit: 50, offset: 0, q: pickerSearch || undefined },
-    { enabled: isPickerOpen && canPickBeneficiary }
-  );
-  const adminUsers = useMemo<User[]>(
-    () => normalizePaginatedItems<User>(adminUsersQuery.data),
-    [adminUsersQuery.data]
-  );
-  const adminUsersForbidden =
-    adminUsersQuery.isError &&
-    isAxiosError(adminUsersQuery.error) &&
-    adminUsersQuery.error.response?.status === 403;
-
-  const payoutOptions: Array<{ value: PayoutDestinationType; label: string }> = useMemo(
-    () => [
-      { value: 'BENEFICIARY_PROVIDER', label: 'Bénéficiaire / Provider' },
-      { value: 'MERCHANT', label: 'Merchant (Direct Pay)' }
-    ],
-    []
-  );
+  const payoutOptions: Array<{ value: PayoutDestinationType; label: string }> = [
+    { value: 'BENEFICIARY_PROVIDER', label: 'Bénéficiaire / Provider' },
+    { value: 'MERCHANT', label: 'Merchant (Direct Pay)' }
+  ];
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -74,21 +63,9 @@ export default function SenderMandatesPage() {
     setCopySuccess(null);
     setCreatedMandate(null);
 
-    const parsedBeneficiaryId = Number(beneficiaryId);
-    const parsedSenderId = senderId.trim() ? Number(senderId) : undefined;
     const trimmedTotalAmount = totalAmount.trim();
     const normalizedCurrency = (currency || DEFAULT_CURRENCY).trim().toUpperCase();
     const expiresInput = expiresAt.trim();
-
-    if (!Number.isFinite(parsedBeneficiaryId)) {
-      setErrorMessage('Veuillez saisir un identifiant bénéficiaire valide.');
-      return;
-    }
-
-    if (senderId.trim() && !Number.isFinite(parsedSenderId)) {
-      setErrorMessage('Veuillez saisir un identifiant expéditeur valide.');
-      return;
-    }
 
     if (!trimmedTotalAmount) {
       setErrorMessage('Veuillez saisir un montant total.');
@@ -106,17 +83,58 @@ export default function SenderMandatesPage() {
       return;
     }
 
-    const payload: UsageMandateCreate = {
-      beneficiary_id: parsedBeneficiaryId,
-      total_amount: trimmedTotalAmount,
-      currency: normalizedCurrency,
-      expires_at: expiresDate.toISOString(),
-      payout_destination_type: payoutDestinationType
+    const basePayload: UsageMandateCreate = {
+      total_amount: trimmedTotalAmount, // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — required total_amount
+      currency: normalizedCurrency, // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — currency normalized
+      expires_at: expiresDate.toISOString(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — expires_at ISO
+      payout_destination_type: payoutDestinationType // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — payout_destination_type
     };
 
-    const finalPayload: UsageMandateCreate = { ...payload };
-    if (parsedSenderId !== undefined && Number.isFinite(parsedSenderId)) {
-      finalPayload.sender_id = parsedSenderId;
+    if (targetType === 'on-platform') {
+      const parsedBeneficiaryId = Number(beneficiaryId);
+      if (!Number.isFinite(parsedBeneficiaryId)) {
+        setErrorMessage('Veuillez saisir un identifiant bénéficiaire valide.');
+        return;
+      }
+      basePayload.beneficiary_id = parsedBeneficiaryId; // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — beneficiary_id XOR beneficiary
+    } else {
+      const {
+        full_name,
+        email,
+        phone_number,
+        address_line1,
+        address_country_code,
+        bank_account,
+        national_id_number
+      } = beneficiaryOffPlatform;
+
+      const requiredOffPlatformFields = [
+        full_name,
+        email,
+        phone_number,
+        address_line1,
+        address_country_code,
+        bank_account
+      ];
+
+      if (requiredOffPlatformFields.some((value) => !value.trim())) {
+        setErrorMessage('Renseignez tous les champs du bénéficiaire hors plateforme.');
+        return;
+      }
+
+      basePayload.beneficiary = {
+        full_name: full_name.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (name)
+        email: email.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (contact)
+        phone_number: phone_number.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (phone)
+        address_line1: address_line1.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (address)
+        address_country_code: address_country_code.trim().toUpperCase(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (address country)
+        bank_account: bank_account.trim(), // Contract: docs/Backend_info/BACKEND_MANDATE_MILESTONE_IDENTITY_AUDIT (1).md — Beneficiary identity requires bank_account
+        ...(national_id_number.trim()
+          ? {
+              national_id_number: national_id_number.trim() // Contract: docs/Backend_info/BACKEND_MANDATE_MILESTONE_IDENTITY_AUDIT (1).md — Beneficiary identity includes national_id_number
+            }
+          : {})
+      };
     }
 
     if (payoutDestinationType === 'MERCHANT') {
@@ -137,23 +155,40 @@ export default function SenderMandatesPage() {
       }
 
       if (hasRegistry) {
-        finalPayload.merchant_registry_id = registryId;
+        basePayload.merchant_registry_id = registryId; // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Direct Pay merchant_registry_id
       } else {
-        finalPayload.merchant_suggestion = {
-          name: suggestionName,
-          country_code: suggestionCountry
+        basePayload.merchant_suggestion = {
+          name: suggestionName, // Contract: docs/Backend_info/FRONTEND_API_GUIDE (6).md — UsageMandateCreate merchant_suggestion name
+          country_code: suggestionCountry // Contract: docs/Backend_info/FRONTEND_API_GUIDE (6).md — UsageMandateCreate merchant_suggestion country_code
         };
       }
     }
 
     try {
-      const result = await createMandate.mutateAsync(finalPayload);
+      const result = await createMandate.mutateAsync(basePayload);
       setCreatedMandate(result);
       setErrorMessage(null);
     } catch (error) {
       const normalized = normalizeApiError(error);
       if (normalized.status === 403) {
-        setErrorMessage('Accès refusé : portée insuffisante pour créer un mandat.');
+        setErrorMessage('Scope insuffisant pour créer un mandat.');
+        return;
+      }
+      if (normalized.status === 422) {
+        const validationDetails = Array.isArray(normalized.details)
+          ? (normalized.details as Array<{ loc?: Array<string | number> }>)
+          : undefined;
+        const fieldError =
+          validationDetails && validationDetails.length > 0
+            ? Array.isArray(validationDetails[0]?.loc)
+              ? validationDetails[0]?.loc?.join('.')
+              : undefined
+            : undefined;
+        setErrorMessage(
+          fieldError
+            ? `Payload invalide (champ: ${fieldError}).`
+            : 'Payload invalide pour la création du mandat.'
+        );
         return;
       }
       setErrorMessage(normalized.message ?? extractErrorMessage(error));
@@ -206,46 +241,38 @@ export default function SenderMandatesPage() {
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             {errorMessage && <ErrorAlert message={errorMessage} />}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Sender ID (optionnel)</label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={senderId}
-                  onChange={(event) => setSenderId(event.target.value)}
-                  placeholder="123"
-                  disabled={createMandate.isPending}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700">Beneficiary ID</label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    value={beneficiaryId}
-                    onChange={(event) => setBeneficiaryId(event.target.value)}
-                    placeholder="456"
-                    required
+            <div className="space-y-2 rounded-md border border-slate-200 p-4">
+              <label className="block text-sm font-medium text-slate-700">Destination</label>
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="targetType"
+                    value="on-platform"
+                    checked={targetType === 'on-platform'}
+                    onChange={() => setTargetType('on-platform')}
                     disabled={createMandate.isPending}
-                    className="md:w-56"
                   />
-                  {canPickBeneficiary && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsPickerOpen(true)}
-                      disabled={createMandate.isPending}
-                    >
-                      Choisir un bénéficiaire
-                    </Button>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500">
-                  Vous pouvez trouver l&apos;ID dans Admin → Users (colonne User ID).
-                </p>
+                  Destinataire sur la plateforme
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="targetType"
+                    value="off-platform"
+                    checked={targetType === 'off-platform'}
+                    onChange={() => setTargetType('off-platform')}
+                    disabled={createMandate.isPending}
+                  />
+                  Bénéficiaire hors plateforme
+                </label>
               </div>
+              <p className="text-xs text-slate-500">
+                Sélectionnez soit un utilisateur existant, soit un bénéficiaire hors plateforme (XOR).
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-slate-700">Montant total</label>
                 <Input
@@ -293,6 +320,136 @@ export default function SenderMandatesPage() {
                 </Select>
               </div>
             </div>
+
+            {targetType === 'on-platform' && (
+              <div className="space-y-2 rounded-md border border-slate-200 p-4">
+                <label className="block text-sm font-medium text-slate-700">
+                  Recipient user ID (on-platform)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={beneficiaryId}
+                  onChange={(event) => setBeneficiaryId(event.target.value)}
+                  placeholder="Identifiant utilisateur"
+                  disabled={createMandate.isPending}
+                  required
+                />
+                <p className="text-xs text-slate-500">
+                  Utilisez l&apos;ID utilisateur du bénéficiaire (provider/recipient) présent sur la plateforme.
+                </p>
+              </div>
+            )}
+
+            {targetType === 'off-platform' && (
+              <div className="space-y-3 rounded-md border border-slate-200 p-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Nom complet</label>
+                    <Input
+                      type="text"
+                      value={beneficiaryOffPlatform.full_name}
+                      onChange={(event) =>
+                        setBeneficiaryOffPlatform((prev) => ({ ...prev, full_name: event.target.value }))
+                      }
+                      placeholder="Jane Doe"
+                      required
+                      disabled={createMandate.isPending}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Email</label>
+                    <Input
+                      type="email"
+                      value={beneficiaryOffPlatform.email}
+                      onChange={(event) =>
+                        setBeneficiaryOffPlatform((prev) => ({ ...prev, email: event.target.value }))
+                      }
+                      placeholder="jane.doe@example.com"
+                      required
+                      disabled={createMandate.isPending}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Téléphone</label>
+                    <Input
+                      type="tel"
+                      value={beneficiaryOffPlatform.phone_number}
+                      onChange={(event) =>
+                        setBeneficiaryOffPlatform((prev) => ({ ...prev, phone_number: event.target.value }))
+                      }
+                      placeholder="+2507..."
+                      required
+                      disabled={createMandate.isPending}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Compte bancaire / IBAN</label>
+                    <Input
+                      type="text"
+                      value={beneficiaryOffPlatform.bank_account}
+                      onChange={(event) =>
+                        setBeneficiaryOffPlatform((prev) => ({ ...prev, bank_account: event.target.value }))
+                      }
+                      placeholder="FR76..."
+                      required
+                      disabled={createMandate.isPending}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Adresse (ligne 1)</label>
+                    <Input
+                      type="text"
+                      value={beneficiaryOffPlatform.address_line1}
+                      onChange={(event) =>
+                        setBeneficiaryOffPlatform((prev) => ({
+                          ...prev,
+                          address_line1: event.target.value
+                        }))
+                      }
+                      placeholder="123 Rue Exemple"
+                      required
+                      disabled={createMandate.isPending}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Code pays (adresse)</label>
+                    <Input
+                      type="text"
+                      value={beneficiaryOffPlatform.address_country_code}
+                      onChange={(event) =>
+                        setBeneficiaryOffPlatform((prev) => ({
+                          ...prev,
+                          address_country_code: event.target.value
+                        }))
+                      }
+                      placeholder="FR"
+                      required
+                      disabled={createMandate.isPending}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Numéro d&apos;identité (optionnel)</label>
+                  <Input
+                    type="text"
+                    value={beneficiaryOffPlatform.national_id_number ?? ''}
+                    onChange={(event) =>
+                      setBeneficiaryOffPlatform((prev) => ({
+                        ...prev,
+                        national_id_number: event.target.value
+                      }))
+                    }
+                    placeholder="ID national / passeport"
+                    disabled={createMandate.isPending}
+                  />
+                </div>
+              </div>
+            )}
 
             {payoutDestinationType === 'MERCHANT' && (
               <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
@@ -369,8 +526,17 @@ export default function SenderMandatesPage() {
                 variant="outline"
                 disabled={createMandate.isPending}
                 onClick={() => {
-                  setSenderId('');
+                  setTargetType('on-platform');
                   setBeneficiaryId('');
+                  setBeneficiaryOffPlatform({
+                    full_name: '',
+                    email: '',
+                    phone_number: '',
+                    address_line1: '',
+                    address_country_code: '',
+                    bank_account: '',
+                    national_id_number: ''
+                  });
                   setTotalAmount('');
                   setCurrency(DEFAULT_CURRENCY);
                   setExpiresAt('');
@@ -381,6 +547,7 @@ export default function SenderMandatesPage() {
                   setMerchantMode('registry');
                   setErrorMessage(null);
                   setCopySuccess(null);
+                  setCreatedMandate(null);
                 }}
               >
                 Réinitialiser
@@ -448,91 +615,8 @@ export default function SenderMandatesPage() {
               Dernier nettoyage: {new Date(lastCleanupRun).toLocaleString()}
             </p>
           )}
-        </CardContent>
-      </Card>
-
-      {isPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl space-y-4 rounded-lg bg-white p-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Sélectionner un bénéficiaire</h2>
-                <p className="text-xs text-slate-500">Disponible pour les rôles admin/both.</p>
-              </div>
-              <button
-                type="button"
-                className="rounded-md border px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                onClick={() => setIsPickerOpen(false)}
-              >
-                Fermer
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                className="w-64 rounded-md border px-3 py-2 text-sm"
-                placeholder="Rechercher par email..."
-                value={pickerSearch}
-                onChange={(event) => setPickerSearch(event.target.value)}
-              />
-              <button
-                type="button"
-                className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-                onClick={() => adminUsersQuery.refetch()}
-                disabled={adminUsersQuery.isFetching}
-              >
-                {adminUsersQuery.isFetching ? 'Recherche...' : 'Rechercher'}
-              </button>
-            </div>
-
-            {adminUsersQuery.isLoading && (
-              <p className="text-sm text-slate-600">Chargement des utilisateurs...</p>
-            )}
-
-            {adminUsersForbidden && (
-              <ErrorAlert message="Access denied (admin scope required) pour l'annuaire utilisateurs." />
-            )}
-
-            {adminUsersQuery.isError && !adminUsersForbidden && (
-              <ErrorAlert message={extractErrorMessage(adminUsersQuery.error)} />
-            )}
-
-            {!adminUsersQuery.isLoading && !adminUsersQuery.isError && adminUsers.length === 0 && (
-              <p className="text-sm text-slate-600">Aucun utilisateur trouvé.</p>
-            )}
-
-            {!adminUsersQuery.isLoading && !adminUsersQuery.isError && adminUsers.length > 0 && (
-              <div className="max-h-96 overflow-auto rounded-md border">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">User ID</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">Email</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">Rôle</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {adminUsers.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="cursor-pointer hover:bg-slate-50"
-                        onClick={() => {
-                          setBeneficiaryId(String(user.id));
-                          setIsPickerOpen(false);
-                        }}
-                      >
-                        <td className="px-4 py-2 font-mono text-xs">{user.id}</td>
-                        <td className="px-4 py-2">{user.email}</td>
-                        <td className="px-4 py-2 capitalize">{user.role}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          </CardContent>
+        </Card>
     </div>
   );
 }

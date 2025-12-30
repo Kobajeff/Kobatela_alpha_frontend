@@ -38,9 +38,19 @@ export type MerchantSuggestionPayload = {
   country_code: string;
 };
 
+export type BeneficiaryOffPlatformCreate = {
+  full_name: string;
+  email: string;
+  phone_number: string;
+  address_line1: string;
+  address_country_code: string;
+  bank_account: string;
+  national_id_number?: string;
+};
+
 export type UsageMandateCreate = {
-  sender_id?: number;
-  beneficiary_id: number;
+  beneficiary_id?: number;
+  beneficiary?: BeneficiaryOffPlatformCreate;
   total_amount: string;
   currency: string;
   expires_at: string;
@@ -53,6 +63,7 @@ export type UsageMandateRead = {
   id: string | number;
   sender_id?: number;
   beneficiary_id?: number;
+  beneficiary_profile_id?: number | null;
   total_amount?: string | number;
   currency?: string;
   expires_at?: string;
