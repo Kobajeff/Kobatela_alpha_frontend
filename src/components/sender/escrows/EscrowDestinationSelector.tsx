@@ -9,7 +9,8 @@ const emptyBeneficiary: BeneficiaryCreate = {
   phone_number: '',
   address_line1: '',
   address_country_code: '',
-  bank_account: ''
+  bank_account: '',
+  national_id_number: ''
 };
 
 type Props = {
@@ -43,7 +44,7 @@ export function EscrowDestinationSelector({ destination, onChange, disabled }: P
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-slate-800">Destinataire</p>
         <p className="text-xs text-slate-600">
-          Prestataire = utilisateur Kobatela existant. Bénéficiaire = contact hors plateforme avec accès limité via lien.
+          Prestataire = utilisateur Kobatela existant. Bénéficiaire = contact hors plateforme.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-4">
@@ -204,10 +205,10 @@ export function EscrowDestinationSelector({ destination, onChange, disabled }: P
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Numéro d&apos;identité (optionnel)</label>
+              <label className="block text-sm font-medium text-slate-700">Numéro d&apos;identité</label>
               <Input
                 type="text"
-                value={destination.beneficiary.national_id_number ?? ''}
+                value={destination.beneficiary.national_id_number}
                 onChange={(event) =>
                   handleBeneficiaryChange(
                     // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — national_id_number
@@ -216,6 +217,7 @@ export function EscrowDestinationSelector({ destination, onChange, disabled }: P
                   )
                 }
                 placeholder="ID national / passeport"
+                required
                 disabled={disabled}
               />
             </div>

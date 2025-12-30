@@ -39,12 +39,19 @@ export type MerchantSuggestionPayload = {
 };
 
 export type BeneficiaryOffPlatformCreate = {
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.1 Create Mandate — beneficiary.full_name
   full_name: string;
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.1 Create Mandate — beneficiary.email
   email: string;
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.1 Create Mandate — beneficiary.phone_number
   phone_number: string;
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.1 Create Mandate — beneficiary.address_line1
   address_line1: string;
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.1 Create Mandate — beneficiary.address_country_code
   address_country_code: string;
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.1 Create Mandate — beneficiary.bank_account
   bank_account: string;
+  // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.1 Create Mandate — beneficiary.national_id_number
   national_id_number?: string;
 };
 
@@ -160,7 +167,22 @@ export type EscrowReleaseConditions = {
   milestones?: EscrowReleaseConditionMilestone[];
 };
 
-export type BeneficiaryCreate = BeneficiaryOffPlatformCreate;
+export type BeneficiaryCreate = {
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — full_name
+  full_name: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — email
+  email: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — phone_number
+  phone_number: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — address_line1
+  address_line1: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — address_country_code
+  address_country_code: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — bank_account
+  bank_account: string;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — national_id_number
+  national_id_number: string;
+};
 
 export type EscrowCreatePayload = {
   // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 2.3 Create Escrow — provider_user_id XOR beneficiary
