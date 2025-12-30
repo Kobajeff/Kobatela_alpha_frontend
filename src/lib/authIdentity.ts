@@ -93,6 +93,8 @@ function getRoleLabel(role?: UserRole | string): string | null {
       return 'expéditeur';
     case 'both':
       return 'expéditeur';
+    case 'provider':
+      return 'prestataire';
     default:
       return null;
   }
@@ -126,7 +128,7 @@ export function getPortalDestination(
     return { path: PORTAL_PATHS.sender, label: roleLabel ?? 'expéditeur' };
   }
 
-  if (hasScope('PROVIDER')) {
+  if (user.role === 'provider' || hasScope('PROVIDER')) {
     return { path: PORTAL_PATHS.provider, label: 'prestataire' };
   }
 

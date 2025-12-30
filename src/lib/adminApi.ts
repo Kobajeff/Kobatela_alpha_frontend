@@ -6,6 +6,7 @@ import type {
   AiProofSetting,
   ApiKey,
   PaginatedResponse,
+  UserCreatePayload,
   User
 } from '@/types/api';
 
@@ -25,6 +26,13 @@ export async function createAdminUser(
     const { data } = await apiClient.post<AdminUserCreateResponse>('/admin/users', payload);
     return data;
   }, 'POST /admin/users');
+}
+
+export async function createUser(payload: UserCreatePayload): Promise<User> {
+  return withAdminError(async () => {
+    const { data } = await apiClient.post<User>('/users', payload);
+    return data;
+  }, 'POST /users');
 }
 
 export async function getAdminUsers(params: {
