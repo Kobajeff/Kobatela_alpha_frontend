@@ -73,9 +73,7 @@ export type BeneficiaryProfilePublicRead = {
   updated_at?: string;
 } & Record<string, unknown>;
 
-export type UsageMandateCreate = {
-  beneficiary_id?: number;
-  beneficiary?: BeneficiaryOffPlatformCreate;
+type UsageMandateBase = {
   total_amount: string;
   currency: string;
   expires_at: string;
@@ -84,11 +82,17 @@ export type UsageMandateCreate = {
   merchant_suggestion?: MerchantSuggestionPayload;
 };
 
+export type UsageMandateCreate =
+  | (UsageMandateBase & { beneficiary_id: number; beneficiary?: never })
+  | (UsageMandateBase & { beneficiary: BeneficiaryOffPlatformCreate; beneficiary_id?: never });
+
 export type UsageMandateRead = {
   id: string | number;
   sender_id?: number;
   beneficiary_id?: number;
+  provider_user_id?: number;
   beneficiary_profile_id?: number | null;
+  beneficiary_profile?: BeneficiaryProfilePublicRead | null;
   total_amount?: string | number;
   currency?: string;
   expires_at?: string;

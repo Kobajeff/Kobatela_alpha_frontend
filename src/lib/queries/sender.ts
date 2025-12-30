@@ -146,13 +146,14 @@ export function useMerchantSuggestion(id?: string) {
 }
 
 export function useCreateMandate() {
+  const queryClient = useQueryClient();
   return useMutation<UsageMandateRead, Error, UsageMandateCreate>({
     mutationFn: async (payload) => {
       const response = await apiClient.post<UsageMandateRead>('/mandates', payload);
       return response.data;
     },
-    onError: (error) => {
-      throw new Error(extractErrorMessage(error));
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sender.mandates.base() });
     }
   });
 }
@@ -162,9 +163,6 @@ export function useCleanupMandates() {
     mutationFn: async () => {
       const response = await apiClient.post<{ expired_count?: number }>('/mandates/cleanup', {});
       return response.data;
-    },
-    onError: (error) => {
-      throw new Error(extractErrorMessage(error));
     }
   });
 }

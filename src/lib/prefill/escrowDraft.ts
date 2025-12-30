@@ -30,7 +30,7 @@ export const buildEscrowDraftFromMandate = (mandate: Record<string, unknown>) =>
     payload.currency = currency;
   }
 
-  const beneficiaryId = mandate.beneficiary_id ?? mandate.beneficiaryId;
+  const beneficiaryId = mandate.provider_user_id ?? mandate.beneficiary_id ?? mandate.beneficiaryId;
   if (typeof beneficiaryId === 'number') {
     // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 1.1 — provider_user_id
     payload.provider_user_id = beneficiaryId;
