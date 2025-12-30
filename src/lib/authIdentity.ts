@@ -34,6 +34,8 @@ function getUserId(user: AuthUser): string | number {
 }
 
 export function normalizeAuthUser(user: AuthUser): NormalizedAuthUser {
+  const normalizedRole =
+    typeof user.role === 'string' ? (user.role.toLowerCase() as UserRole) : user.role;
   const scopeList = [
     ...normalizeScopeList(user.scopes),
     ...normalizeScopeList(user.api_scopes),
@@ -46,6 +48,7 @@ export function normalizeAuthUser(user: AuthUser): NormalizedAuthUser {
 
   return {
     ...user,
+    role: normalizedRole,
     userId: getUserId(user),
     scopeList: normalizedScopes,
     normalizedScopes

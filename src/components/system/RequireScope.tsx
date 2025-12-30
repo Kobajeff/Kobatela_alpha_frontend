@@ -44,7 +44,6 @@ export function RequireScope({
   const didRedirectRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [hasToken, setHasToken] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const normalizedError = error ? normalizeApiError(error) : null;
   const status = normalizedError?.status;
   const isUnauthorized = status === 401 || status === 404;
@@ -53,12 +52,22 @@ export function RequireScope({
   const hasAllowedRole = allowRoles.length === 0 || allowRoles.includes(user?.role as UserRole);
   const hasAllowedScope =
     anyScopes.length === 0 || (user ? anyScopes.some((scope) => hasScope(user, scope)) : false);
+  const isAtDestination =
+    Boolean(destination?.path) && Boolean(pathname) && pathname.startsWith(destination.path);
   const needsPortalRedirect =
     Boolean(user) &&
     (!hasAllowedRole || !hasAllowedScope) &&
-    Boolean(destination) &&
+    Boolean(destination?.path) &&
     Boolean(pathname) &&
-    !pathname.startsWith(destination?.path ?? '');
+    !isAtDestination;
+  const shouldPortalRedirect =
+    mounted &&
+    hasToken &&
+    Boolean(user) &&
+    Boolean(destination?.path) &&
+    Boolean(pathname) &&
+    !isAtDestination &&
+    (isForbidden || needsPortalRedirect);
 
   useEffect(() => {
     setMounted(true);
@@ -97,35 +106,61 @@ export function RequireScope({
       return;
     }
 
-    if (isForbidden && destination && pathname && !pathname.startsWith(destination.path)) {
+    if (shouldPortalRedirect && destination) {
       if (didRedirectRef.current) return;
       didRedirectRef.current = true;
-      setIsRedirecting(true);
       setAuthNotice({
-        message: `Portée insuffisante pour cette page. Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`,
+        message: isForbidden
+          ? `Portée insuffisante pour cette page. Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`
+          : `Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`,
         variant: 'info'
       });
       router.replace(destination.path as Route);
     }
-  }, [destination, hasToken, isForbidden, isLoading, isUnauthorized, mounted, pathname, router]);
+  }, [
+    destination,
+    hasToken,
+    isForbidden,
+    isLoading,
+    isUnauthorized,
+    mounted,
+    pathname,
+    router,
+    shouldPortalRedirect
+  ]);
 
-  useEffect(() => {
-    if (!mounted || !needsPortalRedirect || !destination || didRedirectRef.current) return;
-    didRedirectRef.current = true;
-    setIsRedirecting(true);
-    setAuthNotice({
-      message: `Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`,
-      variant: 'info'
+  if (process.env.NODE_ENV === 'development') {
+    const rawScopes = user?.scopes;
+    const rawApiScopes = user?.api_scopes;
+    const rawPermissions = user?.permissions;
+    const rawScope = user?.scope;
+    const scopeList = Array.isArray(user?.normalizedScopes) ? user.normalizedScopes : [];
+    console.debug('[RequireScope]', {
+      pathname,
+      hasToken,
+      isLoading,
+      status,
+      role: user?.role,
+      scopes: {
+        scopesCount: Array.isArray(rawScopes) ? rawScopes.length : rawScopes ? 1 : 0,
+        apiScopesCount: Array.isArray(rawApiScopes) ? rawApiScopes.length : rawApiScopes ? 1 : 0,
+        permissionsCount: Array.isArray(rawPermissions)
+          ? rawPermissions.length
+          : rawPermissions
+            ? 1
+            : 0,
+        scopeValue: rawScope,
+        normalizedCount: scopeList.length,
+        sample: scopeList.slice(0, 3)
+      },
+      hasAllowedRole,
+      hasAllowedScope,
+      destinationPath: destination?.path
     });
-    router.replace(destination.path as Route);
-  }, [destination, mounted, needsPortalRedirect, router]);
+  }
 
   if (!mounted) {
     return <LoadingState label="Loading…" />;
-  }
-
-  if (isRedirecting) {
-    return <LoadingState label="Redirection…" />;
   }
 
   if (isLoading || (!hasToken && !isLoading)) {
@@ -156,17 +191,20 @@ export function RequireScope({
     );
   }
 
-  if (!user || !hasAllowedRole || !hasAllowedScope) {
-    if (destination) {
-      return <LoadingState label="Redirection..." />;
-    }
+  if (user && hasAllowedRole && hasAllowedScope) {
+    return <>{typeof children === 'function' ? children(user) : children}</>;
+  }
 
+  if (shouldPortalRedirect) {
+    return <LoadingState label="Redirection…" />;
+  }
+
+  if (!user || !hasAllowedRole || !hasAllowedScope) {
     return (
       <div className="p-4">
         <ErrorAlert message={unauthorizedMessage} />
       </div>
     );
   }
-
   return <>{typeof children === 'function' ? children(user) : children}</>;
 }
