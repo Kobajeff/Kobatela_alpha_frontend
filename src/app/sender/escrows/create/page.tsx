@@ -7,13 +7,14 @@ import { clearEscrowDraft, createEscrowDraftFromMandate, getEscrowDraft, type Es
 import { useCreateEscrow, useMandate } from '@/lib/queries/sender';
 import type {
   EscrowCreatePayload,
-  EscrowReleaseConditionMilestone,
-  EscrowReleaseConditions
+  EscrowReleaseConditions,
+  MilestoneCreatePayload
 } from '@/types/api';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { MilestonesEditor } from '@/components/sender/milestones/MilestonesEditor';
 
 const DEFAULT_CURRENCY = 'EUR';
 const DEFAULT_DOMAIN: 'private' = 'private';
@@ -50,10 +51,7 @@ export default function SenderCreateEscrowPage() {
   const [deadlineAt, setDeadlineAt] = useState('');
   const [domain, setDomain] = useState<'private' | 'public' | 'aid'>(DEFAULT_DOMAIN);
   const [requiresProof, setRequiresProof] = useState(true);
-  const [useMilestones, setUseMilestones] = useState(false);
-  const [milestones, setMilestones] = useState<EscrowReleaseConditionMilestone[]>([
-    { label: '', idx: 1 }
-  ]);
+  const [milestoneDrafts, setMilestoneDrafts] = useState<MilestoneCreatePayload[]>([]);
   const [participantMode, setParticipantMode] = useState<'provider' | 'beneficiary' | null>(null);
   const [providerUserId, setProviderUserId] = useState('');
   const [beneficiary, setBeneficiary] = useState<BeneficiaryForm>(emptyBeneficiary);
@@ -113,11 +111,9 @@ export default function SenderCreateEscrowPage() {
   const releaseConditions: EscrowReleaseConditions = useMemo(
     () => ({
       // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — release_conditions.requires_proof
-      requires_proof: requiresProof,
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — release_conditions.milestones
-      milestones: useMilestones ? milestones : undefined
+      requires_proof: requiresProof
     }),
-    [milestones, requiresProof, useMilestones]
+    [requiresProof]
   );
 
   const resetDraft = () => {
@@ -196,14 +192,6 @@ export default function SenderCreateEscrowPage() {
         // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — national_id_number
         national_id_number: national_id_number?.trim() || undefined
       };
-    }
-
-    if (useMilestones) {
-      const hasEmptyLabel = milestones.some((milestone) => !milestone.label.trim());
-      if (hasEmptyLabel) {
-        setErrorMessage('Chaque milestone doit avoir un libellé.');
-        return;
-      }
     }
 
     try {
@@ -457,64 +445,15 @@ export default function SenderCreateEscrowPage() {
                   Preuve requise
                 </label>
               </div>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={useMilestones}
-                  onChange={(event) => setUseMilestones(event.target.checked)}
-                />
-                Ajouter des milestones
-              </label>
-
-              {useMilestones && (
-                <div className="space-y-3">
-                  {milestones.map((milestone, index) => (
-                    <div key={milestone.idx} className="rounded-md border border-slate-100 p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-slate-800">Milestone #{milestone.idx}</p>
-                        {milestones.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              setMilestones((prev) => prev.filter((m) => m.idx !== milestone.idx))
-                            }
-                          >
-                            Supprimer
-                          </Button>
-                        )}
-                      </div>
-                      <label className="mt-2 block text-sm font-medium text-slate-700">Libellé</label>
-                      <Input
-                        type="text"
-                        value={milestone.label}
-                        onChange={(event) =>
-                          setMilestones((prev) =>
-                            prev.map((item) =>
-                              item.idx === milestone.idx ? { ...item, label: event.target.value } : item
-                            )
-                          )
-                        }
-                        placeholder="Livraison initiale"
-                        required
-                      />
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() =>
-                      setMilestones((prev) => [
-                        ...prev,
-                        { idx: (prev[prev.length - 1]?.idx ?? prev.length) + 1, label: '' }
-                      ])
-                    }
-                  >
-                    Ajouter une milestone
-                  </Button>
-                </div>
-              )}
+              <MilestonesEditor
+                milestones={milestoneDrafts}
+                onChange={setMilestoneDrafts}
+                disabledReason="Création de milestones réservée aux rôles admin/support (POST /escrows/{id}/milestones)."
+              />
+              <p className="text-xs text-slate-600">
+                Les milestones ne sont pas envoyées à la création d&apos;un escrow car le contrat backend limite la création
+                aux rôles admin/support. La création expéditeur reste désactivée pour éviter les erreurs 403/422.
+              </p>
             </div>
 
             <div className="flex items-center gap-3">
