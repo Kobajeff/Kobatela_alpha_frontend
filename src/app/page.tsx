@@ -17,8 +17,8 @@ import { LoadingState } from '@/components/common/LoadingState';
 export default function HomePage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { data, isLoading, isError, error } = useAuthMe();
-  const destination = getPortalDestination(data);
+  const { data: user, isLoading, isError, error } = useAuthMe();
+  const destination = getPortalDestination(user);
   const [mounted, setMounted] = useState(false);
   const [hasToken, setHasToken] = useState(false);
   const didRedirectRef = useRef(false);
@@ -28,13 +28,6 @@ export default function HomePage() {
   const isForbidden = normalizedError?.status === 403;
   const isAtDestination =
     Boolean(destination?.path) && Boolean(pathname) && pathname.startsWith(destination.path);
-  const shouldRedirectToLogin = mounted && !hasToken;
-  const shouldRedirectToPortal =
-    mounted && hasToken && Boolean(destination?.path) && !isAtDestination;
-  const shouldRedirectForForbidden =
-    mounted && isForbidden && Boolean(destination?.path) && !isAtDestination;
-  const shouldRedirect =
-    shouldRedirectToLogin || shouldRedirectToPortal || shouldRedirectForForbidden;
 
   useEffect(() => {
     setMounted(true);
@@ -57,6 +50,13 @@ export default function HomePage() {
   useEffect(() => {
     if (!mounted) return;
 
+    if (!hasToken) {
+      if (didRedirectRef.current) return;
+      didRedirectRef.current = true;
+      router.replace('/login');
+      return;
+    }
+
     if (isUnauthorized) {
       if (didResetRef.current) return;
       didResetRef.current = true;
@@ -68,39 +68,36 @@ export default function HomePage() {
       return;
     }
 
-    if (!shouldRedirect || didRedirectRef.current) return;
+    if (!user || !destination?.path || isAtDestination) return;
+
+    if (didRedirectRef.current) return;
     didRedirectRef.current = true;
 
-    if (shouldRedirectToLogin) {
-      router.replace('/login');
-      return;
-    }
-
-    if (shouldRedirectForForbidden && destination) {
+    if (isForbidden) {
       setAuthNotice({
         message: `Portée insuffisante pour cette page. Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`,
         variant: 'info'
       });
-      router.replace(destination.path as Route);
-      return;
     }
 
-    if (shouldRedirectToPortal && destination) {
-      router.replace(destination.path as Route);
-    }
+    router.replace(destination.path as Route);
   }, [
     destination,
     isUnauthorized,
     mounted,
     router,
-    shouldRedirect,
-    shouldRedirectForForbidden,
-    shouldRedirectToLogin,
-    shouldRedirectToPortal
+    hasToken,
+    isAtDestination,
+    isForbidden,
+    user
   ]);
 
   if (!mounted) {
     return <LoadingState label="Loading…" />;
+  }
+
+  if (!hasToken) {
+    return <LoadingState label="Redirection…" />;
   }
 
   if (isError && !isUnauthorized) {
@@ -111,5 +108,17 @@ export default function HomePage() {
     );
   }
 
-  return <LoadingState label={shouldRedirect ? 'Redirection…' : 'Loading…'} />;
+  if (isLoading || !user) {
+    return <LoadingState label="Loading…" />;
+  }
+
+  if (!destination?.path) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <ErrorAlert message="Impossible de déterminer votre espace." />
+      </div>
+    );
+  }
+
+  return <LoadingState label="Redirection…" />;
 }

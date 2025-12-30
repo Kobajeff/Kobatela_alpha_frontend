@@ -6,7 +6,7 @@ import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { getPortalDestination } from '@/lib/authIdentity';
-import { getAuthToken, getAuthTokenEventName } from '@/lib/auth';
+import { clearAuthToken, clearAuthUser, getAuthToken, getAuthTokenEventName } from '@/lib/auth';
 import { useAuthMe, useLogin } from '@/lib/queries/sender';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [hasToken, setHasToken] = useState(false);
+  const isDev = process.env.NODE_ENV === 'development';
 
   const destination = getPortalDestination(user);
   const isAuthenticated = hasToken && Boolean(user);
@@ -125,6 +126,23 @@ export default function LoginPage() {
             {login.isPending ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
+        {isDev && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            <p className="font-semibold">Debug</p>
+            <button
+              type="button"
+              onClick={() => {
+                clearAuthToken();
+                clearAuthUser();
+                queryClient.clear();
+                setError(null);
+              }}
+              className="mt-2 rounded-md border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-100"
+            >
+              Clear session
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );
