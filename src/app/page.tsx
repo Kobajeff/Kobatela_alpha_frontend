@@ -4,21 +4,22 @@
 import { useEffect } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { getAuthToken } from '@/lib/auth';
+import { getAuthToken, setAuthNotice } from '@/lib/auth';
+import { getPortalDestination } from '@/lib/authIdentity';
 import { useAuthMe } from '@/lib/queries/sender';
-import { AuthUser } from '@/types/api';
-import { extractErrorMessage, isUnauthorizedError } from '@/lib/apiClient';
+import { extractErrorMessage } from '@/lib/apiClient';
+import { normalizeApiError } from '@/lib/apiError';
+import { resetSession } from '@/lib/sessionReset';
+import { getQueryClient } from '@/lib/queryClient';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
-
-const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
-const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
-const advisorQueuePath = ['', 'advisor', 'queue'].join('/');
 
 export default function HomePage() {
   const router = useRouter();
   const { data, isLoading, isError, error } = useAuthMe();
-  const user = data as AuthUser | undefined;
-  const isUnauthorized = isError && isUnauthorizedError(error);
+  const destination = getPortalDestination(data);
+  const normalizedError = error ? normalizeApiError(error) : null;
+  const isUnauthorized = normalizedError?.status === 401 || normalizedError?.status === 404;
+  const isForbidden = normalizedError?.status === 403;
 
   useEffect(() => {
     const token = getAuthToken();
@@ -32,15 +33,27 @@ export default function HomePage() {
     if (!token) return;
 
     if (isUnauthorized) {
-      router.replace('/login');
-    } else if (user?.role === 'admin') {
-      router.replace(adminDashboardPath as Route);
-    } else if (user?.role === 'advisor') {
-      router.replace(advisorQueuePath as Route);
-    } else if (user?.role) {
-      router.replace(senderDashboardPath as Route);
+      setAuthNotice({
+        message: 'Session expirée. Veuillez vous reconnecter.',
+        variant: 'error'
+      });
+      resetSession(getQueryClient());
+      return;
     }
-  }, [isUnauthorized, router, user]);
+
+    if (isForbidden && destination) {
+      setAuthNotice({
+        message: `Portée insuffisante pour cette page. Vous êtes connecté en tant que ${destination.label}. Redirection vers votre espace.`,
+        variant: 'info'
+      });
+      router.replace(destination.path as Route);
+      return;
+    }
+
+    if (destination) {
+      router.replace(destination.path as Route);
+    }
+  }, [destination, isForbidden, isUnauthorized, router]);
 
   if (isError && !isUnauthorized) {
     return (

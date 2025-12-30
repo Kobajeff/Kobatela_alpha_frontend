@@ -3,6 +3,18 @@
 import type { AuthMeResponse, AuthUser, UserRole } from '@/types/api';
 import { normalizeScopeList, normalizeScopeValue, userHasAnyScope } from './scopes';
 
+const PORTAL_PATHS = {
+  admin: '/admin/dashboard',
+  advisor: '/advisor/queue',
+  sender: '/sender/dashboard',
+  provider: '/provider/dashboard'
+} as const;
+
+export type PortalDestination = {
+  path: string;
+  label: string;
+};
+
 export type NormalizedAuthUser = AuthUser & {
   userId: string | number;
   scopeList: string[];
@@ -52,4 +64,68 @@ export function normalizeAuthMe(response: AuthMeResponse): AuthIdentity {
 
 export function hasScope(user: AuthUser | undefined, scope: string): boolean {
   return userHasAnyScope(user, [scope]);
+}
+
+function getNormalizedScopes(user: AuthUser | NormalizedAuthUser): string[] {
+  if ('normalizedScopes' in user && Array.isArray(user.normalizedScopes)) {
+    return user.normalizedScopes;
+  }
+  return [
+    ...normalizeScopeList(user.scopes),
+    ...normalizeScopeList(user.api_scopes),
+    ...normalizeScopeList(user.scope),
+    ...normalizeScopeList(Array.isArray(user.permissions) ? user.permissions : [])
+  ];
+}
+
+function getRoleLabel(role?: UserRole | string): string | null {
+  switch (role) {
+    case 'admin':
+      return 'administrateur';
+    case 'support':
+      return 'support';
+    case 'advisor':
+      return 'conseiller';
+    case 'sender':
+      return 'expéditeur';
+    case 'both':
+      return 'expéditeur';
+    default:
+      return null;
+  }
+}
+
+export function getPortalDestination(
+  user?: AuthUser | NormalizedAuthUser | null
+): PortalDestination | null {
+  if (!user) return null;
+
+  const scopes = getNormalizedScopes(user);
+  const roleLabel = getRoleLabel(user.role);
+  const hasScope = (scope: string) => scopes.includes(normalizeScopeValue(scope));
+
+  if (
+    user.role === 'admin' ||
+    user.role === 'support' ||
+    hasScope('ADMIN') ||
+    hasScope('SUPPORT') ||
+    hasScope('PRICING_ADMIN') ||
+    hasScope('RISK_ADMIN')
+  ) {
+    return { path: PORTAL_PATHS.admin, label: roleLabel ?? 'administrateur' };
+  }
+
+  if (user.role === 'advisor' || hasScope('ADVISOR')) {
+    return { path: PORTAL_PATHS.advisor, label: roleLabel ?? 'conseiller' };
+  }
+
+  if (user.role === 'sender' || user.role === 'both' || hasScope('SENDER')) {
+    return { path: PORTAL_PATHS.sender, label: roleLabel ?? 'expéditeur' };
+  }
+
+  if (hasScope('PROVIDER')) {
+    return { path: PORTAL_PATHS.provider, label: 'prestataire' };
+  }
+
+  return null;
 }

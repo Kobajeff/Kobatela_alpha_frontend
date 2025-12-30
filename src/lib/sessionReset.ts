@@ -1,11 +1,12 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { clearAuthToken, isBrowser } from './auth';
+import { clearAuthToken, clearAuthUser, isBrowser } from './auth';
 
 export function resetSession(
   queryClient: QueryClient | null,
   options: { redirectTo?: string } = {}
 ) {
   clearAuthToken();
+  clearAuthUser();
   queryClient?.clear();
 
   if (!isBrowser()) return;
