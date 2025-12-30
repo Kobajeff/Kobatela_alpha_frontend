@@ -102,24 +102,45 @@ export type EscrowStatus =
   | 'CANCELLED';
 
 export type EscrowListItem = {
-  id: string;
+  id: string | number;
   status: EscrowStatus;
-  amount: number;
+  amount_total: string;
   currency: string;
   created_at: string;
-  updated_at: string;
+  deadline_at?: string;
+  provider_user_id?: number;
+  beneficiary_id?: number;
+  beneficiary_profile_id?: number | null;
+  domain?: 'private' | 'public' | 'aid';
+  // Legacy fields kept for backward compatibility in existing UI components.
+  amount?: number;
+  updated_at?: string;
   client_id?: string | number;
   provider_id?: string | number;
   release_conditions?: string;
   deadline?: string;
-  domain?: string;
 };
 
-// TODO (docs/FRONTEND_BACKEND_COMPARATIVE_AUDIT.md): Extend payload fields once escrow creation contract is finalized.
+export type EscrowReleaseConditionMilestone = {
+  label: string;
+  idx: number;
+};
+
+export type EscrowReleaseConditions = {
+  requires_proof: boolean;
+  milestones?: EscrowReleaseConditionMilestone[];
+};
+
+export type BeneficiaryCreate = BeneficiaryOffPlatformCreate;
+
 export type EscrowCreatePayload = {
-  amount: number;
-  currency: string;
-  description?: string;
+  provider_user_id?: number;
+  beneficiary?: BeneficiaryCreate;
+  amount_total: string;
+  currency: 'USD' | 'EUR' | string;
+  release_conditions: EscrowReleaseConditions;
+  deadline_at: string;
+  domain?: 'private' | 'public' | 'aid';
 };
 
 export type CreateProofPayload = {

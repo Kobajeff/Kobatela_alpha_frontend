@@ -15,14 +15,23 @@ export const buildEscrowDraftFromMandate = (mandate: Record<string, unknown>) =>
   const payload: Record<string, unknown> = {};
   const totalAmount = mandate.total_amount ?? mandate.totalAmount;
   if (typeof totalAmount === 'number') {
-    payload.amount = totalAmount.toString();
+    // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 1.1 — amount_total
+    payload.amount_total = totalAmount.toString();
   } else if (typeof totalAmount === 'string') {
-    payload.amount = totalAmount;
+    // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 1.1 — amount_total
+    payload.amount_total = totalAmount;
   }
 
   const currency = mandate.currency;
   if (typeof currency === 'string') {
+    // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 1.1 — currency
     payload.currency = currency;
+  }
+
+  const beneficiaryId = mandate.beneficiary_id ?? mandate.beneficiaryId;
+  if (typeof beneficiaryId === 'number') {
+    // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (2).md — 1.1 — provider_user_id
+    payload.provider_user_id = beneficiaryId;
   }
 
   return payload;

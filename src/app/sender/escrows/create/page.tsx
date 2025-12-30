@@ -1,66 +1,213 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { clearEscrowDraft, getEscrowDraft, type EscrowDraftPrefill } from '@/lib/prefill/escrowDraft';
-import { useCreateEscrow } from '@/lib/queries/sender';
+import { clearEscrowDraft, createEscrowDraftFromMandate, getEscrowDraft, type EscrowDraftPrefill } from '@/lib/prefill/escrowDraft';
+import { useCreateEscrow, useMandate } from '@/lib/queries/sender';
+import type {
+  EscrowCreatePayload,
+  EscrowReleaseConditionMilestone,
+  EscrowReleaseConditions
+} from '@/types/api';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 
 const DEFAULT_CURRENCY = 'EUR';
+const DEFAULT_DOMAIN: 'private' = 'private';
+
+type BeneficiaryForm = {
+  full_name: string;
+  email: string;
+  phone_number: string;
+  address_line1: string;
+  address_country_code: string;
+  bank_account: string;
+  national_id_number?: string;
+};
+
+const emptyBeneficiary: BeneficiaryForm = {
+  full_name: '',
+  email: '',
+  phone_number: '',
+  address_line1: '',
+  address_country_code: '',
+  bank_account: ''
+};
 
 export default function SenderCreateEscrowPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromMandateId = searchParams.get('from_mandate');
+  const shouldPrefillFromQuery = searchParams.get('prefill') === '1';
+  const mandateQuery = useMandate(shouldPrefillFromQuery ? fromMandateId ?? undefined : undefined);
+
   const createEscrow = useCreateEscrow();
-  const [amount, setAmount] = useState('');
+  const [amountTotal, setAmountTotal] = useState('');
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
-  const [description, setDescription] = useState('');
+  const [deadlineAt, setDeadlineAt] = useState('');
+  const [domain, setDomain] = useState<'private' | 'public' | 'aid'>(DEFAULT_DOMAIN);
+  const [requiresProof, setRequiresProof] = useState(true);
+  const [useMilestones, setUseMilestones] = useState(false);
+  const [milestones, setMilestones] = useState<EscrowReleaseConditionMilestone[]>([
+    { label: '', idx: 1 }
+  ]);
+  const [participantMode, setParticipantMode] = useState<'provider' | 'beneficiary' | null>(null);
+  const [providerUserId, setProviderUserId] = useState('');
+  const [beneficiary, setBeneficiary] = useState<BeneficiaryForm>(emptyBeneficiary);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [draftInfo, setDraftInfo] = useState<EscrowDraftPrefill | null>(null);
   const [prefillApplied, setPrefillApplied] = useState(false);
 
+  const applyDraft = (draft: EscrowDraftPrefill | null) => {
+    if (!draft) return;
+    const payload = draft.payload ?? {};
+    if (typeof payload.amount_total === 'number' || typeof payload.amount_total === 'string') {
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — amount_total
+      setAmountTotal(String(payload.amount_total));
+    }
+    if (typeof payload.currency === 'string') {
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — currency
+      setCurrency(String(payload.currency).toUpperCase());
+    }
+    if (typeof payload.provider_user_id === 'number' || typeof payload.provider_user_id === 'string') {
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — provider_user_id
+      setParticipantMode('provider');
+      setProviderUserId(String(payload.provider_user_id));
+      setBeneficiary(emptyBeneficiary);
+    }
+    setDraftInfo(draft);
+  };
+
   useEffect(() => {
     if (prefillApplied) return;
-    const draft = getEscrowDraft();
-    if (!draft) {
+    if (shouldPrefillFromQuery && mandateQuery.isLoading) return;
+    if (mandateQuery.data) {
+      const draft = createEscrowDraftFromMandate(mandateQuery.data);
+      applyDraft(draft);
+      setDraftInfo(draft);
       setPrefillApplied(true);
       return;
     }
-    const payload = draft.payload ?? {};
-    if (typeof payload.amount === 'number' || typeof payload.amount === 'string') {
-      setAmount(String(payload.amount));
+    if (shouldPrefillFromQuery && mandateQuery.isError) {
+      setErrorMessage(extractErrorMessage(mandateQuery.error));
+      setPrefillApplied(true);
+      return;
     }
-    if (typeof payload.currency === 'string') {
-      setCurrency(payload.currency);
+    const storedDraft = getEscrowDraft();
+    if (storedDraft) {
+      applyDraft(storedDraft);
     }
-    if (typeof payload.description === 'string') {
-      setDescription(payload.description);
-    }
-    setDraftInfo(draft);
     setPrefillApplied(true);
-  }, [prefillApplied]);
+  }, [
+    mandateQuery.data,
+    mandateQuery.error,
+    mandateQuery.isError,
+    mandateQuery.isLoading,
+    prefillApplied,
+    shouldPrefillFromQuery
+  ]);
+
+  const releaseConditions: EscrowReleaseConditions = useMemo(
+    () => ({
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — release_conditions.requires_proof
+      requires_proof: requiresProof,
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — release_conditions.milestones
+      milestones: useMilestones ? milestones : undefined
+    }),
+    [milestones, requiresProof, useMilestones]
+  );
+
+  const resetDraft = () => {
+    clearEscrowDraft();
+    setDraftInfo(null);
+    setAmountTotal('');
+    setCurrency(DEFAULT_CURRENCY);
+    setProviderUserId('');
+    setParticipantMode(null);
+    setBeneficiary(emptyBeneficiary);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
 
-    const parsedAmount = Number(amount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setErrorMessage('Veuillez saisir un montant valide.');
+    const normalizedAmount = amountTotal.trim();
+    const parsedAmount = Number(normalizedAmount);
+    if (!normalizedAmount || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setErrorMessage('Veuillez saisir un montant total valide.');
       return;
     }
 
     const normalizedCurrency = currency.trim().toUpperCase() || DEFAULT_CURRENCY;
+    if (!deadlineAt) {
+      setErrorMessage('La date limite est requise.');
+      return;
+    }
+    const deadlineIso = new Date(deadlineAt).toISOString();
+
+    if (!participantMode) {
+      setErrorMessage('Sélectionnez un destinataire (prestataire ou bénéficiaire).');
+      return;
+    }
+
+    const payload: EscrowCreatePayload = {
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — amount_total
+      amount_total: normalizedAmount,
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — currency
+      currency: normalizedCurrency,
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — release_conditions
+      release_conditions: releaseConditions,
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — deadline_at
+      deadline_at: deadlineIso,
+      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — domain
+      domain
+    };
+
+    if (participantMode === 'provider') {
+      const parsedProviderId = Number(providerUserId);
+      if (!providerUserId || !Number.isFinite(parsedProviderId) || parsedProviderId <= 0) {
+        setErrorMessage('Identifiant prestataire invalide.');
+        return;
+      }
+      payload.provider_user_id = parsedProviderId; // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — provider_user_id
+    } else {
+      const { full_name, email, phone_number, address_line1, address_country_code, bank_account, national_id_number } =
+        beneficiary;
+      if (!full_name || !email || !phone_number || !address_line1 || !address_country_code || !bank_account) {
+        setErrorMessage('Tous les champs bénéficiaire sont requis (sauf identifiant national).');
+        return;
+      }
+      payload.beneficiary = {
+        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — full_name
+        full_name,
+        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — email
+        email,
+        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — phone_number
+        phone_number,
+        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — address_line1
+        address_line1,
+        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — address_country_code
+        address_country_code,
+        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — bank_account
+        bank_account,
+        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — national_id_number
+        national_id_number: national_id_number?.trim() || undefined
+      };
+    }
+
+    if (useMilestones) {
+      const hasEmptyLabel = milestones.some((milestone) => !milestone.label.trim());
+      if (hasEmptyLabel) {
+        setErrorMessage('Chaque milestone doit avoir un libellé.');
+        return;
+      }
+    }
 
     try {
-      const created = await createEscrow.mutateAsync({
-        amount: parsedAmount,
-        currency: normalizedCurrency,
-        description: description.trim() || undefined
-      });
+      const created = await createEscrow.mutateAsync(payload);
       clearEscrowDraft();
       router.push(`/sender/escrows/${created.id}`);
     } catch (error) {
@@ -81,65 +228,295 @@ export default function SenderCreateEscrowPage() {
         <CardHeader>
           <CardTitle className="text-lg">Détails de l&apos;escrow</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {draftInfo && (
-            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p>
                   Formulaire pré-rempli depuis mandate{' '}
                   <span className="font-mono">{String(draftInfo.mandate_id)}</span>.
                 </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    clearEscrowDraft();
-                    setDraftInfo(null);
-                    setAmount('');
-                    setCurrency(DEFAULT_CURRENCY);
-                    setDescription('');
-                  }}
-                >
+                <Button type="button" size="sm" variant="outline" onClick={resetDraft}>
                   Effacer
                 </Button>
               </div>
             </div>
           )}
+
+          {errorMessage && <ErrorAlert message={errorMessage} />}
+
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {errorMessage && <ErrorAlert message={errorMessage} />}
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Montant</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                placeholder="0.00"
-                required
-              />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Montant total</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={amountTotal}
+                  onChange={(event) => setAmountTotal(event.target.value)}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Devise</label>
+                <Input
+                  type="text"
+                  value={currency}
+                  onChange={(event) => setCurrency(event.target.value)}
+                  placeholder={DEFAULT_CURRENCY}
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Devise</label>
-              <Input
-                type="text"
-                value={currency}
-                onChange={(event) => setCurrency(event.target.value)}
-                placeholder={DEFAULT_CURRENCY}
-                required
-              />
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Date limite</label>
+                <Input
+                  type="datetime-local"
+                  value={deadlineAt}
+                  onChange={(event) => setDeadlineAt(event.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Domaine</label>
+                <select
+                  className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  value={domain}
+                  onChange={(event) => setDomain(event.target.value as typeof domain)}
+                >
+                  <option value="private">Privé</option>
+                  <option value="public">Public</option>
+                  <option value="aid">Aid</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Description (optionnel)</label>
-              <textarea
-                className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                rows={3}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Ajoutez des précisions sur la prestation ou les conditions"
-              />
+
+            <div className="space-y-3 rounded-md border border-slate-200 p-4">
+              <p className="text-sm font-medium text-slate-800">Destinataire</p>
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="participant-mode"
+                    value="provider"
+                    checked={participantMode === 'provider'}
+                    onChange={() => {
+                      setParticipantMode('provider');
+                      setBeneficiary(emptyBeneficiary);
+                    }}
+                  />
+                  Prestataire sur la plateforme
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="participant-mode"
+                    value="beneficiary"
+                    checked={participantMode === 'beneficiary'}
+                    onChange={() => {
+                      setParticipantMode('beneficiary');
+                      setProviderUserId('');
+                    }}
+                  />
+                  Bénéficiaire hors plateforme
+                </label>
+              </div>
+
+              {participantMode === 'provider' && (
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Identifiant utilisateur prestataire
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={providerUserId}
+                    onChange={(event) => setProviderUserId(event.target.value)}
+                    placeholder="ID utilisateur"
+                    required
+                  />
+                </div>
+              )}
+
+              {participantMode === 'beneficiary' && (
+                <div className="mt-2 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Nom complet</label>
+                    <Input
+                      type="text"
+                      value={beneficiary.full_name}
+                      onChange={(event) =>
+                        setBeneficiary((prev) => ({ ...prev, full_name: event.target.value }))
+                      }
+                      placeholder="Nom et prénom"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Email</label>
+                      <Input
+                        type="email"
+                        value={beneficiary.email}
+                        onChange={(event) =>
+                          setBeneficiary((prev) => ({ ...prev, email: event.target.value }))
+                        }
+                        placeholder="beneficiaire@example.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Téléphone</label>
+                      <Input
+                        type="tel"
+                        value={beneficiary.phone_number}
+                        onChange={(event) =>
+                          setBeneficiary((prev) => ({ ...prev, phone_number: event.target.value }))
+                        }
+                        placeholder="+2507..."
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Adresse (ligne 1)</label>
+                      <Input
+                        type="text"
+                        value={beneficiary.address_line1}
+                        onChange={(event) =>
+                          setBeneficiary((prev) => ({ ...prev, address_line1: event.target.value }))
+                        }
+                        placeholder="123 Rue Exemple"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Code pays (adresse)</label>
+                      <Input
+                        type="text"
+                        value={beneficiary.address_country_code}
+                        onChange={(event) =>
+                          setBeneficiary((prev) => ({
+                            ...prev,
+                            address_country_code: event.target.value
+                          }))
+                        }
+                        placeholder="FR"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Compte bancaire / IBAN</label>
+                      <Input
+                        type="text"
+                        value={beneficiary.bank_account}
+                        onChange={(event) =>
+                          setBeneficiary((prev) => ({ ...prev, bank_account: event.target.value }))
+                        }
+                        placeholder="FR76..."
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">
+                        Numéro d&apos;identité (optionnel)
+                      </label>
+                      <Input
+                        type="text"
+                        value={beneficiary.national_id_number ?? ''}
+                        onChange={(event) =>
+                          setBeneficiary((prev) => ({
+                            ...prev,
+                            national_id_number: event.target.value
+                          }))
+                        }
+                        placeholder="ID national / passeport"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+
+            <div className="space-y-3 rounded-md border border-slate-200 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-800">Conditions de libération</p>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={requiresProof}
+                    onChange={(event) => setRequiresProof(event.target.checked)}
+                  />
+                  Preuve requise
+                </label>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={useMilestones}
+                  onChange={(event) => setUseMilestones(event.target.checked)}
+                />
+                Ajouter des milestones
+              </label>
+
+              {useMilestones && (
+                <div className="space-y-3">
+                  {milestones.map((milestone, index) => (
+                    <div key={milestone.idx} className="rounded-md border border-slate-100 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-slate-800">Milestone #{milestone.idx}</p>
+                        {milestones.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setMilestones((prev) => prev.filter((m) => m.idx !== milestone.idx))
+                            }
+                          >
+                            Supprimer
+                          </Button>
+                        )}
+                      </div>
+                      <label className="mt-2 block text-sm font-medium text-slate-700">Libellé</label>
+                      <Input
+                        type="text"
+                        value={milestone.label}
+                        onChange={(event) =>
+                          setMilestones((prev) =>
+                            prev.map((item) =>
+                              item.idx === milestone.idx ? { ...item, label: event.target.value } : item
+                            )
+                          )
+                        }
+                        placeholder="Livraison initiale"
+                        required
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      setMilestones((prev) => [
+                        ...prev,
+                        { idx: (prev[prev.length - 1]?.idx ?? prev.length) + 1, label: '' }
+                      ])
+                    }
+                  >
+                    Ajouter une milestone
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-3">
               <Button type="submit" disabled={createEscrow.isPending}>
                 {createEscrow.isPending ? 'Création en cours...' : 'Créer l\'escrow'}

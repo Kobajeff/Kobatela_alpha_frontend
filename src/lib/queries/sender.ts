@@ -375,10 +375,9 @@ export function useCreateEscrow() {
               resolve({
                 id: `demo-escrow-${Date.now()}`,
                 status: 'DRAFT',
-                amount: payload.amount,
+                amount_total: payload.amount_total,
                 currency: payload.currency,
-                created_at: now,
-                updated_at: now
+                created_at: now
               }),
             200
           );
@@ -394,6 +393,18 @@ export function useCreateEscrow() {
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
     }
+  });
+}
+
+export function useMandate(mandateId?: string) {
+  return useQuery<UsageMandateRead>({
+    queryKey: queryKeys.sender.mandates.byId(mandateId),
+    queryFn: async () => {
+      if (!mandateId) throw new Error('Mandate id is required');
+      const response = await apiClient.get<UsageMandateRead>(`/mandates/${mandateId}`);
+      return response.data;
+    },
+    enabled: Boolean(mandateId)
   });
 }
 
