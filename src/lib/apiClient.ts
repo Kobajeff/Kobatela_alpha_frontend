@@ -98,10 +98,14 @@ export function logApiError(error: unknown, context?: string) {
 
 export async function uploadProofFile(
   file: File,
+  escrowId?: string,
   onProgress?: (percent: number) => void
 ): Promise<ProofFileUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
+  if (escrowId) {
+    formData.append('escrow_id', escrowId);
+  }
 
   const response = await apiClient.post<ProofFileUploadResponse>('/files/proofs', formData, {
     headers: {

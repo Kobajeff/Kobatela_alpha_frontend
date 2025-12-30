@@ -4,22 +4,31 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useCreateProof } from '@/lib/queries/sender';
-import { extractErrorMessage, uploadProofFile } from '@/lib/apiClient';
+import { uploadProofFile } from '@/lib/apiClient';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/ToastProvider';
 import { isDemoMode } from '@/lib/config';
-import type { ProofFileUploadResponse } from '@/types/api';
+import type { ProofFileUploadResponse, ProofType } from '@/types/api';
+import { normalizeApiError } from '@/lib/apiError';
+import type { EscrowSummaryViewer } from '@/lib/queryKeys';
 
 interface ProofFormProps {
   escrowId: string;
-  milestoneId?: string;
+  milestoneIdx?: number;
+  milestoneRequired?: boolean;
+  viewer?: EscrowSummaryViewer;
   onProofCreated?: (proofId: string) => void;
 }
 
-export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormProps) {
-  const [description, setDescription] = useState('');
-  const [attachmentUrl, setAttachmentUrl] = useState('');
+export function ProofForm({
+  escrowId,
+  milestoneIdx,
+  milestoneRequired = true,
+  viewer = 'sender',
+  onProofCreated
+}: ProofFormProps) {
+  const [note, setNote] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -27,7 +36,8 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const createProof = useCreateProof();
+  const [proofType, setProofType] = useState<ProofType>('PHOTO');
+  const createProof = useCreateProof({ viewer });
   const { showToast } = useToast();
 
   const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -80,6 +90,11 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
     }
 
     setSelectedFile(file);
+    if (file.type.startsWith('image/')) {
+      setProofType('PHOTO');
+    } else {
+      setProofType('DOCUMENT');
+    }
   };
 
   const handleClearFile = () => {
@@ -93,10 +108,13 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
     event.preventDefault();
     setErrorMessage('');
     setFileError(null);
-    const trimmedAttachmentUrl = attachmentUrl.trim();
+    if (milestoneRequired && (milestoneIdx === undefined || milestoneIdx === null)) {
+      setErrorMessage('Sélectionnez un jalon avant de soumettre la preuve.');
+      return;
+    }
 
-    if (!selectedFile && !trimmedAttachmentUrl) {
-      setErrorMessage('Ajoutez un fichier ou fournissez un lien vers la preuve.');
+    if (!selectedFile) {
+      setErrorMessage('Ajoutez un fichier pour soumettre la preuve.');
       return;
     }
 
@@ -113,14 +131,11 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
     try {
       const basePayload = {
         escrow_id: escrowId,
-        milestone_id: milestoneId || undefined,
-        description: description || undefined
+        milestone_idx: milestoneIdx as number,
+        type: proofType
       };
 
-      let payloadWithAttachment: typeof basePayload & {
-        file_id?: string;
-        attachment_url?: string;
-      } = { ...basePayload };
+      let uploadResponse: ProofFileUploadResponse;
 
       if (selectedFile) {
         const validationMessage = validateFile(selectedFile);
@@ -130,7 +145,6 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
         }
 
         setUploadProgress(0);
-        let uploadResponse: ProofFileUploadResponse;
 
         if (isDemoMode()) {
           await new Promise((resolve) => {
@@ -143,39 +157,50 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
 
           uploadResponse = {
             file_id: 'demo-file-id',
-            file_url: 'https://demo.kobatela.com/files/demo-proof.pdf'
+            storage_key: 'proofs/demo-proof.pdf',
+            storage_url: 'https://demo.kobatela.com/files/demo-proof.pdf',
+            sha256: 'demo-sha256',
+            content_type: selectedFile.type,
+            size_bytes: selectedFile.size,
+            escrow_id: escrowId,
+            uploaded_by_role: viewer,
+            uploaded_by_user_id: 'demo-user',
+            bound: false
           };
         } else {
-          uploadResponse = await uploadProofFile(selectedFile, (percent) => {
+          uploadResponse = await uploadProofFile(selectedFile, escrowId, (percent) => {
             setUploadProgress(percent);
           });
         }
 
         setUploadProgress(100);
-
-        payloadWithAttachment = {
-          ...basePayload,
-          file_id: uploadResponse.file_id,
-          attachment_url: uploadResponse.file_url ?? undefined
-        };
-      } else if (trimmedAttachmentUrl) {
-        payloadWithAttachment = {
-          ...basePayload,
-          attachment_url: trimmedAttachmentUrl
-        };
       }
 
-      const createdProof = await createProof.mutateAsync(payloadWithAttachment);
-      onProofCreated?.(createdProof.id);
-      setDescription('');
-      setAttachmentUrl('');
+      const createdProof = await createProof.mutateAsync({
+        ...basePayload,
+        storage_key: uploadResponse.storage_key,
+        storage_url: uploadResponse.storage_url,
+        sha256: uploadResponse.sha256,
+        metadata: note ? { note } : undefined
+      });
+      const proofId = createdProof.id ?? createdProof.proof_id;
+      if (proofId) {
+        onProofCreated?.(String(proofId));
+      }
+      setNote('');
       setSelectedFile(null);
       setFileInputKey((key) => key + 1);
       setUploadProgress(null);
       setFileError(null);
       showToast('Proof created successfully', 'success');
     } catch (error) {
-      const message = extractErrorMessage(error);
+      const normalized = normalizeApiError(error);
+      const message =
+        normalized.status === 401
+          ? 'Session expirée. Veuillez vous reconnecter.'
+          : normalized.status === 403
+            ? 'Accès refusé : vous ne pouvez pas soumettre de preuve.'
+            : normalized.message;
       setErrorMessage(message);
       showToast(message, 'error');
     } finally {
@@ -184,19 +209,32 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
     }
   };
 
+  const milestoneMissing =
+    Boolean(milestoneRequired) && (milestoneIdx === undefined || milestoneIdx === null);
   const isSubmitting = createProof.isPending || isUploading;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
       <div>
-        <label className="block text-sm font-medium text-slate-700">Description</label>
+        <label className="block text-sm font-medium text-slate-700">Note (optionnelle)</label>
         <textarea
           className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           rows={3}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          placeholder="Décrivez la preuve fournie"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="Ajoutez un contexte ou une précision"
         />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700">Type de preuve</label>
+        <select
+          className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
+          value={proofType}
+          onChange={(event) => setProofType(event.target.value as ProofType)}
+        >
+          <option value="PHOTO">Photo</option>
+          <option value="DOCUMENT">Document</option>
+        </select>
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700">Proof file (photo or PDF)</label>
@@ -266,19 +304,14 @@ export function ProofForm({ escrowId, milestoneId, onProofCreated }: ProofFormPr
           </p>
         )}
       </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700">Lien de pièce jointe</label>
-        <Input
-          value={attachmentUrl}
-          onChange={(event) => setAttachmentUrl(event.target.value)}
-          placeholder="https://exemple.com/preuve"
-        />
-      </div>
       <div className="flex items-center justify-between">
         <div className="text-sm">
+          {milestoneMissing && (
+            <p className="text-amber-700">Sélectionnez un jalon pour continuer.</p>
+          )}
           {errorMessage && <p className="text-rose-600">{errorMessage}</p>}
         </div>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || milestoneMissing}>
           {isSubmitting ? 'Submitting proof…' : 'Ajouter une preuve'}
         </Button>
       </div>

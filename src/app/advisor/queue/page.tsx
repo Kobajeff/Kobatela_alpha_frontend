@@ -124,8 +124,6 @@ function formatDate(value?: string) {
 }
 
 function ProofRow({ proof }: { proof: AdvisorProofItem }) {
-  const attachment = proof.file_url ?? proof.attachment_url;
-
   return (
     <tr className="hover:bg-slate-50">
       <td className="px-4 py-3 font-mono text-xs text-slate-700">{proof.id}</td>
@@ -137,13 +135,9 @@ function ProofRow({ proof }: { proof: AdvisorProofItem }) {
       </td>
       <td className="px-4 py-3 text-slate-600">{formatDate(proof.created_at)}</td>
       <td className="px-4 py-3">
-        {attachment ? (
-          <a href={attachment} target="_blank" className="text-indigo-700 hover:underline" rel="noreferrer">
-            View
-          </a>
-        ) : (
-          '—'
-        )}
+        {proof.storage_key || proof.storage_url || proof.attachment_url || proof.file_url
+          ? 'Fichier reçu'
+          : '—'}
       </td>
     </tr>
   );

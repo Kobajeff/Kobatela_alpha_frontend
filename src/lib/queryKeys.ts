@@ -1,4 +1,4 @@
-export type EscrowSummaryViewer = 'sender' | 'admin';
+export type EscrowSummaryViewer = 'sender' | 'admin' | 'provider';
 
 type ListFilters = Record<string, unknown>;
 

@@ -217,12 +217,16 @@ export type EscrowRead = EscrowListItem & {
   deadline_at?: string | null;
 };
 
+export type ProofMetadata = Record<string, unknown>;
+
 export type CreateProofPayload = {
   escrow_id: string;
-  milestone_id?: string;
-  description?: string;
-  file_id?: string;
-  attachment_url?: string;
+  milestone_idx: number;
+  type: ProofType;
+  storage_key: string;
+  storage_url: string;
+  sha256: string;
+  metadata?: ProofMetadata;
 };
 
 export type AiAnalysis = {
@@ -243,9 +247,15 @@ export interface ProofDecisionRequest {
 
 export type Proof = {
   id: string;
+  proof_id?: string | number;
   escrow_id: string;
-  milestone_id?: string;
+  milestone_id?: string | number;
+  milestone_idx?: number | null;
   type?: ProofType;
+  storage_key?: string;
+  storage_url?: string;
+  sha256?: string;
+  metadata?: ProofMetadata | null;
   description?: string;
   attachment_url?: string;
   file_id?: string;
@@ -454,8 +464,62 @@ export type ProofType = 'PHOTO' | 'DOCUMENT';
 
 export interface ProofFileUploadResponse {
   file_id: string;
+  storage_key: string;
+  storage_url: string;
+  sha256: string;
+  content_type: string;
+  size_bytes: number;
+  escrow_id?: number | string;
+  uploaded_by_role?: string;
+  uploaded_by_user_id?: number | string;
+  bound?: boolean;
   file_url?: string;
 }
+
+export type ExternalProofUploadResponse = {
+  storage_key: string;
+  storage_url: string;
+  sha256: string;
+  content_type: string;
+  size_bytes: number;
+  escrow_id: number | string;
+  milestone_idx: number;
+};
+
+export type ExternalProofSubmitPayload = {
+  escrow_id: number | string;
+  milestone_idx: number;
+  type: ProofType;
+  storage_key: string;
+  storage_url: string;
+  sha256: string;
+  metadata?: ProofMetadata;
+};
+
+export type ExternalProofSubmitResponse = {
+  proof_id: number | string;
+  status: ProofStatus;
+  escrow_id: number | string;
+  milestone_idx: number;
+  created_at: string;
+};
+
+export type ExternalEscrowMilestoneSummary = {
+  milestone_idx: number;
+  label?: string;
+  amount?: string;
+  status?: string;
+  requires_proof?: boolean;
+  last_proof_status?: string | null;
+};
+
+export type ExternalEscrowSummary = {
+  escrow_id: number | string;
+  status: string;
+  currency?: string;
+  amount_total?: string;
+  milestones: ExternalEscrowMilestoneSummary[];
+};
 
 export interface AdvisorProfile {
   id: string;

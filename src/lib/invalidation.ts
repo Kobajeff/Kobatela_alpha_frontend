@@ -16,7 +16,7 @@ type ProofBundleOptions = {
   viewer?: EscrowSummaryViewer;
 };
 
-const summaryViewers: EscrowSummaryViewer[] = ['sender', 'admin'];
+const summaryViewers: EscrowSummaryViewer[] = ['sender', 'admin', 'provider'];
 
 function findProofListQueryKey(queryClient: QueryClient, escrowId: string) {
   const cachedQueries = queryClient.getQueriesData({

@@ -57,7 +57,7 @@ export default function SenderEscrowDetailsPage() {
   const [fundingError, setFundingError] = useState<string | null>(null);
   const [depositError, setDepositError] = useState<string | null>(null);
   const [fundingNote, setFundingNote] = useState<string | null>(null);
-  const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>('');
+  const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState<string>('');
   const [latestProofId, setLatestProofId] = useState<string | null>(null);
   const [proofRequestMessage, setProofRequestMessage] = useState<{
     tone: 'success' | 'info' | 'error';
@@ -79,7 +79,7 @@ export default function SenderEscrowDetailsPage() {
   });
   const { showToast } = useToast();
   const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
-  const proofReview = useProofReviewPolling(latestProofId, escrowId);
+  const proofReview = useProofReviewPolling(latestProofId, escrowId, 'sender');
   const directDepositEnabled = isDirectDepositEnabled();
   const polling = query.polling;
   const banners = useMemo(
@@ -388,6 +388,16 @@ export default function SenderEscrowDetailsPage() {
     }
   };
 
+  useEffect(() => {
+    if (!query.data) return;
+    if (query.data.milestones.length === 0) return;
+    if (selectedMilestoneIdx) return;
+    const first = query.data.milestones[0]?.sequence_index;
+    if (first !== undefined && first !== null) {
+      setSelectedMilestoneIdx(String(first));
+    }
+  }, [query.data, selectedMilestoneIdx]);
+
   if (query.isLoading) {
     return <LoadingState label="Chargement de l'escrow..." />;
   }
@@ -426,18 +436,22 @@ export default function SenderEscrowDetailsPage() {
 
   const proofForm = (
     <div className="space-y-3 rounded-md border border-slate-100 bg-slate-50 p-4">
+      {data.milestones.length === 0 && (
+        <p className="text-sm text-amber-700">
+          Aucun jalon disponible. La soumission d'une preuve nécessite un jalon.
+        </p>
+      )}
       {data.milestones.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-slate-700">Associer à un jalon</label>
           <select
-            value={selectedMilestoneId}
-            onChange={(event) => setSelectedMilestoneId(event.target.value)}
+            value={selectedMilestoneIdx}
+            onChange={(event) => setSelectedMilestoneIdx(event.target.value)}
             className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
           >
-            <option value="">Aucun</option>
             {data.milestones.map((milestone) => (
-              <option key={milestone.id} value={milestone.id}>
-                {milestone.name}
+              <option key={milestone.id} value={milestone.sequence_index}>
+                {milestone.label ?? milestone.name ?? `Jalon ${milestone.sequence_index}`}
               </option>
             ))}
           </select>
@@ -445,7 +459,10 @@ export default function SenderEscrowDetailsPage() {
       )}
       <ProofForm
         escrowId={escrowId}
-        milestoneId={selectedMilestoneId || undefined}
+        milestoneIdx={
+          selectedMilestoneIdx ? Number.parseInt(selectedMilestoneIdx, 10) : undefined
+        }
+        viewer="sender"
         onProofCreated={setLatestProofId}
       />
     </div>
