@@ -52,6 +52,29 @@ export default function SenderProfilePage() {
     });
   }, [profile]);
 
+  const optionalFields = useMemo(
+    () => ({
+      first_name: formState.first_name.trim() || undefined,
+      last_name: formState.last_name.trim() || undefined,
+      email: formState.email.trim() || undefined,
+      phone: formState.phone.trim() || undefined,
+      address_line1: formState.address_line1.trim() || undefined,
+      address_line2: formState.address_line2.trim() || undefined,
+      city: formState.city.trim() || undefined,
+      postal_code: formState.postal_code.trim() || undefined,
+      country_code: formState.country_code.trim() ? formState.country_code.trim().toUpperCase() : undefined,
+      bank_account: formState.bank_account.trim() || undefined,
+      national_id_type: formState.national_id_type || undefined,
+      national_id_number: formState.national_id_number.trim() || undefined,
+      spoken_languages: formState.spoken_languages.trim()
+        ? formState.spoken_languages.split(',').map((lang) => lang.trim()).filter(Boolean)
+        : undefined,
+      residence_region: formState.residence_region.trim() || undefined,
+      habitual_send_region: formState.habitual_send_region.trim() || undefined
+    }),
+    [formState]
+  );
+
   const isLoading = isAuthLoading || isProfileLoading;
   const error = authError ?? profileError;
 
@@ -82,29 +105,6 @@ export default function SenderProfilePage() {
     authUser.scopeList && authUser.scopeList.length > 0
       ? authUser.scopeList.join(', ')
       : 'Non disponible (MVP)';
-
-  const optionalFields = useMemo(
-    () => ({
-      first_name: formState.first_name.trim() || undefined,
-      last_name: formState.last_name.trim() || undefined,
-      email: formState.email.trim() || undefined,
-      phone: formState.phone.trim() || undefined,
-      address_line1: formState.address_line1.trim() || undefined,
-      address_line2: formState.address_line2.trim() || undefined,
-      city: formState.city.trim() || undefined,
-      postal_code: formState.postal_code.trim() || undefined,
-      country_code: formState.country_code.trim() ? formState.country_code.trim().toUpperCase() : undefined,
-      bank_account: formState.bank_account.trim() || undefined,
-      national_id_type: formState.national_id_type || undefined,
-      national_id_number: formState.national_id_number.trim() || undefined,
-      spoken_languages: formState.spoken_languages.trim()
-        ? formState.spoken_languages.split(',').map((lang) => lang.trim()).filter(Boolean)
-        : undefined,
-      residence_region: formState.residence_region.trim() || undefined,
-      habitual_send_region: formState.habitual_send_region.trim() || undefined
-    }),
-    [formState]
-  );
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
