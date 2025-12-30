@@ -19,6 +19,19 @@ import type {
 } from '@/types/api';
 
 const DEFAULT_CURRENCY = 'USD';
+const DEFAULT_BENEFICIARY_OFF_PLATFORM: BeneficiaryOffPlatformCreate = {
+  full_name: '',
+  email: '',
+  phone_number: '',
+  address_line1: '',
+  address_country_code: '',
+  bank_account: '',
+  national_id_number: ''
+};
+
+type MandateDestinationSnapshot =
+  | { type: 'on-platform'; beneficiaryId: number }
+  | { type: 'off-platform'; beneficiary: BeneficiaryOffPlatformCreate };
 
 export default function SenderMandatesPage() {
   const router = useRouter();
@@ -38,24 +51,50 @@ export default function SenderMandatesPage() {
   const [merchantCountryCode, setMerchantCountryCode] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createdMandate, setCreatedMandate] = useState<UsageMandateRead | null>(null);
+  const [createdDestination, setCreatedDestination] = useState<MandateDestinationSnapshot | null>(null);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
   const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [lastCleanupRun, setLastCleanupRun] = useState<string | null>(null);
-  const [beneficiaryOffPlatform, setBeneficiaryOffPlatform] = useState<BeneficiaryOffPlatformCreate>({
-    full_name: '',
-    email: '',
-    phone_number: '',
-    address_line1: '',
-    address_country_code: '',
-    bank_account: '',
-    national_id_number: ''
-  });
+  const [beneficiaryOffPlatform, setBeneficiaryOffPlatform] = useState<BeneficiaryOffPlatformCreate>(
+    DEFAULT_BENEFICIARY_OFF_PLATFORM
+  );
 
   const payoutOptions: Array<{ value: PayoutDestinationType; label: string }> = [
     { value: 'BENEFICIARY_PROVIDER', label: 'Bénéficiaire / Provider' },
     { value: 'MERCHANT', label: 'Merchant (Direct Pay)' }
   ];
+
+  const handleTargetTypeChange = (nextType: 'on-platform' | 'off-platform') => {
+    setTargetType(nextType);
+    setErrorMessage(null);
+    setCopySuccess(null);
+    setCreatedMandate(null);
+    setCreatedDestination(null);
+    if (nextType === 'on-platform') {
+      setBeneficiaryOffPlatform(DEFAULT_BENEFICIARY_OFF_PLATFORM);
+    } else {
+      setBeneficiaryId('');
+    }
+  };
+
+  const handlePayoutDestinationChange = (value: PayoutDestinationType) => {
+    setPayoutDestinationType(value);
+    setErrorMessage(null);
+    if (value !== 'MERCHANT') {
+      setMerchantRegistryId('');
+      setMerchantName('');
+      setMerchantCountryCode('');
+      setMerchantMode('registry');
+    }
+  };
+
+  const handleMerchantModeChange = (mode: 'registry' | 'suggestion') => {
+    setMerchantMode(mode);
+    setMerchantRegistryId('');
+    setMerchantName('');
+    setMerchantCountryCode('');
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -83,12 +122,14 @@ export default function SenderMandatesPage() {
       return;
     }
 
-    const basePayload: UsageMandateCreate = {
+    const basePayload = {
       total_amount: trimmedTotalAmount, // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — required total_amount
       currency: normalizedCurrency, // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — currency normalized
       expires_at: expiresDate.toISOString(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — expires_at ISO
       payout_destination_type: payoutDestinationType // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — payout_destination_type
     };
+
+    let destinationPayload: UsageMandateCreate | null = null;
 
     if (targetType === 'on-platform') {
       const parsedBeneficiaryId = Number(beneficiaryId);
@@ -96,7 +137,10 @@ export default function SenderMandatesPage() {
         setErrorMessage('Veuillez saisir un identifiant bénéficiaire valide.');
         return;
       }
-      basePayload.beneficiary_id = parsedBeneficiaryId; // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — beneficiary_id XOR beneficiary
+      destinationPayload = {
+        ...basePayload,
+        beneficiary_id: parsedBeneficiaryId // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Create Mandate — beneficiary_id XOR beneficiary
+      };
     } else {
       const {
         full_name,
@@ -122,22 +166,25 @@ export default function SenderMandatesPage() {
         return;
       }
 
-      basePayload.beneficiary = {
-        full_name: full_name.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (name)
-        email: email.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (contact)
-        phone_number: phone_number.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (phone)
-        address_line1: address_line1.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (address)
+      destinationPayload = {
+        ...basePayload,
+        beneficiary: {
+          full_name: full_name.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (name)
+          email: email.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (contact)
+          phone_number: phone_number.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (phone)
+          address_line1: address_line1.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (address)
         address_country_code: address_country_code.trim().toUpperCase(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (address country)
         bank_account: bank_account.trim(), // Contract: docs/Backend_info/BACKEND_MANDATE_MILESTONE_IDENTITY_AUDIT (1).md — Beneficiary identity requires bank_account
-        ...(national_id_number.trim()
-          ? {
-              national_id_number: national_id_number.trim() // Contract: docs/Backend_info/BACKEND_MANDATE_MILESTONE_IDENTITY_AUDIT (1).md — Beneficiary identity includes national_id_number
-            }
-          : {})
+          ...(national_id_number.trim()
+            ? {
+                national_id_number: national_id_number.trim()
+              }
+            : {})
+        }
       };
     }
 
-    if (payoutDestinationType === 'MERCHANT') {
+    if (payoutDestinationType === 'MERCHANT' && destinationPayload) {
       const registryId = merchantRegistryId.trim();
       const suggestionName = merchantName.trim();
       const suggestionCountry = merchantCountryCode.trim().toUpperCase();
@@ -155,18 +202,49 @@ export default function SenderMandatesPage() {
       }
 
       if (hasRegistry) {
-        basePayload.merchant_registry_id = registryId; // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Direct Pay merchant_registry_id
+        destinationPayload = {
+          ...destinationPayload,
+          merchant_registry_id: registryId // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Direct Pay merchant_registry_id
+        };
       } else {
-        basePayload.merchant_suggestion = {
-          name: suggestionName, // Contract: docs/Backend_info/FRONTEND_API_GUIDE (6).md — UsageMandateCreate merchant_suggestion name
-          country_code: suggestionCountry // Contract: docs/Backend_info/FRONTEND_API_GUIDE (6).md — UsageMandateCreate merchant_suggestion country_code
+        destinationPayload = {
+          ...destinationPayload,
+          merchant_suggestion: {
+            name: suggestionName, // Contract: docs/Backend_info/FRONTEND_API_GUIDE (8).md — UsageMandateCreate merchant_suggestion name
+            country_code: suggestionCountry // Contract: docs/Backend_info/FRONTEND_API_GUIDE (8).md — UsageMandateCreate merchant_suggestion country_code
+          }
         };
       }
     }
 
+    if (!destinationPayload) {
+      setErrorMessage('Sélectionnez une destination valide pour le mandat.');
+      return;
+    }
+
     try {
-      const result = await createMandate.mutateAsync(basePayload);
+      const result = await createMandate.mutateAsync(destinationPayload);
       setCreatedMandate(result);
+      if (targetType === 'on-platform') {
+        setCreatedDestination({
+          type: 'on-platform',
+          beneficiaryId: Number(beneficiaryId)
+        });
+      } else {
+        setCreatedDestination({
+          type: 'off-platform',
+          beneficiary: {
+            ...beneficiaryOffPlatform,
+            full_name: beneficiaryOffPlatform.full_name.trim(),
+            email: beneficiaryOffPlatform.email.trim(),
+            phone_number: beneficiaryOffPlatform.phone_number.trim(),
+            address_line1: beneficiaryOffPlatform.address_line1.trim(),
+            address_country_code: beneficiaryOffPlatform.address_country_code.trim().toUpperCase(),
+            bank_account: beneficiaryOffPlatform.bank_account.trim(),
+            national_id_number: beneficiaryOffPlatform.national_id_number?.trim() || ''
+          }
+        });
+      }
       setErrorMessage(null);
     } catch (error) {
       const normalized = normalizeApiError(error);
@@ -194,6 +272,35 @@ export default function SenderMandatesPage() {
       setErrorMessage(normalized.message ?? extractErrorMessage(error));
     }
   };
+
+  const destinationSummary = (() => {
+    if (!createdMandate && !createdDestination) return null;
+    const providerId =
+      createdMandate?.provider_user_id ??
+      createdMandate?.beneficiary_id ??
+      (createdDestination?.type === 'on-platform' ? createdDestination.beneficiaryId : null);
+    if (providerId) {
+      return {
+        label: 'Utilisateur Kobatela',
+        detail: `ID utilisateur: ${providerId}`
+      };
+    }
+
+    const profile = createdMandate?.beneficiary_profile;
+    const name =
+      profile?.full_name ??
+      (createdDestination?.type === 'off-platform' ? createdDestination.beneficiary.full_name : null);
+    const country =
+      profile?.address_country_code ??
+      (createdDestination?.type === 'off-platform'
+        ? createdDestination.beneficiary.address_country_code
+        : null);
+
+    return {
+      label: 'Bénéficiaire hors plateforme',
+      detail: [name, country].filter(Boolean).join(' · ') || 'Informations limitées'
+    };
+  })();
 
   const handleCopyId = async () => {
     if (!createdMandate?.id || typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -250,7 +357,7 @@ export default function SenderMandatesPage() {
                     name="targetType"
                     value="on-platform"
                     checked={targetType === 'on-platform'}
-                    onChange={() => setTargetType('on-platform')}
+                    onChange={() => handleTargetTypeChange('on-platform')}
                     disabled={createMandate.isPending}
                   />
                   Destinataire sur la plateforme
@@ -261,7 +368,7 @@ export default function SenderMandatesPage() {
                     name="targetType"
                     value="off-platform"
                     checked={targetType === 'off-platform'}
-                    onChange={() => setTargetType('off-platform')}
+                    onChange={() => handleTargetTypeChange('off-platform')}
                     disabled={createMandate.isPending}
                   />
                   Bénéficiaire hors plateforme
@@ -309,7 +416,7 @@ export default function SenderMandatesPage() {
                 <label className="block text-sm font-medium text-slate-700">Destination de payout</label>
                 <Select
                   value={payoutDestinationType}
-                  onChange={(event) => setPayoutDestinationType(event.target.value as PayoutDestinationType)}
+                  onChange={(event) => handlePayoutDestinationChange(event.target.value as PayoutDestinationType)}
                   disabled={createMandate.isPending}
                 >
                   {payoutOptions.map((option) => (
@@ -461,7 +568,7 @@ export default function SenderMandatesPage() {
                       name="merchant-mode"
                       value="registry"
                       checked={merchantMode === 'registry'}
-                      onChange={() => setMerchantMode('registry')}
+                      onChange={() => handleMerchantModeChange('registry')}
                       disabled={createMandate.isPending}
                     />
                     Identifiant registre
@@ -472,7 +579,7 @@ export default function SenderMandatesPage() {
                       name="merchant-mode"
                       value="suggestion"
                       checked={merchantMode === 'suggestion'}
-                      onChange={() => setMerchantMode('suggestion')}
+                      onChange={() => handleMerchantModeChange('suggestion')}
                       disabled={createMandate.isPending}
                     />
                     Suggestion
@@ -528,15 +635,7 @@ export default function SenderMandatesPage() {
                 onClick={() => {
                   setTargetType('on-platform');
                   setBeneficiaryId('');
-                  setBeneficiaryOffPlatform({
-                    full_name: '',
-                    email: '',
-                    phone_number: '',
-                    address_line1: '',
-                    address_country_code: '',
-                    bank_account: '',
-                    national_id_number: ''
-                  });
+                  setBeneficiaryOffPlatform(DEFAULT_BENEFICIARY_OFF_PLATFORM);
                   setTotalAmount('');
                   setCurrency(DEFAULT_CURRENCY);
                   setExpiresAt('');
@@ -548,6 +647,7 @@ export default function SenderMandatesPage() {
                   setErrorMessage(null);
                   setCopySuccess(null);
                   setCreatedMandate(null);
+                  setCreatedDestination(null);
                 }}
               >
                 Réinitialiser
@@ -570,8 +670,15 @@ export default function SenderMandatesPage() {
                     {copySuccess && <span className="text-xs text-green-800">{copySuccess}</span>}
                   </div>
                 </div>
+                {destinationSummary && (
+                  <div className="rounded-md border border-green-200 bg-white p-3 text-green-900">
+                    <p className="text-xs uppercase text-green-700">Destination</p>
+                    <p className="text-sm font-semibold">{destinationSummary.label}</p>
+                    <p className="text-xs text-green-800">{destinationSummary.detail}</p>
+                  </div>
+                )}
                 <div className="rounded-md border border-green-200 bg-white p-3 text-green-900">
-                  <p className="text-sm font-medium">Créer un escrow à partir de ce mandate</p>
+                  <p className="text-sm font-medium">Créer un escrow à partir de ce mandat</p>
                   <p className="mt-1 text-xs text-green-800">
                     Pré-remplira l&apos;écran de création d&apos;escrow. Vous pourrez modifier avant validation.
                   </p>
@@ -584,12 +691,9 @@ export default function SenderMandatesPage() {
                       router.push('/sender/escrows/create');
                     }}
                   >
-                    Créer un escrow à partir de ce mandate
+                    Créer un escrow à partir de ce mandat
                   </Button>
                 </div>
-                <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-slate-900 p-3 text-xs text-slate-100">
-                  {JSON.stringify(createdMandate, null, 2)}
-                </pre>
               </div>
             )}
           </form>
