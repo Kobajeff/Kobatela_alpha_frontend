@@ -197,15 +197,46 @@ export type MilestoneStatus =
   | 'PAYING'
   | 'PAID';
 
-export type Milestone = {
-  id: string;
-  name: string;
-  status: MilestoneStatus;
-  due_date?: string;
+export type MilestoneProofRequirements = Record<string, unknown>;
+
+export type MilestoneCreatePayload = {
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — label
+  label: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — amount
+  amount: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — currency
+  currency: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — sequence_index
+  sequence_index: number;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — proof_kind
+  proof_kind?: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — proof_requirements
+  proof_requirements?: MilestoneProofRequirements;
 };
 
-// Milestone creation payload contract is defined by the backend; use a JSON object to match it.
-export type MilestoneCreatePayload = Record<string, unknown>;
+export type Milestone = {
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — id
+  id: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — escrow_id
+  escrow_id?: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — label
+  label?: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — amount
+  amount?: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — currency
+  currency?: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — sequence_index
+  sequence_index?: number;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — status
+  status: MilestoneStatus;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — proof_kind
+  proof_kind?: string;
+  // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneRead — proof_requirements
+  proof_requirements?: MilestoneProofRequirements;
+  // Deprecated UI fields kept for compatibility with existing renders.
+  name?: string;
+  due_date?: string;
+};
 
 export type Payment = {
   id: string;
