@@ -30,6 +30,7 @@ import type {
   EscrowListItem,
   AuthLoginResponse,
   AuthUser,
+  MilestoneCreatePayload,
   Milestone,
   MilestoneStatus,
   Payment,
@@ -389,6 +390,44 @@ export function useCreateEscrow() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.escrows.listBase() });
       queryClient.invalidateQueries({ queryKey: queryKeys.sender.dashboard() });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
+}
+
+export function useCreateEscrowMilestones() {
+  const queryClient = useQueryClient();
+  return useMutation<Milestone[], Error, { escrowId: string | number; milestones: MilestoneCreatePayload[] }>({
+    mutationFn: async ({ escrowId, milestones }) => {
+      if (milestones.length === 0) return [];
+      const created: Milestone[] = [];
+      for (const milestone of milestones) {
+        const response = await apiClient.post<Milestone>(`/escrows/${escrowId}/milestones`, {
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — label
+          label: milestone.label,
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — amount
+          amount: milestone.amount,
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — currency
+          currency: milestone.currency,
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — sequence_index
+          sequence_index: milestone.sequence_index,
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — proof_kind
+          proof_kind: milestone.proof_kind,
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — proof_requirements
+          proof_requirements: milestone.proof_requirements
+        });
+        created.push(response.data);
+      }
+      return created;
+    },
+    onSuccess: (_data, variables) => {
+      invalidateEscrowBundle(queryClient, {
+        escrowId: String(variables.escrowId),
+        viewer: 'sender',
+        refetchSummary: true
+      });
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));

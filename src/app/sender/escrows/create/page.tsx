@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { clearEscrowDraft, createEscrowDraftFromMandate, getEscrowDraft, type EscrowDraftPrefill } from '@/lib/prefill/escrowDraft';
-import { useCreateEscrow, useMandate } from '@/lib/queries/sender';
+import { useCreateEscrow, useCreateEscrowMilestones, useEscrowMilestones, useMandate } from '@/lib/queries/sender';
 import type {
   EscrowCreatePayload,
+  EscrowReleaseConditionMilestone,
   EscrowReleaseConditions,
   MilestoneCreatePayload
 } from '@/types/api';
@@ -46,6 +47,7 @@ export default function SenderCreateEscrowPage() {
   const mandateQuery = useMandate(shouldPrefillFromQuery ? fromMandateId ?? undefined : undefined);
 
   const createEscrow = useCreateEscrow();
+  const createEscrowMilestones = useCreateEscrowMilestones();
   const [amountTotal, setAmountTotal] = useState('');
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [deadlineAt, setDeadlineAt] = useState('');
@@ -56,22 +58,26 @@ export default function SenderCreateEscrowPage() {
   const [providerUserId, setProviderUserId] = useState('');
   const [beneficiary, setBeneficiary] = useState<BeneficiaryForm>(emptyBeneficiary);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [milestoneCreationError, setMilestoneCreationError] = useState<string | null>(null);
   const [draftInfo, setDraftInfo] = useState<EscrowDraftPrefill | null>(null);
   const [prefillApplied, setPrefillApplied] = useState(false);
+  const [createdEscrowId, setCreatedEscrowId] = useState<string | number | null>(null);
+
+  const createdMilestonesQuery = useEscrowMilestones(createdEscrowId ? String(createdEscrowId) : '');
 
   const applyDraft = (draft: EscrowDraftPrefill | null) => {
     if (!draft) return;
     const payload = draft.payload ?? {};
     if (typeof payload.amount_total === 'number' || typeof payload.amount_total === 'string') {
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — amount_total
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — amount_total
       setAmountTotal(String(payload.amount_total));
     }
     if (typeof payload.currency === 'string') {
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — currency
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — currency
       setCurrency(String(payload.currency).toUpperCase());
     }
     if (typeof payload.provider_user_id === 'number' || typeof payload.provider_user_id === 'string') {
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — provider_user_id
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — provider_user_id
       setParticipantMode('provider');
       setProviderUserId(String(payload.provider_user_id));
       setBeneficiary(emptyBeneficiary);
@@ -108,14 +114,6 @@ export default function SenderCreateEscrowPage() {
     shouldPrefillFromQuery
   ]);
 
-  const releaseConditions: EscrowReleaseConditions = useMemo(
-    () => ({
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — release_conditions.requires_proof
-      requires_proof: requiresProof
-    }),
-    [requiresProof]
-  );
-
   const resetDraft = () => {
     clearEscrowDraft();
     setDraftInfo(null);
@@ -129,6 +127,8 @@ export default function SenderCreateEscrowPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
+    setMilestoneCreationError(null);
+    setCreatedEscrowId(null);
 
     const normalizedAmount = amountTotal.trim();
     const parsedAmount = Number(normalizedAmount);
@@ -149,16 +149,58 @@ export default function SenderCreateEscrowPage() {
       return;
     }
 
+    const releaseConditions: EscrowReleaseConditions = {
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — release_conditions.requires_proof
+      requires_proof: requiresProof
+    };
+
+    const hasMilestones = milestoneDrafts.length > 0;
+    if (hasMilestones) {
+      const seenIndexes = new Set<number>();
+      let cumulativeAmount = 0;
+      for (const milestone of milestoneDrafts) {
+        if (!milestone.label.trim()) {
+          setErrorMessage('Chaque milestone doit avoir un libellé.');
+          return;
+        }
+        const milestoneAmount = Number(milestone.amount);
+        if (!milestone.amount || !Number.isFinite(milestoneAmount) || milestoneAmount <= 0) {
+          setErrorMessage('Chaque milestone doit avoir un montant positif.');
+          return;
+        }
+        cumulativeAmount += milestoneAmount;
+        if (cumulativeAmount > parsedAmount) {
+          setErrorMessage('La somme des milestones dépasse le montant total de l’escrow.');
+          return;
+        }
+        if (!milestone.currency.trim() || milestone.currency.toUpperCase() !== normalizedCurrency) {
+          setErrorMessage('La devise des milestones doit correspondre à celle de l’escrow.');
+          return;
+        }
+        if (milestone.sequence_index <= 0 || seenIndexes.has(milestone.sequence_index)) {
+          setErrorMessage('Les index de milestones doivent être uniques et positifs.');
+          return;
+        }
+        seenIndexes.add(milestone.sequence_index);
+      }
+      releaseConditions.milestones = milestoneDrafts.map<EscrowReleaseConditionMilestone>((milestone) => ({
+        // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate.release_conditions.milestones — label
+        label: milestone.label,
+        // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate.release_conditions.milestones — idx
+        idx: milestone.sequence_index
+      }));
+    }
+
     const payload: EscrowCreatePayload = {
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — amount_total
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — amount_total
       amount_total: normalizedAmount,
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — currency
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — currency
       currency: normalizedCurrency,
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — release_conditions
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — release_conditions
       release_conditions: releaseConditions,
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — deadline_at
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — deadline_at
       deadline_at: deadlineIso,
-      // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — domain
+      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — domain
       domain
     };
 
@@ -168,7 +210,7 @@ export default function SenderCreateEscrowPage() {
         setErrorMessage('Identifiant prestataire invalide.');
         return;
       }
-      payload.provider_user_id = parsedProviderId; // Contract: docs/Backend_info/API_GUIDE (6).md — EscrowCreate — provider_user_id
+      payload.provider_user_id = parsedProviderId; // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — provider_user_id
     } else {
       const { full_name, email, phone_number, address_line1, address_country_code, bank_account, national_id_number } =
         beneficiary;
@@ -177,19 +219,19 @@ export default function SenderCreateEscrowPage() {
         return;
       }
       payload.beneficiary = {
-        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — full_name
+        // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — full_name
         full_name,
-        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — email
+        // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — email
         email,
-        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — phone_number
+        // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — phone_number
         phone_number,
-        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — address_line1
+        // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — address_line1
         address_line1,
-        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — address_country_code
+        // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — address_country_code
         address_country_code,
-        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — bank_account
+        // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — bank_account
         bank_account,
-        // Contract: docs/Backend_info/API_GUIDE (6).md — BeneficiaryCreate — national_id_number
+        // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — national_id_number
         national_id_number: national_id_number?.trim() || undefined
       };
     }
@@ -197,6 +239,22 @@ export default function SenderCreateEscrowPage() {
     try {
       const created = await createEscrow.mutateAsync(payload);
       clearEscrowDraft();
+      setCreatedEscrowId(created.id);
+
+      if (hasMilestones) {
+        try {
+          await createEscrowMilestones.mutateAsync({
+            escrowId: created.id,
+            milestones: milestoneDrafts
+          });
+          await createdMilestonesQuery.refetch();
+          return;
+        } catch (error) {
+          setMilestoneCreationError(extractErrorMessage(error));
+          return;
+        }
+      }
+
       router.push(`/sender/escrows/${created.id}`);
     } catch (error) {
       setErrorMessage(extractErrorMessage(error));
@@ -448,22 +506,22 @@ export default function SenderCreateEscrowPage() {
               <MilestonesEditor
                 milestones={milestoneDrafts}
                 onChange={setMilestoneDrafts}
-                disabledReason="Création de milestones réservée aux rôles admin/support (POST /escrows/{id}/milestones)."
+                totalAmount={amountTotal}
+                currency={currency}
               />
               <p className="text-xs text-slate-600">
-                Les milestones ne sont pas envoyées à la création d&apos;un escrow car le contrat backend limite la création
-                aux rôles admin/support. La création expéditeur reste désactivée pour éviter les erreurs 403/422.
+                Les milestones sont créées après l&apos;escrow via l&apos;endpoint dédié (POST /escrows/{{id}}/milestones) accessible à l&apos;expéditeur tant que l&apos;escrow est en brouillon.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <Button type="submit" disabled={createEscrow.isPending}>
-                {createEscrow.isPending ? 'Création en cours...' : 'Créer l\'escrow'}
+              <Button type="submit" disabled={createEscrow.isPending || createEscrowMilestones.isPending}>
+                {createEscrow.isPending || createEscrowMilestones.isPending ? 'Création en cours...' : 'Créer l\'escrow'}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                disabled={createEscrow.isPending}
+                disabled={createEscrow.isPending || createEscrowMilestones.isPending}
                 onClick={() => router.push('/sender/escrows')}
               >
                 Annuler
@@ -472,6 +530,64 @@ export default function SenderCreateEscrowPage() {
           </form>
         </CardContent>
       </Card>
+
+      {createdEscrowId && milestoneDrafts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Milestones créés pour l&apos;escrow {createdEscrowId}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {milestoneCreationError && <ErrorAlert message={milestoneCreationError} />}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={createEscrowMilestones.isPending}
+                onClick={async () => {
+                  if (!createdEscrowId) return;
+                  setMilestoneCreationError(null);
+                  try {
+                    await createEscrowMilestones.mutateAsync({
+                      escrowId: createdEscrowId,
+                      milestones: milestoneDrafts
+                    });
+                    await createdMilestonesQuery.refetch();
+                  } catch (error) {
+                    setMilestoneCreationError(extractErrorMessage(error));
+                  }
+                }}
+              >
+                Réessayer création milestones
+              </Button>
+              <Button variant="link" onClick={() => router.push(`/sender/escrows/${createdEscrowId}`)}>
+                Ouvrir l&apos;escrow
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-800">Liste retournée par le backend</p>
+              <div className="space-y-2 rounded-md border border-slate-200 p-3">
+                {(createdMilestonesQuery.data ?? []).length === 0 ? (
+                  <p className="text-sm text-slate-600">Aucun milestone disponible pour le moment.</p>
+                ) : (
+                  <ul className="space-y-2 text-sm text-slate-800">
+                    {createdMilestonesQuery.data?.map((milestone) => (
+                      <li key={milestone.id} className="rounded border border-slate-100 p-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-medium">#{milestone.sequence_index} — {milestone.label}</span>
+                          <span className="text-slate-700">
+                            {milestone.amount} {milestone.currency}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600">Statut: {milestone.status}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

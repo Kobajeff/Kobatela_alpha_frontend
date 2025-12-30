@@ -7,25 +7,27 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 type MilestonesEditorProps = {
   milestones: MilestoneCreatePayload[];
   onChange: (next: MilestoneCreatePayload[]) => void;
+  totalAmount?: string;
+  currency?: string;
   disabledReason?: string;
 };
 
 const DEFAULT_CURRENCY = 'EUR';
 
-export function MilestonesEditor({ milestones, onChange, disabledReason }: MilestonesEditorProps) {
+export function MilestonesEditor({ milestones, onChange, totalAmount, currency, disabledReason }: MilestonesEditorProps) {
   const [enabled, setEnabled] = useState(milestones.length > 0);
   const [localMilestones, setLocalMilestones] = useState<MilestoneCreatePayload[]>(() =>
     milestones.length > 0
       ? milestones
       : [
           {
-            // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — label
+            // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — label
             label: '',
-            // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — amount
+            // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — amount
             amount: '',
-            // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — currency
+            // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — currency
             currency: DEFAULT_CURRENCY,
-            // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — sequence_index
+            // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — sequence_index
             sequence_index: 1
           }
         ]
@@ -56,13 +58,13 @@ export function MilestonesEditor({ milestones, onChange, disabledReason }: Miles
     if (checked && localMilestones.length === 0) {
       setLocalMilestones([
         {
-          // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — label
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — label
           label: '',
-          // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — amount
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — amount
           amount: '',
-          // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — currency
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — currency
           currency: DEFAULT_CURRENCY,
-          // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — sequence_index
+          // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — sequence_index
           sequence_index: 1
         }
       ]);
@@ -82,13 +84,13 @@ export function MilestonesEditor({ milestones, onChange, disabledReason }: Miles
     setLocalMilestones((prev) => [
       ...prev,
       {
-        // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — label
+        // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — label
         label: '',
-        // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — amount
+        // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — amount
         amount: '',
-        // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — currency
+        // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — currency
         currency: DEFAULT_CURRENCY,
-        // Contract: docs/Backend_info/API_GUIDE (6).md — MilestoneCreate — sequence_index
+        // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — sequence_index
         sequence_index: nextIndex
       }
     ]);
@@ -101,6 +103,8 @@ export function MilestonesEditor({ milestones, onChange, disabledReason }: Miles
 
   const validateDrafts = () => {
     const seenIndexes = new Set<number>();
+    const numericTotalAmount = totalAmount ? Number(totalAmount) : null;
+    let runningAmount = 0;
     for (const milestone of localMilestones) {
       if (!milestone.label.trim()) {
         setError('Chaque milestone doit avoir un libellé.');
@@ -111,8 +115,17 @@ export function MilestonesEditor({ milestones, onChange, disabledReason }: Miles
         setError('Chaque milestone doit avoir un montant positif.');
         return false;
       }
+      runningAmount += numericAmount;
+      if (numericTotalAmount !== null && Number.isFinite(numericTotalAmount) && runningAmount > numericTotalAmount) {
+        setError('La somme des montants de milestones ne doit pas dépasser le montant total de l’escrow.');
+        return false;
+      }
       if (!milestone.currency.trim()) {
         setError('Chaque milestone doit avoir une devise.');
+        return false;
+      }
+      if (currency && milestone.currency.toUpperCase() !== currency.toUpperCase()) {
+        setError('La devise des milestones doit correspondre à celle de l’escrow.');
         return false;
       }
       if (milestone.sequence_index <= 0 || seenIndexes.has(milestone.sequence_index)) {
