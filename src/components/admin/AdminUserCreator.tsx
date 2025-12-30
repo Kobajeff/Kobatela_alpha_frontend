@@ -90,8 +90,8 @@ export function AdminUserCreator() {
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-slate-800">Create platform user</h2>
             <p className="text-sm text-slate-600">
-              Create sender/provider/support users with the required profile fields for the
-              /users contract.
+              Create sender/provider/support users via /users (username + email required by the
+              backend contract).
             </p>
           </div>
           <form onSubmit={handleUserSubmit} className="space-y-3">

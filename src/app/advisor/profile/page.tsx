@@ -35,9 +35,8 @@ export default function AdvisorProfilePage() {
     );
   }
 
-  const fullName = `${profile.first_name} ${profile.last_name}`.trim();
-  const languages = profile.languages?.length ? profile.languages.join(', ') : '—';
-  const specialties = profile.specialties?.length ? profile.specialties.join(', ') : '—';
+  const fullName = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim();
+  const displayName = fullName || profile.email || profile.advisor_id || '—';
 
   return (
     <Card>
@@ -45,11 +44,17 @@ export default function AdvisorProfilePage() {
         <CardTitle>Advisor profile</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
-        <ProfileField label="Nom complet" value={fullName || '—'} />
-        <ProfileField label="Email" value={profile.email} />
+        <ProfileField label="Nom complet" value={displayName} />
+        <ProfileField label="Email" value={profile.email ?? '—'} />
+        <ProfileField label="Téléphone" value={profile.phone ?? '—'} />
         <ProfileField label="Pays" value={profile.country ?? '—'} />
-        <ProfileField label="Langues" value={languages} />
-        <ProfileField label="Spécialités" value={specialties} />
+        <ProfileField label="Langue" value={profile.language ?? '—'} />
+        <ProfileField label="Grade" value={profile.advisor_grade ?? '—'} />
+        <ProfileField label="Description" value={profile.short_description ?? '—'} />
+        <ProfileField
+          label="Note"
+          value={profile.advisor_review !== null && profile.advisor_review !== undefined ? profile.advisor_review.toString() : '—'}
+        />
         <ProfileField
           label="Preuves ouvertes gérées"
           value={profile.load_stats?.open_proofs?.toString() ?? '—'}

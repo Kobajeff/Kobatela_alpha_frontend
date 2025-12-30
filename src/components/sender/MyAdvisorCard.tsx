@@ -14,24 +14,26 @@ export function AdvisorProfileCard({ advisor, showProfileLink = true }: { adviso
     first_name,
     last_name,
     email,
+    phone,
     sender_managed,
     total_number_of_case_managed,
     subscribe_date,
-    languages,
-    specialties,
+    language,
+    advisor_grade,
+    short_description,
     country,
     is_active,
     blocked
   } = advisor;
+  const fullName = `${first_name ?? ''} ${last_name ?? ''}`.trim();
+  const displayName = fullName || email || advisor.advisor_id || 'Votre conseiller';
 
   return (
     <div className="flex flex-col justify-between rounded-md border bg-white p-4">
       <div>
         <p className="text-xs font-medium uppercase text-muted-foreground">Your dedicated advisor</p>
-        <h3 className="mt-1 text-base font-semibold">
-          {first_name} {last_name}
-        </h3>
-        <p className="mt-1 text-xs text-muted-foreground">{email}</p>
+        <h3 className="mt-1 text-base font-semibold">{displayName}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{email ?? '—'}</p>
 
         <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
           <span
@@ -54,9 +56,11 @@ export function AdvisorProfileCard({ advisor, showProfileLink = true }: { adviso
           <p>
             Assigned since: <span className="font-medium">{new Date(subscribe_date).toLocaleDateString()}</span>
           </p>
+          {phone && <p>Téléphone : {phone}</p>}
           {country && <p>Pays : {country}</p>}
-          {languages && languages.length > 0 && <p>Languages: {languages.join(', ')}</p>}
-          {specialties && specialties.length > 0 && <p>Focus: {specialties.join(', ')}</p>}
+          {language && <p>Langue : {language}</p>}
+          {advisor_grade && <p>Grade : {advisor_grade}</p>}
+          {short_description && <p>Focus : {short_description}</p>}
         </div>
       </div>
 

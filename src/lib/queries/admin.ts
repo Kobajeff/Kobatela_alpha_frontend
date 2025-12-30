@@ -28,6 +28,8 @@ import type {
   AdminProofReviewItem,
   AiProofSetting,
   AdvisorProfile,
+  AdvisorProfileCreatePayload,
+  AdvisorProfileUpdatePayload,
   AdvisorSenderItem,
   AdminEscrowSummary,
   ApiKey,
@@ -896,7 +898,7 @@ export function useAdminAdvisorSenders(advisorId: number) {
 export function useAdminUpdateAdvisor() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { advisorId: number; data: Partial<AdvisorProfile> }) => {
+    mutationFn: async (params: { advisorId: number; data: AdvisorProfileUpdatePayload }) => {
       const { advisorId, data } = params;
       const response = await apiClient.patch(`/admin/advisors/${advisorId}`, data);
       return response.data;
@@ -915,13 +917,7 @@ export function useAdminUpdateAdvisor() {
 export function useAdminCreateAdvisor() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: {
-      user_id: number;
-      display_name?: string;
-      country?: string;
-      languages?: string[];
-      grade?: string;
-    }) => {
+    mutationFn: async (payload: AdvisorProfileCreatePayload) => {
       const response = await apiClient.post('/admin/advisors', payload);
       return response.data;
     },

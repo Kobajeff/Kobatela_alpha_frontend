@@ -6,7 +6,8 @@ import {
   EscrowListItem,
   Payment,
   Proof,
-  SenderEscrowSummary
+  SenderEscrowSummary,
+  UserProfile
 } from '@/types/api';
 import { DemoRole } from './config';
 
@@ -29,16 +30,34 @@ export const demoAdminUser: AuthUser = {
 export const demoAdvisorProfile: AdvisorProfile = {
   id: 'advisor-1',
   user_id: 'advisor-user-1',
+  advisor_id: 'ADV-000001',
   first_name: 'Amina',
   last_name: 'Kouadio',
   email: 'advisor.kouadio@kobatela.com',
+  phone: '+2250102030405',
+  country: 'CI',
+  language: 'fr',
+  advisor_grade: 'Senior',
+  short_description: 'Accompanies infrastructure projects and proof reviews.',
   blocked: false,
   sender_managed: 24,
   total_number_of_case_managed: 180,
   subscribe_date: '2024-11-01T00:00:00Z',
-  is_active: true,
-  languages: ['English', 'Français'],
-  specialties: ['Construction oversight', 'Payment scheduling']
+  is_active: true
+};
+
+export const demoUserProfile: UserProfile = {
+  first_name: 'Demo',
+  last_name: 'Sender',
+  email: 'demo.sender@kobatela.com',
+  phone: '+2250102030406',
+  address_line1: '1 Rue Demo',
+  city: 'Abidjan',
+  postal_code: 'BP 123',
+  country_code: 'CI',
+  spoken_languages: ['fr', 'en'],
+  residence_region: 'Abidjan',
+  habitual_send_region: 'West Africa'
 };
 
 export const demoEscrows: EscrowListItem[] = [

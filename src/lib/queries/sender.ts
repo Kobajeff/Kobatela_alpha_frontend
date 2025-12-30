@@ -20,6 +20,7 @@ import {
   demoAdvisorProfile,
   demoPayments,
   demoProofs,
+  demoUserProfile,
   getDemoEscrowSummary,
   getDemoUserByRole
 } from '@/lib/demoData';
@@ -44,7 +45,9 @@ import type {
   MerchantSuggestion,
   MerchantSuggestionCreatePayload,
   UsageMandateCreate,
-  UsageMandateRead
+  UsageMandateRead,
+  UserProfile,
+  UserProfileUpdatePayload
 } from '@/types/api';
 import { buildQueryString, getPaginatedLimitOffset, getPaginatedTotal, normalizePaginatedItems } from './queryUtils';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
@@ -299,7 +302,38 @@ export function useAuthMe() {
 }
 
 export function useMyProfile() {
-  return useAuthMe();
+  return useUserProfile();
+}
+
+export function useUserProfile() {
+  return useQuery<UserProfile>({
+    queryKey: queryKeys.sender.profile(),
+    queryFn: async () => {
+      if (isDemoMode()) {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve(demoUserProfile), 200);
+        });
+      }
+      const response = await apiClient.get<UserProfile>('/me/profile');
+      return response.data;
+    }
+  });
+}
+
+export function useUpdateUserProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: UserProfileUpdatePayload) => {
+      const response = await apiClient.patch<UserProfile>('/me/profile', payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sender.profile() });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
 }
 
 export function useSenderDashboard() {
