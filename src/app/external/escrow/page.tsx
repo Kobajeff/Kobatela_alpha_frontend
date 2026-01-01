@@ -12,7 +12,7 @@ import {
   setExternalToken
 } from '@/lib/external/externalSession';
 import { useExternalEscrowSummary } from '@/lib/queries/external';
-import { mapExternalErrorMessage } from '@/lib/api/externalClient';
+import { mapExternalErrorMessage } from '@/lib/external/externalErrorMessages';
 import { normalizeApiError } from '@/lib/apiError';
 
 export default function ExternalEscrowPage() {
@@ -48,7 +48,7 @@ export default function ExternalEscrowPage() {
 
   useEffect(() => {
     if (!token) {
-      setError("Lien invalide ou expiré. Demandez un nouveau lien à l’expéditeur.");
+      setError("Lien requis. Utilisez le lien sécurisé transmis par l’expéditeur.");
     } else {
       setError(null);
     }
@@ -56,9 +56,10 @@ export default function ExternalEscrowPage() {
 
   useEffect(() => {
     if (queryError) {
-      setError(mapExternalErrorMessage(queryError));
+      const mapped = mapExternalErrorMessage(queryError);
+      setError(mapped);
       const normalized = normalizeApiError(queryError);
-      if (normalized.status === 401) {
+      if (normalized.status === 401 || normalized.status === 403 || normalized.status === 410) {
         clearExternalToken();
         router.replace('/external?error=invalid_token');
       }
@@ -96,11 +97,13 @@ export default function ExternalEscrowPage() {
             {data && (
               <div className="space-y-2 rounded-md border border-slate-200 bg-white p-4">
                 <div className="text-base font-semibold text-slate-900">
-                  Escrow #{data.escrow_id} — {data.status}
+                  Dossier #{data.escrow_id} — {data.status}
                 </div>
-                <div className="text-sm text-slate-700">
-                  Montant total: {data.amount_total ?? '—'} {data.currency ?? ''}
-                </div>
+                {data.amount_total && (
+                  <div className="text-sm text-slate-700">
+                    Montant total: {data.amount_total} {data.currency ?? ''}
+                  </div>
+                )}
                 {data.milestones.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-sm font-medium text-slate-800">Jalons</div>
