@@ -107,7 +107,7 @@ GET | /health | `healthcheck` | Public | — | — | `dict[str, object]` | 200 |
 Method | Path | Handler | Auth | Required scope(s) | Request model | Response model | Success codes | Common error codes | Evidence
 ---|---|---|---|---|---|---|---|---|---
 POST | /auth/login | `login` | Public | — | `AuthLoginRequest` | `AuthLoginResponse` | 200 | INVALID_CREDENTIALS, INSUFFICIENT_SCOPE | 【F:app/routers/auth.py†L133-L176】【F:app/schemas/auth.py†L9-L32】
-GET | /auth/me | `auth_me` | API key | sender, provider, admin | — | `AuthMeResponse` | 200 | USER_NOT_FOUND, INSUFFICIENT_SCOPE, NO_API_KEY, UNAUTHORIZED | 【F:app/routers/auth.py†L179-L198】【F:app/schemas/auth.py†L31-L32】【F:app/security/__init__.py†L33-L153】
+GET | /auth/me | `auth_me` | API key | sender, provider, admin, advisor | — | `AuthMeResponse` | 200 | USER_NOT_FOUND, INSUFFICIENT_SCOPE, NO_API_KEY, UNAUTHORIZED | 【F:app/routers/auth.py†L179-L198】【F:app/schemas/auth.py†L31-L32】【F:app/security/__init__.py†L33-L153】
 
 ### Users/Admin users
 Method | Path | Handler | Auth | Required scope(s) | Request model | Response model | Success codes | Common error codes | Evidence
