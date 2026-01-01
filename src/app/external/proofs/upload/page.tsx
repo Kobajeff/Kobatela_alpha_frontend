@@ -20,6 +20,7 @@ export default function ExternalProofUploadPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
+  const [missingToken, setMissingToken] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -47,7 +48,10 @@ export default function ExternalProofUploadPage() {
     const stored = getExternalToken();
     if (stored) {
       setToken(stored);
+      setMissingToken(false);
+      return;
     }
+    setMissingToken(true);
   }, [router, searchParams]);
 
   const uploadMutation = useExternalProofUpload(token);
@@ -86,7 +90,6 @@ export default function ExternalProofUploadPage() {
       const normalized = normalizeApiError(error);
       if (normalized.status === 401 || normalized.status === 403 || normalized.status === 410) {
         clearExternalToken();
-        router.replace('/external?error=invalid_token');
       }
     }
   };
@@ -110,83 +113,99 @@ export default function ExternalProofUploadPage() {
       const normalized = normalizeApiError(error);
       if (normalized.status === 401 || normalized.status === 403 || normalized.status === 410) {
         clearExternalToken();
-        router.replace('/external?error=invalid_token');
       }
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-10">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Déposer une preuve</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-slate-700">
-            <p>
-              Chargez un fichier conforme aux instructions de l&apos;expéditeur. Aucun jeton n’est
-              exposé dans les journaux.
-            </p>
-            <p className="text-xs text-slate-600">
-              Formats acceptés: JPEG, PNG, PDF. Taille maximale: 5 Mo (images) ou 10 Mo (PDF).
-            </p>
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-800">Fichier</label>
-              <Input
-                type="file"
-                accept="image/jpeg,image/png,application/pdf"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-              />
-              <Button
-                type="button"
-                onClick={handleUpload}
-                disabled={!selectedFile || uploadMutation.isPending || !token}
-              >
-                {uploadMutation.isPending ? 'Téléversement…' : 'Téléverser'}
-              </Button>
-              {uploadError && <ErrorAlert message={uploadError} />}
-            </div>
-            {uploadMetadata && (
-              <div className="space-y-2 rounded-md border border-slate-200 bg-white p-4 text-xs text-slate-700">
-                <div className="font-semibold text-slate-900">Fichier prêt à être soumis</div>
-                <div>Escrow: {uploadMetadata.escrow_id}</div>
-                <div>Jalon: {uploadMetadata.milestone_idx}</div>
-                <div>Nom du fichier: {uploadMetadata.file_name ?? '—'}</div>
-                <div>Taille: {uploadMetadata.size_bytes ?? '—'} octets</div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Déposer une preuve</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-slate-700">
+          <p>
+            Étape 3/5 : chargez le fichier demandé par l’expéditeur. Le lien reste limité à ce
+            dossier.
+          </p>
+          {missingToken && (
+            <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-4 text-sm">
+              <p className="font-medium text-slate-800">
+                Lien manquant : retournez à l’accueil et collez le jeton sécurisé pour continuer.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Button type="button" onClick={() => router.push('/external')} variant="secondary">
+                  Retour à l’accueil
+                </Button>
               </div>
-            )}
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-800">
-                Note pour l&apos;expéditeur (optionnel)
-              </label>
-              <Input
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Ex: Détails complémentaires"
-              />
             </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!uploadMetadata || submitMutation.isPending || !token}
-              >
-                {submitMutation.isPending ? 'Soumission…' : 'Soumettre la preuve'}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => router.push('/external/escrow')}
-              >
-                Retour au résumé
-              </Button>
+          )}
+          <p className="text-xs text-slate-600">
+            Formats acceptés : JPEG, PNG, PDF. Taille maximale : 5 Mo (images) ou 10 Mo (PDF).
+          </p>
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-slate-800">
+              Fichier à déposer
+              <span className="block text-xs font-normal text-slate-600">
+                Le fichier doit correspondre au jalon indiqué dans votre lien.
+              </span>
+            </label>
+            <Input
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+            />
+            <Button
+              type="button"
+              onClick={handleUpload}
+              disabled={!selectedFile || uploadMutation.isPending || !token}
+            >
+              {uploadMutation.isPending ? 'Téléversement…' : 'Uploader le fichier'}
+            </Button>
+            {uploadError && <ErrorAlert message={uploadError} />}
+          </div>
+          {uploadMetadata && (
+            <div className="space-y-2 rounded-md border border-slate-200 bg-white p-4 text-xs text-slate-700">
+              <div className="font-semibold text-slate-900">Fichier prêt à être soumis</div>
+              <div>Escrow: {uploadMetadata.escrow_id}</div>
+              <div>Jalon: {uploadMetadata.milestone_idx}</div>
+              <div>Nom du fichier: {uploadMetadata.file_name ?? '—'}</div>
+              <div>Taille: {uploadMetadata.size_bytes ?? '—'} octets</div>
+              <div className="pt-2 text-slate-800">Étape suivante : soumettre la preuve.</div>
             </div>
-            {submitError && <ErrorAlert message={submitError} />}
-          </CardContent>
-        </Card>
-      </div>
+          )}
+
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-slate-800">
+              Note pour l&apos;expéditeur (optionnel)
+              <span className="block text-xs font-normal text-slate-600">
+                Ajoutez des précisions pour faciliter la validation.
+              </span>
+            </label>
+            <textarea
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Ex: Détails complémentaires ou numéro de référence"
+              rows={3}
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!uploadMetadata || submitMutation.isPending || !token}
+            >
+              {submitMutation.isPending ? 'Soumission…' : 'Soumettre la preuve'}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => router.push('/external/escrow')}>
+              Retour au résumé
+            </Button>
+          </div>
+          {submitError && <ErrorAlert message={submitError} />}
+        </CardContent>
+      </Card>
     </div>
   );
 }
