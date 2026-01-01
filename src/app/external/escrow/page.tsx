@@ -4,55 +4,47 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
-import { getExternalTokenFromStorage, getExternalTokenFromUrl } from '@/lib/externalAuth';
+import {
+  clearExternalToken,
+  getExternalToken,
+  readTokenFromQuery,
+  setExternalToken
+} from '@/lib/external/externalSession';
 import { useExternalEscrowSummary } from '@/lib/queries/external';
 import { mapExternalErrorMessage } from '@/lib/api/externalClient';
+import { normalizeApiError } from '@/lib/apiError';
 
 export default function ExternalEscrowPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
-  const [escrowIdInput, setEscrowIdInput] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const tokenFromUrl = useMemo(() => {
     if (!searchParams) return null;
-    return getExternalTokenFromUrl(searchParams);
+    return readTokenFromQuery(searchParams);
   }, [searchParams]);
 
   useEffect(() => {
     if (tokenFromUrl) {
       setToken(tokenFromUrl);
-      return;
+      setExternalToken(tokenFromUrl);
+      router.replace('/external/escrow');
+    } else {
+      const stored = getExternalToken();
+      if (stored) {
+        setToken(stored);
+      }
     }
-    const stored = getExternalTokenFromStorage();
-    if (stored) {
-      setToken(stored);
-    }
-  }, [tokenFromUrl]);
-
-  const escrowIdParam = useMemo(() => {
-    if (!searchParams) return null;
-    return searchParams.get('escrowId') ?? searchParams.get('escrow_id');
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (escrowIdParam) {
-      setEscrowIdInput(escrowIdParam);
-    }
-  }, [escrowIdParam]);
+  }, [router, tokenFromUrl]);
 
   const {
     data,
     isLoading,
     refetch,
     error: queryError
-  } = useExternalEscrowSummary(
-    token,
-    escrowIdInput || escrowIdParam
-  );
+  } = useExternalEscrowSummary(token ?? undefined);
 
   useEffect(() => {
     if (!token) {
@@ -65,8 +57,13 @@ export default function ExternalEscrowPage() {
   useEffect(() => {
     if (queryError) {
       setError(mapExternalErrorMessage(queryError));
+      const normalized = normalizeApiError(queryError);
+      if (normalized.status === 401) {
+        clearExternalToken();
+        router.replace('/external?error=invalid_token');
+      }
     }
-  }, [queryError]);
+  }, [queryError, router]);
 
   const handleFetch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -77,9 +74,8 @@ export default function ExternalEscrowPage() {
   };
 
   const handleUploadRedirect = () => {
-    if (!token || !escrowIdInput) return;
-    const params = new URLSearchParams({ token, escrowId: escrowIdInput });
-    router.push(`/external/proofs/upload?${params.toString()}`);
+    if (!token) return;
+    router.push('/external/proofs/upload');
   };
 
   return (
@@ -90,20 +86,9 @@ export default function ExternalEscrowPage() {
             <CardTitle>Résumé de l&apos;escrow</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-slate-700">
-            <p>
-              Consultez le statut associé à votre lien sécurisé. Saisissez l’identifiant d’escrow si
-              nécessaire.
-            </p>
+            <p>Consultez le statut associé à votre lien sécurisé.</p>
             <form className="flex flex-col gap-3" onSubmit={handleFetch}>
-              <label className="text-sm font-medium text-slate-800">
-                Identifiant d&apos;escrow
-              </label>
-              <Input
-                value={escrowIdInput}
-                onChange={(event) => setEscrowIdInput(event.target.value.trim())}
-                placeholder="Ex: 1024"
-              />
-              <Button type="submit" disabled={!token || !escrowIdInput || isLoading}>
+              <Button type="submit" disabled={!token || isLoading}>
                 {isLoading ? 'Chargement...' : 'Afficher le résumé'}
               </Button>
             </form>
@@ -139,7 +124,7 @@ export default function ExternalEscrowPage() {
                   <Button
                     type="button"
                     onClick={handleUploadRedirect}
-                    disabled={!escrowIdInput || !token}
+                    disabled={!token}
                   >
                     Déposer une preuve
                   </Button>

@@ -546,6 +546,16 @@ export type ExternalEscrowSummary = {
   milestones: ExternalEscrowMilestoneSummary[];
 };
 
+export type ExternalProofStatus = {
+  proof_id: number | string;
+  status: ProofStatus;
+  escrow_id: number | string;
+  milestone_idx: number;
+  terminal: boolean;
+  submitted_at: string;
+  reviewed_at?: string | null;
+};
+
 export interface AdvisorProfile {
   id: string;
   user_id: string;

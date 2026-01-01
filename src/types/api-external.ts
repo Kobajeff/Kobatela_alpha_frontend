@@ -50,4 +50,12 @@ export type ExternalProofSubmitResponse = {
 };
 
 /** Proof status payload for polling. */
-export type ExternalProofStatus = ExternalProofSubmitResponse;
+export type ExternalProofStatus = {
+  proof_id: number | string;
+  status: ProofStatus;
+  escrow_id: number | string;
+  milestone_idx: number;
+  terminal: boolean;
+  submitted_at: string;
+  reviewed_at?: string | null;
+};

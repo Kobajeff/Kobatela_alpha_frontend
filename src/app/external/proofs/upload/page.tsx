@@ -1,14 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
-import { getExternalTokenFromStorage, getExternalTokenFromUrl } from '@/lib/externalAuth';
+import {
+  clearExternalToken,
+  getExternalToken,
+  readTokenFromQuery,
+  setExternalToken
+} from '@/lib/external/externalSession';
 import { useExternalProofSubmit, useExternalProofUpload } from '@/lib/queries/external';
 import { mapExternalErrorMessage } from '@/lib/api/externalClient';
+import { normalizeApiError } from '@/lib/apiError';
 
 export default function ExternalProofUploadPage() {
   const searchParams = useSearchParams();
@@ -27,27 +33,21 @@ export default function ExternalProofUploadPage() {
     size_bytes?: number;
   } | null>(null);
   const [note, setNote] = useState('');
-  const [escrowId, setEscrowId] = useState<string>('');
-
-  const tokenFromUrl = useMemo(() => {
-    if (!searchParams) return null;
-    return getExternalTokenFromUrl(searchParams);
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl);
-      return;
-    }
-    const stored = getExternalTokenFromStorage();
-    if (stored) setToken(stored);
-  }, [tokenFromUrl]);
 
   useEffect(() => {
     if (!searchParams) return;
-    const param = searchParams.get('escrowId') ?? searchParams.get('escrow_id');
-    if (param) setEscrowId(param);
-  }, [searchParams]);
+    const tokenFromQuery = readTokenFromQuery(searchParams);
+    if (tokenFromQuery) {
+      setToken(tokenFromQuery);
+      setExternalToken(tokenFromQuery);
+      router.replace('/external/proofs/upload');
+      return;
+    }
+    const stored = getExternalToken();
+    if (stored) {
+      setToken(stored);
+    }
+  }, [router, searchParams]);
 
   const uploadMutation = useExternalProofUpload(token);
   const submitMutation = useExternalProofSubmit(token);
@@ -71,11 +71,13 @@ export default function ExternalProofUploadPage() {
         content_type: response.content_type,
         size_bytes: response.size_bytes
       });
-      if (response.escrow_id) {
-        setEscrowId(String(response.escrow_id));
-      }
     } catch (error) {
       setUploadError(mapExternalErrorMessage(error));
+      const normalized = normalizeApiError(error);
+      if (normalized.status === 401) {
+        clearExternalToken();
+        router.replace('/external?error=invalid_token');
+      }
     }
   };
 
@@ -92,10 +94,14 @@ export default function ExternalProofUploadPage() {
         sha256: uploadMetadata.sha256,
         metadata: note ? { note } : undefined
       });
-      const params = new URLSearchParams({ token });
-      router.push(`/external/proofs/${response.proof_id}?${params.toString()}`);
+      router.push(`/external/proofs/${response.proof_id}`);
     } catch (error) {
       setSubmitError(mapExternalErrorMessage(error));
+      const normalized = normalizeApiError(error);
+      if (normalized.status === 401) {
+        clearExternalToken();
+        router.replace('/external?error=invalid_token');
+      }
     }
   };
 
@@ -111,6 +117,9 @@ export default function ExternalProofUploadPage() {
               Chargez un fichier conforme aux instructions de l&apos;expéditeur. Aucun jeton n’est
               exposé dans les journaux.
             </p>
+            <p className="text-xs text-slate-600">
+              Formats acceptés: JPEG, PNG, PDF. Taille maximale: 5 Mo (images) ou 10 Mo (PDF).
+            </p>
             <div className="space-y-3">
               <label className="text-sm font-medium text-slate-800">Fichier</label>
               <Input
@@ -121,7 +130,7 @@ export default function ExternalProofUploadPage() {
               <Button
                 type="button"
                 onClick={handleUpload}
-                disabled={!selectedFile || uploadMutation.isPending}
+                disabled={!selectedFile || uploadMutation.isPending || !token}
               >
                 {uploadMutation.isPending ? 'Téléversement…' : 'Téléverser'}
               </Button>
@@ -153,18 +162,14 @@ export default function ExternalProofUploadPage() {
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!uploadMetadata || submitMutation.isPending}
+                disabled={!uploadMetadata || submitMutation.isPending || !token}
               >
                 {submitMutation.isPending ? 'Soumission…' : 'Soumettre la preuve'}
               </Button>
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => {
-                  if (!token || !escrowId) return;
-                  const params = new URLSearchParams({ token, escrowId });
-                  router.push(`/external/escrow?${params.toString()}`);
-                }}
+                onClick={() => router.push('/external/escrow')}
               >
                 Retour au résumé
               </Button>

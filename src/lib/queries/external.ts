@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { ExternalProofSubmit } from '@/types/api-external';
 import {
@@ -10,17 +11,17 @@ import {
 import { sanitizeExternalEscrowSummary, sanitizeExternalProofStatus } from '../externalDisplay';
 import { queryKeys } from '../queryKeys';
 
-export function useExternalEscrowSummary(token?: string | null, escrowId?: string | number | null) {
+export function useExternalEscrowSummary(token?: string | null) {
   return useQuery({
-    queryKey: queryKeys.external.escrow(escrowId, token),
+    queryKey: queryKeys.external.escrowSummary(token),
     queryFn: async () => {
-      if (!token || escrowId == null) {
-        throw new Error('Token ou identifiant escrow manquant.');
+      if (!token) {
+        throw new Error('Token manquant.');
       }
-      const response = await getExternalEscrowSummary(token, escrowId);
+      const response = await getExternalEscrowSummary(token);
       return sanitizeExternalEscrowSummary(response);
     },
-    enabled: Boolean(token && escrowId)
+    enabled: Boolean(token)
   });
 }
 
@@ -60,6 +61,12 @@ export function useExternalProofSubmit(token?: string | null) {
 }
 
 export function useExternalProofStatus(token?: string | null, proofId?: string | number | null) {
+  const intervalRef = useRef(3000);
+
+  useEffect(() => {
+    intervalRef.current = 3000;
+  }, [proofId, token]);
+
   return useQuery({
     queryKey: queryKeys.external.proofStatus(proofId, token),
     queryFn: async () => {
@@ -71,8 +78,10 @@ export function useExternalProofStatus(token?: string | null, proofId?: string |
     },
     enabled: Boolean(token && proofId),
     refetchInterval: (data) => {
-      if (!data) return 3000;
-      return data.status === 'PENDING' ? 3000 : false;
+      if (!data) return intervalRef.current;
+      if (data.terminal) return false;
+      intervalRef.current = Math.min(15000, Math.max(3000, Math.round(intervalRef.current * 1.5)));
+      return intervalRef.current;
     }
   });
 }

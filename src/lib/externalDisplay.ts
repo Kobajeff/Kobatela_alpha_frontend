@@ -28,6 +28,8 @@ export function sanitizeExternalProofStatus(status: ExternalProofStatus): Extern
     status: status.status,
     escrow_id: status.escrow_id,
     milestone_idx: status.milestone_idx,
-    created_at: status.created_at
+    terminal: Boolean(status.terminal),
+    submitted_at: status.submitted_at,
+    reviewed_at: status.reviewed_at ?? null
   };
 }

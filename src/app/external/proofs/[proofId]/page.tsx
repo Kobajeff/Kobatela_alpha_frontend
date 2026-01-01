@@ -5,9 +5,15 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
-import { getExternalTokenFromStorage, getExternalTokenFromUrl } from '@/lib/externalAuth';
+import {
+  clearExternalToken,
+  getExternalToken,
+  readTokenFromQuery,
+  setExternalToken
+} from '@/lib/external/externalSession';
 import { useExternalProofStatus } from '@/lib/queries/external';
 import { mapExternalErrorMessage } from '@/lib/api/externalClient';
+import { normalizeApiError } from '@/lib/apiError';
 
 export default function ExternalProofStatusPage() {
   const params = useParams<{ proofId: string }>();
@@ -18,17 +24,19 @@ export default function ExternalProofStatusPage() {
 
   const tokenFromUrl = useMemo(() => {
     if (!searchParams) return null;
-    return getExternalTokenFromUrl(searchParams);
+    return readTokenFromQuery(searchParams);
   }, [searchParams]);
 
   useEffect(() => {
     if (tokenFromUrl) {
       setToken(tokenFromUrl);
-      return;
+      setExternalToken(tokenFromUrl);
+      router.replace(`/external/proofs/${params?.proofId ?? ''}`);
+    } else {
+      const stored = getExternalToken();
+      if (stored) setToken(stored);
     }
-    const stored = getExternalTokenFromStorage();
-    if (stored) setToken(stored);
-  }, [tokenFromUrl]);
+  }, [params?.proofId, router, tokenFromUrl]);
 
   const { data, isLoading, error: queryError } = useExternalProofStatus(token, params?.proofId);
 
@@ -43,10 +51,16 @@ export default function ExternalProofStatusPage() {
   useEffect(() => {
     if (queryError) {
       setError(mapExternalErrorMessage(queryError));
+      const normalized = normalizeApiError(queryError);
+      if (normalized.status === 401) {
+        clearExternalToken();
+        router.replace('/external?error=invalid_token');
+      }
     }
-  }, [queryError]);
+  }, [queryError, router]);
 
   const statusLabel = data?.status ?? '—';
+  const isTerminal = Boolean(data?.terminal);
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-10">
@@ -69,39 +83,31 @@ export default function ExternalProofStatusPage() {
                 <div className="text-sm font-medium text-slate-900">
                   Statut: <span className="text-indigo-700">{statusLabel}</span>
                 </div>
-                <div className="text-xs text-slate-600">Créée le: {data.created_at}</div>
+                <div className="text-xs text-slate-600">Soumise le: {data.submitted_at}</div>
+                {data.reviewed_at && (
+                  <div className="text-xs text-slate-600">Décision: {data.reviewed_at}</div>
+                )}
+                <div className="text-xs text-slate-700">
+                  {isTerminal
+                    ? 'Le dossier est traité. Si nécessaire, contactez votre expéditeur.'
+                    : 'Votre preuve est en cours de revue. Cette page se met à jour automatiquement.'}
+                </div>
               </div>
             )}
             <div className="flex flex-wrap gap-3">
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => {
-                  if (!token || !data?.escrow_id) {
-                    setError(mapExternalErrorMessage(new Error('Token requis')));
-                    return;
-                  }
-                  const paramsEscrow = new URLSearchParams({
-                    token,
-                    escrowId: String(data.escrow_id)
-                  });
-                  router.push(`/external/escrow?${paramsEscrow.toString()}`);
-                }}
+                onClick={() => router.push('/external/escrow')}
               >
                 Retour au résumé
               </Button>
               <Button
                 type="button"
-                onClick={() => {
-                  if (!token || !data?.escrow_id) return;
-                  const paramsUpload = new URLSearchParams({
-                    token,
-                    escrowId: String(data.escrow_id)
-                  });
-                  router.push(`/external/proofs/upload?${paramsUpload.toString()}`);
-                }}
+                onClick={() => router.push('/external/proofs/upload')}
+                disabled={!token || !data || !isTerminal}
               >
-                Déposer une nouvelle preuve
+                {isTerminal ? 'Déposer une nouvelle preuve' : 'Attendez la décision'}
               </Button>
             </div>
           </CardContent>
