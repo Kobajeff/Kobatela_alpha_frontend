@@ -48,6 +48,12 @@ export const queryKeys = {
       byId: (id?: string | null) => ['merchantSuggestions', id] as const
     }
   },
+  external: {
+    escrow: (escrowId?: string | number | null, token?: string | null) =>
+      ['external', 'escrow', escrowId, token] as const,
+    proofStatus: (proofId?: string | number | null, token?: string | null) =>
+      ['external', 'proofStatus', proofId, token] as const
+  },
   admin: {
     dashboardStats: () => ['adminDashboardStats', { scope: 'canonical' }] as const,
     users: {
