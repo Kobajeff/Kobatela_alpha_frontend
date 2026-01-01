@@ -13,7 +13,7 @@ import {
   setExternalToken
 } from '@/lib/external/externalSession';
 import { useExternalProofSubmit, useExternalProofUpload } from '@/lib/queries/external';
-import { mapExternalErrorMessage } from '@/lib/api/externalClient';
+import { mapExternalErrorMessage } from '@/lib/external/externalErrorMessages';
 import { normalizeApiError } from '@/lib/apiError';
 
 export default function ExternalProofUploadPage() {
@@ -31,6 +31,7 @@ export default function ExternalProofUploadPage() {
     milestone_idx: number;
     content_type?: string;
     size_bytes?: number;
+    file_name?: string;
   } | null>(null);
   const [note, setNote] = useState('');
 
@@ -52,6 +53,14 @@ export default function ExternalProofUploadPage() {
   const uploadMutation = useExternalProofUpload(token);
   const submitMutation = useExternalProofSubmit(token);
 
+  useEffect(() => {
+    if (!token) {
+      setUploadError('Lien requis pour déposer une preuve. Utilisez le lien transmis.');
+    } else {
+      setUploadError(null);
+    }
+  }, [token]);
+
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploadError(null);
@@ -69,12 +78,13 @@ export default function ExternalProofUploadPage() {
         escrow_id: response.escrow_id,
         milestone_idx: response.milestone_idx,
         content_type: response.content_type,
-        size_bytes: response.size_bytes
+        size_bytes: response.size_bytes,
+        file_name: selectedFile.name
       });
     } catch (error) {
       setUploadError(mapExternalErrorMessage(error));
       const normalized = normalizeApiError(error);
-      if (normalized.status === 401) {
+      if (normalized.status === 401 || normalized.status === 403 || normalized.status === 410) {
         clearExternalToken();
         router.replace('/external?error=invalid_token');
       }
@@ -98,7 +108,7 @@ export default function ExternalProofUploadPage() {
     } catch (error) {
       setSubmitError(mapExternalErrorMessage(error));
       const normalized = normalizeApiError(error);
-      if (normalized.status === 401) {
+      if (normalized.status === 401 || normalized.status === 403 || normalized.status === 410) {
         clearExternalToken();
         router.replace('/external?error=invalid_token');
       }
@@ -141,8 +151,7 @@ export default function ExternalProofUploadPage() {
                 <div className="font-semibold text-slate-900">Fichier prêt à être soumis</div>
                 <div>Escrow: {uploadMetadata.escrow_id}</div>
                 <div>Jalon: {uploadMetadata.milestone_idx}</div>
-                <div>Clé de stockage: {uploadMetadata.storage_key}</div>
-                <div>Empreinte (sha256): {uploadMetadata.sha256}</div>
+                <div>Nom du fichier: {uploadMetadata.file_name ?? '—'}</div>
                 <div>Taille: {uploadMetadata.size_bytes ?? '—'} octets</div>
               </div>
             )}

@@ -1,15 +1,17 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { ExternalProofSubmit } from '@/types/api-external';
 import {
   getExternalEscrowSummary,
   getExternalProofStatus,
-  mapExternalErrorMessage,
   submitExternalProof,
   uploadExternalProofFile
 } from '../api/externalClient';
+import { mapExternalErrorMessage } from '../external/externalErrorMessages';
 import { sanitizeExternalEscrowSummary, sanitizeExternalProofStatus } from '../externalDisplay';
 import { queryKeys } from '../queryKeys';
+import { normalizeApiError } from '../apiError';
+import { isTerminalStatus } from '../external/externalProofStatuses';
 
 export function useExternalEscrowSummary(token?: string | null) {
   return useQuery({
@@ -62,26 +64,58 @@ export function useExternalProofSubmit(token?: string | null) {
 
 export function useExternalProofStatus(token?: string | null, proofId?: string | number | null) {
   const intervalRef = useRef(3000);
+  const consecutiveErrorRef = useRef(0);
+  const [stoppedReason, setStoppedReason] = useState<string | null>(null);
 
   useEffect(() => {
     intervalRef.current = 3000;
+    consecutiveErrorRef.current = 0;
+    setStoppedReason(null);
   }, [proofId, token]);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.external.proofStatus(proofId, token),
     queryFn: async () => {
       if (!token || proofId == null) {
         throw new Error('Token ou identifiant de preuve manquant.');
       }
       const response = await getExternalProofStatus(token, proofId);
+      consecutiveErrorRef.current = 0;
       return sanitizeExternalProofStatus(response);
     },
     enabled: Boolean(token && proofId),
-    refetchInterval: (data) => {
-      if (!data) return intervalRef.current;
-      if (data.terminal) return false;
-      intervalRef.current = Math.min(15000, Math.max(3000, Math.round(intervalRef.current * 1.5)));
-      return intervalRef.current;
+    refetchInterval: (_data, query) => {
+      const data = query.state.data;
+      const error = query.state.error as unknown;
+      const hasTerminalStatus =
+        (data?.terminal ?? false) || isTerminalStatus((data as { status?: string })?.status);
+
+      // Stop polling on terminal proof status.
+      if (hasTerminalStatus) return false;
+
+      // Stop polling when auth/link issues occur.
+      const normalizedError = error ? normalizeApiError(error) : null;
+      if (normalizedError?.status && [401, 403, 404, 410].includes(normalizedError.status)) {
+        setStoppedReason(mapExternalErrorMessage(error));
+        return false;
+      }
+
+      // Exponential-ish backoff with cap and stop after repeated failures.
+      if (normalizedError) {
+        consecutiveErrorRef.current += 1;
+      }
+      const baseInterval = intervalRef.current;
+      const next = Math.min(10000, Math.max(3000, Math.round(baseInterval * 1.5)));
+      intervalRef.current = next;
+      if (consecutiveErrorRef.current >= 5) {
+        setStoppedReason(
+          'Impossible de mettre à jour le statut après plusieurs tentatives. Réessayez plus tard.'
+        );
+        return false;
+      }
+      return next;
     }
   });
+
+  return { ...query, stoppedReason };
 }
