@@ -13,6 +13,7 @@ export default function ExternalLandingPage() {
   const router = useRouter();
   const [inputToken, setInputToken] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const tokenFromUrl = useMemo(() => {
     if (!searchParams) return null;
     return readTokenFromQuery(searchParams);
@@ -23,6 +24,8 @@ export default function ExternalLandingPage() {
     const error = searchParams.get('error');
     if (error === 'invalid_token') {
       setErrorMessage("Lien invalide ou expiré. Merci de saisir un nouveau jeton.");
+    } else {
+      setErrorMessage(null);
     }
   }, [searchParams]);
 
@@ -30,7 +33,10 @@ export default function ExternalLandingPage() {
     if (tokenFromUrl) {
       setExternalToken(tokenFromUrl);
       setInputToken(tokenFromUrl);
-      router.replace('/external');
+      setInfoMessage('Jeton détecté dans le lien. Vous pouvez accéder directement au dossier.');
+      router.replace('/external/escrow');
+    } else {
+      setInfoMessage(null);
     }
   }, [router, tokenFromUrl]);
 
@@ -43,37 +49,42 @@ export default function ExternalLandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-10">
-      <div className="mx-auto max-w-xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Portail bénéficiaire externe</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm text-slate-700">
-            <p>
-              Accédez à votre dossier à l’aide du jeton transmis par l’expéditeur. Vous pourrez
-              consulter le récapitulatif de l&apos;escrow, déposer des preuves et suivre leur statut.
-            </p>
-            {errorMessage && <ErrorAlert message={errorMessage} />}
-            <form className="space-y-3" onSubmit={handleSubmit}>
-              <label className="block text-sm font-medium text-slate-800">
-                Jeton sécurisé (copiez le lien ou le jeton fourni)
-              </label>
-              <Input
-                value={inputToken}
-                onChange={(event) => setInputToken(event.target.value.trim())}
-                placeholder="Collez votre jeton ici"
-              />
-              <Button type="submit" className="w-full" disabled={!inputToken}>
-                Accéder à mon dossier
-              </Button>
-            </form>
-            <p className="text-xs text-slate-500">
-              Nous ne stockons pas le jeton au-delà de votre session actuelle.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="mx-auto max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>Portail bénéficiaire externe</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-slate-700">
+          <p>
+            Suivez les étapes guidées pour accéder à votre dossier, déposer une preuve et suivre le
+            statut. Munissez-vous du lien sécurisé ou du jeton transmis par l’expéditeur.
+          </p>
+          {errorMessage && <ErrorAlert message={errorMessage} />}
+          {infoMessage && !errorMessage && <ErrorAlert message={infoMessage} />}
+          <form className="space-y-3" onSubmit={handleSubmit}>
+            <label className="block text-sm font-medium text-slate-800">
+              Jeton sécurisé
+              <span className="block text-xs font-normal text-slate-600">
+                Collez le lien ou le jeton fourni dans l’email/SMS. Il est requis pour afficher le
+                dossier.
+              </span>
+            </label>
+            <Input
+              value={inputToken}
+              onChange={(event) => setInputToken(event.target.value.trim())}
+              placeholder="Collez votre jeton ici"
+              aria-label="Jeton sécurisé"
+              required
+            />
+            <Button type="submit" className="w-full" disabled={!inputToken}>
+              Accéder au dossier
+            </Button>
+          </form>
+          <p className="text-xs text-slate-500">
+            Le jeton reste uniquement dans cette session (aucun stockage permanent).
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

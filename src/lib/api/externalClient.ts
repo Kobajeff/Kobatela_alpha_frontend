@@ -89,7 +89,7 @@ export async function getExternalProofStatus(
 ): Promise<ExternalProofStatus> {
   try {
     const response = await externalApiClient.get<ExternalProofStatus>(
-      `/external/proofs/${proofId}`,
+      `/external/proofs/${proofId}/status`,
       withToken(token)
     );
     return response.data;
