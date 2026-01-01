@@ -49,8 +49,7 @@ export const queryKeys = {
     }
   },
   external: {
-    escrow: (escrowId?: string | number | null, token?: string | null) =>
-      ['external', 'escrow', escrowId, token] as const,
+    escrowSummary: (token?: string | null) => ['external', 'escrow', token] as const,
     proofStatus: (proofId?: string | number | null, token?: string | null) =>
       ['external', 'proofStatus', proofId, token] as const
   },

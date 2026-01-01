@@ -5,30 +5,41 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { persistExternalToken, getExternalTokenFromUrl } from '@/lib/externalAuth';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { clearExternalToken, readTokenFromQuery, setExternalToken } from '@/lib/external/externalSession';
 
 export default function ExternalLandingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [inputToken, setInputToken] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const tokenFromUrl = useMemo(() => {
     if (!searchParams) return null;
-    return getExternalTokenFromUrl(searchParams);
+    return readTokenFromQuery(searchParams);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!searchParams) return;
+    const error = searchParams.get('error');
+    if (error === 'invalid_token') {
+      setErrorMessage("Lien invalide ou expiré. Merci de saisir un nouveau jeton.");
+    }
   }, [searchParams]);
 
   useEffect(() => {
     if (tokenFromUrl) {
-      // Do not redirect during render; wait for mount.
-      persistExternalToken(tokenFromUrl);
-      router.replace(`/external/escrow?token=${encodeURIComponent(tokenFromUrl)}`);
+      setExternalToken(tokenFromUrl);
+      setInputToken(tokenFromUrl);
+      router.replace('/external');
     }
   }, [router, tokenFromUrl]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!inputToken) return;
-    persistExternalToken(inputToken);
-    router.push(`/external/escrow?token=${encodeURIComponent(inputToken)}`);
+    clearExternalToken();
+    setExternalToken(inputToken);
+    router.push('/external/escrow');
   };
 
   return (
@@ -43,6 +54,7 @@ export default function ExternalLandingPage() {
               Accédez à votre dossier à l’aide du jeton transmis par l’expéditeur. Vous pourrez
               consulter le récapitulatif de l&apos;escrow, déposer des preuves et suivre leur statut.
             </p>
+            {errorMessage && <ErrorAlert message={errorMessage} />}
             <form className="space-y-3" onSubmit={handleSubmit}>
               <label className="block text-sm font-medium text-slate-800">
                 Jeton sécurisé (copiez le lien ou le jeton fourni)

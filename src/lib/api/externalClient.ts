@@ -33,7 +33,6 @@ export async function uploadExternalProofFile(
     '/external/files/proofs',
     formData,
     {
-      ...withToken(token),
       headers: {
         ...withToken(token).headers,
         'Content-Type': 'multipart/form-data'
@@ -61,13 +60,11 @@ export async function submitExternalProof(
 }
 
 export async function getExternalEscrowSummary(
-  token: string,
-  escrowId: string | number
+  token: string
 ): Promise<ExternalEscrowSummary> {
-  const response = await externalApiClient.get<ExternalEscrowSummary>(
-    `/external/escrows/${escrowId}`,
-    withToken(token)
-  );
+  const response = await externalApiClient.get<ExternalEscrowSummary>('/external/escrows/summary', {
+    ...withToken(token)
+  });
   return response.data;
 }
 
@@ -84,6 +81,15 @@ export async function getExternalProofStatus(
 
 export function mapExternalErrorMessage(error: unknown): string {
   const normalized = normalizeApiError(error);
+  if (normalized.code === 'UNSUPPORTED_FILE_TYPE') {
+    return 'Format de fichier non pris en charge (jpeg, png ou pdf uniquement).';
+  }
+  if (normalized.code === 'FILE_TOO_LARGE') {
+    return 'Fichier trop volumineux (5 Mo max pour les images, 10 Mo max pour les PDFs).';
+  }
+  if (normalized.code === 'PROOF_NOT_FOUND') {
+    return 'Preuve introuvable pour ce lien sécurisé.';
+  }
   if (normalized.status === 401 || normalized.status === 403) {
     return "Lien invalide ou expiré. Demandez un nouveau lien à l’expéditeur.";
   }
