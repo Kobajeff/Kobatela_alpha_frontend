@@ -10,6 +10,21 @@ export interface PaginatedResponse<T> {
   offset: number;
 }
 
+export type AlertRead = {
+  // Contract: docs/Backend_info/API_GUIDE (11).md — AlertRead — id
+  id: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — AlertRead — type
+  type: string;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — AlertRead — message
+  message: string;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — AlertRead — payload
+  payload?: Record<string, unknown> | null;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — AlertRead — created_at
+  created_at?: string;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — AlertRead — updated_at
+  updated_at?: string;
+};
+
 export type MerchantSuggestionStatus = string;
 
 export type MerchantSuggestion = {
