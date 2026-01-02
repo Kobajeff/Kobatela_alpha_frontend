@@ -1,66 +1,59 @@
 # FRONTEND_BACKEND_SYNC_AUDIT_V1
 
 ## Executive summary
-- Advisor area is built on `/auth/me`, which the backend limits to sender/provider/admin scopes; advisors hit 401/403 loops and are redirected despite valid advisor API keys. 【F:src/app/advisor/layout.tsx†L7-L15】【F:src/lib/queries/sender.ts†L274-L299】
-- Admin proof review relies on an undocumented `review_mode` query on `/proofs` instead of the documented `/admin/proofs/review-queue`, risking silent drift if the backend removes the alias. 【F:src/lib/queries/admin.ts†L563-L581】
-- Maintenance-only endpoints (`/mandates/cleanup`) and capability gaps (external proof token issuance, beneficiary creation, alerts/spend/transactions) are exposed or missing in UI, leaving backend features either unused or incorrectly surfaced. 【F:src/lib/queries/sender.ts†L165-L173】【F:docs/Backend_info/API_GUIDE (10).md†L344-L370】
-- Performance/operability: the sender dashboard executes N+1 summary calls for recent escrows, and proof/escrow polling lacks role-aware error messaging; these patterns inflate request volume and mask 403/410 causes. 【F:src/lib/queries/sender.ts†L360-L387】【F:src/lib/queries/sender.ts†L1000-L1044】
+- **Admin surfaces use sender summaries**: Admin escrow dashboards call the sender `/escrows/{id}/summary` endpoint instead of the unredacted `/admin/escrows/{id}/summary`, preventing support/admin from requesting proof/payment expansions and exposing them to sender redaction rules. 【F:src/lib/queries/admin.ts†L734-L760】
+- **External tokens shared via query strings**: The external proof token issuer builds portal links as `?token=...`, contradicting backend guidance that query parameters are rejected to avoid leakage; this risks token exfiltration and browser history exposure for PII-bearing uploads. 【F:src/app/sender/escrows/[id]/external-proof-tokens/page.tsx†L115-L189】【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L374-L382】
+- **Schema drift on payments and proofs**: Frontend types omit sensitive fields that the backend returns (e.g., `psp_ref`, `idempotency_key`, `payout_blocked_reasons`, AI flags, invoice totals), so admin/support UI cannot render blocking reasons or enforce redaction/PII masking per contract. 【F:src/types/api.ts†L350-L368】【F:docs/Backend_info/API_GUIDE (11).md†L259-L365】
+- **Maintenance/unused surfaces**: Sender UI still exposes the maintenance-only `/mandates/cleanup` endpoint and leaves beneficiary, alerts, spend/transactions, fraud/risk snapshot, and public-sector endpoints entirely unused, increasing drift and accidental-data-loss risk. 【F:src/lib/queries/sender.ts†L137-L174】【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L332-L415】
 
 ## Scope and methodology
-- Parsed all backend truth sources under `docs/Backend_info/**`, UX contracts, and API usage guides to build the canonical endpoint inventory.
-- Indexed frontend HTTP usage via axios/react-query wrappers (`src/lib/apiClient.ts`, `src/lib/queries/**`, `src/lib/api/externalClient.ts`) and route components under `src/app/**`.
-- Compared inventories to classify each endpoint as USED/UNUSED/PARTIAL/MISUSED and highlighted undocumented frontend calls.
-- Reviewed polling/error handling and role/scope guards for operational and privacy risks.
+- Parsed all backend truth sources under `docs/Backend_info/**`, UX implementation/audit plans, and API usage guides.
+- Cataloged frontend HTTP calls via axios wrappers (`src/lib/apiClient.ts`, `src/lib/api/externalClient.ts`) and React Query hooks/components in `src/lib/queries/**` and `src/app/**`.
+- Mapped each documented backend endpoint to frontend usage (USED/UNUSED/PARTIAL/MISUSED) and flagged undocumented frontend call patterns.
+- Inspected polling/error-handling and type definitions for drift, redaction, and operational-risk gaps.
 
 ## Findings by severity
 ### P0 (breaks core flows / security)
-1. **Advisor access blocked** — Advisor layout depends on `/auth/me`, which the backend restricts to sender/provider/admin; advisors are reset/redirected even with valid advisor tokens. 【F:src/app/advisor/layout.tsx†L7-L15】【F:src/lib/queries/sender.ts†L274-L299】
-2. **Proof review endpoint drift** — Admin proof queue uses `/proofs?review_mode=review_queue` (undocumented), bypassing `/admin/proofs/review-queue`. Any backend tightening will break the queue. 【F:src/lib/queries/admin.ts†L563-L581】
+1) **Admin dashboards miss unredacted data** – Admin escrow views use the sender summary route, so support/admin cannot request proof/payment expansions and continue to see sender-level redaction. 【F:src/lib/queries/admin.ts†L734-L760】
+2) **External tokens in URLs** – Issuer UI shares portal links with `?token=` even though backend forbids query transport, exposing tokens in history/logs and contradicting contract. 【F:src/app/sender/escrows/[id]/external-proof-tokens/page.tsx†L115-L189】【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L374-L382】
 
 ### P1 (blocks UX completeness)
-1. **External beneficiary flow incomplete** — UI implements upload/submit/status but lacks token issuance (`/external/proofs/tokens`, `/external/tokens/beneficiary`), so senders/admins cannot generate links for beneficiaries. 【F:src/lib/api/externalClient.ts†L15-L109】
-2. **Backend maintenance endpoint exposed** — Mandate cleanup (`/mandates/cleanup`) is surfaced in sender mutations even though docs flag it as maintenance-only, risking accidental deletions. 【F:src/lib/queries/sender.ts†L165-L173】
-3. **Sender dashboard bypasses canonical endpoint** — UI builds dashboard via multiple list/summary calls instead of `/sender/dashboard`, missing backend-ready aggregates and over-fetching. 【F:src/lib/queries/sender.ts†L340-L393】
-4. **Advisor role lacks profile/me bootstrap** — Advisor hooks rely on the same `useAuthMe` session and do not fetch advisor-specific context after 401/403, blocking advisor queue/profile screens. 【F:src/lib/queries/advisor.ts†L16-L44】【F:src/lib/queries/sender.ts†L274-L299】
+1) **Payment/proof schema gaps** – Missing fields (`psp_ref`, `idempotency_key`, payout blockers, AI flags/invoice totals) prevent admin/support from showing payout blockers or applying required PII redaction per contract. 【F:src/types/api.ts†L350-L368】【F:docs/Backend_info/API_GUIDE (11).md†L259-L365】
+2) **Mandate maintenance surfaced to end users** – Sender page still calls `/mandates/cleanup`, a maintenance-only route, risking unintended mandate expiration. 【F:src/lib/queries/sender.ts†L137-L174】
 
 ### P2 (cleanup / quality / perf)
-1. **N+1 summary fetch on sender dashboard** — For every dashboard load, the app fetches recent escrows then issues a summary request per escrow to extract payments. 【F:src/lib/queries/sender.ts†L360-L387】
-2. **Admin/sender polling lacks role-aware error surfacing** — Proof polling stops on errors but only logs generic messages; 403/410 causes are hidden from users. 【F:src/lib/queries/sender.ts†L1000-L1044】
-3. **Unimplemented backend surfaces** — Beneficiaries, alerts, spend/transactions, fraud/risk snapshots, and public-sector routes are unused, leaving backend capabilities idle and increasing drift risk. 【F:docs/Backend_info/API_GUIDE (10).md†L270-L370】【F:docs/Backend_info/API_GUIDE (10).md†L420-L518】
-4. **Idempotency UX gaps** — Deposit mutation adds headers but UI copy does not instruct re-use of the same key or surface 409/422 conflict reasons. 【F:src/lib/queries/sender.ts†L881-L929】
+1) **Unused backend capabilities** – Beneficiaries, alerts, spend/transactions, fraud/risk snapshots, and public-sector endpoints are not represented in the UI, leaving backend features idle and contract coverage untested. 【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L332-L415】
+2) **Admin payments filtering drift** – Custom `payment_id`/`id` filters are sent to `/admin/payments` even though the documented filters are `status`/`escrow_id`/`limit`/`offset`, increasing 422/ignored-param risk. 【F:src/lib/queries/admin.ts†L195-L221】【F:docs/Backend_info/API_GUIDE (11).md†L259-L365】
 
 ## Detailed sections
 ### A) Endpoint mismatch findings
-- **Advisor session**: `/auth/me` exclusion of advisor scope contradicts advisor layout reliance, causing hard redirects. 【F:src/app/advisor/layout.tsx†L7-L15】
-- **Proof review**: Using `/proofs?review_mode=review_queue` instead of `/admin/proofs/review-queue` is undocumented and risks breakage. 【F:src/lib/queries/admin.ts†L563-L581】
-- **Maintenance endpoint exposure**: `/mandates/cleanup` surfaced in UI despite docs marking it non-UI. 【F:src/lib/queries/sender.ts†L165-L173】
-- **Dashboard aggregation**: UI bypasses `/sender/dashboard` and recreates aggregates via N+1 calls, diverging from backend contract. 【F:src/lib/queries/sender.ts†L340-L393】
+- **Admin summary path**: Admin escrow view calls `/escrows/{id}/summary` instead of `/admin/escrows/{id}/summary` with `proofs_limit`/`include_milestones`/`include_proofs`, leading to redacted data and no pagination controls for proofs. 【F:src/lib/queries/admin.ts†L734-L760】
+- **Mandate cleanup**: Sender mutations expose `/mandates/cleanup`, which docs label maintenance/non-UI. 【F:src/lib/queries/sender.ts†L137-L174】
+- **Admin payments filters**: `payment_id`/`id` query params are sent to `/admin/payments` but are not documented, risking backend validation drift. 【F:src/lib/queries/admin.ts†L195-L221】
 
 ### B) Role/scope/routing mismatch findings
-- **Advisor scope**: RequireScope requests `ADVISOR` scope but backing `useAuthMe` cannot authenticate advisor tokens, leading to perpetual session resets. 【F:src/app/advisor/layout.tsx†L7-L15】【F:src/lib/queries/sender.ts†L274-L299】
-- **Provider/scope gaps**: UI only models sender/admin/advisor; provider/support-only routes (e.g., `/proofs` provider upload) lack dedicated guards, risking incorrect CTAs when those roles are added. 【F:src/lib/queries/sender.ts†L74-L120】
+- **Token transport**: External proof portal links embed the token in query params, conflicting with the documented header-only transport and increasing leakage risk for beneficiary-upload tokens (contains potential PII/financial proof files). 【F:src/app/sender/escrows/[id]/external-proof-tokens/page.tsx†L169-L189】【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L374-L382】
+- **Admin proof context**: Using sender summaries in admin context means support/admin still see sender redactions for payments (psp_ref/idempotency_key), reducing operational visibility despite admin scope. 【F:src/lib/queries/admin.ts†L734-L760】
 
-### C) Proof lifecycle / external portal mismatch findings
-- **External portal**: Upload/submit/status implemented, but no token issuance UI; beneficiaries cannot be onboarded without backend token issuers. 【F:src/lib/api/externalClient.ts†L15-L109】
-- **Advisor review request**: Sender CTA exists, but advisor queue relies on blocking `/auth/me`, so the workflow dead-ends for advisor users. 【F:src/lib/queries/sender.ts†L1159-L1179】【F:src/lib/queries/advisor.ts†L16-L44】
+### C) Proof lifecycle/external portal mismatch findings
+- **External portal link shape**: Share links rely on `?token=` while backend rejects query tokens; beneficiaries following the link depend on the frontend to set headers, but token remains in URL logs. 【F:src/app/sender/escrows/[id]/external-proof-tokens/page.tsx†L169-L189】【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L374-L382】
+- **Proof metadata coverage**: Proof types omit AI flags/invoice totals; sender/admin components therefore cannot display payout blockers or redact invoice amounts as required by backend redaction rules. 【F:src/types/api.ts†L245-L290】【F:docs/Backend_info/FRONTEND_UI_CONTRACT (5).md†L137-L175】
 
-### D) Fraud/risk data capture mismatch findings
-- **Alerts/fraud snapshots unused**: `/alerts`, `/admin/risk-snapshots`, and `/admin/fraud/score_comparison` are not surfaced, limiting observability promised in backend docs. 【F:docs/Backend_info/API_GUIDE (10).md†L420-L476】
-- **Proof metadata minimization**: Proof creation UI only accepts a free-form note; invoice/EXIF/geofence metadata defined in backend schemas is not collected, reducing fraud signal quality. 【F:src/components/sender/ProofForm.tsx†L129-L195】
+### D) Fraud/risk data capture mismatch findings (no PII leakage)
+- **Payment blocking signals absent**: Payment type lacks `payout_blocked_reasons` and PSP identifiers, so fraud/eligibility gating from backend cannot be surfaced; admins lack context for payout retries. 【F:src/types/api.ts†L350-L358】【F:docs/Backend_info/API_GUIDE (11).md†L259-L365】
+- **Fraud/risk endpoints unused**: Admin tools for fraud score comparison and risk snapshots are not wired into the UI, leaving fraud signals invisible. 【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L355-L358】
 
 ### E) Inefficiencies and tech debt hotspots
-- **Dashboard N+1**: Payment extraction loops over summaries per escrow (at most 5 today), multiplying latency and load. 【F:src/lib/queries/sender.ts†L360-L387】
-- **Polling opacity**: Proof polling hides 403/410 reasons and stops silently, leaving users without remediation steps. 【F:src/lib/queries/sender.ts†L1000-L1044】
-- **Query alias risk**: Reliance on undocumented `review_mode` query adds hidden coupling to backend internals. 【F:src/lib/queries/admin.ts†L563-L581】
+- **Admin summary polling on sender route**: Polling admin dashboards via the sender summary omits `proofs_limit`/`include_*` tuning, forcing repeated full-summary fetches and exposing admin views to sender-side masking. 【F:src/lib/queries/admin.ts†L734-L760】
+- **Error-silent unused surfaces**: Missing UI for alerts/beneficiaries/spend means any backend changes here will go unnoticed until breakage, increasing long-term drift.
 
 ## Doc gaps that block UX
-- **Admin proof queue contract**: Docs do not mention `review_mode` query; frontend uses it as a substitute for `/admin/proofs/review-queue`, creating ambiguity about the supported surface.
-- **Advisor authentication path**: Docs lack a clear advisor-equivalent to `/auth/me`, leaving the frontend without a supported session endpoint for advisor routes.
-- **External token issuer UX**: Backend docs describe token issuance endpoints, but UX requirements (fields, expiry constraints) are not mirrored in frontend guidance, blocking end-user onboarding for beneficiaries.
+- **Admin summary shape**: Clarify whether `/admin/escrows/{id}/summary` should always include payments/proofs with `proofs_limit` defaults and whether PSP references remain unredacted for admin/support; current docs do not specify client-side masking expectations, blocking a safe switch-over.
+- **External token delivery**: Backend forbids query tokens, but there is no documented, copyable header-based link pattern for beneficiaries; need guidance on a safe deep-link pattern (e.g., one-time code to header exchange) to avoid URL leakage.
+- **Payment redaction expectations**: Docs list `psp_ref`/`idempotency_key` but do not define UI redaction rules for admin vs sender/provider views; frontend cannot confidently render or hide these fields without explicit guidance (RGPD warning for PSP/PII).
 
 ## What to change in frontend (recommendations only)
-- Add advisor-aware session bootstrap (either adjust `useAuthMe` to call an advisor-safe endpoint or gate advisor layouts via advisor-specific fetch) to stop 401 loops.
-- Switch admin proof queue to the documented `/admin/proofs/review-queue` (or add fallback handling) and align filters with backend schema.
-- Remove or hard-hide `/mandates/cleanup` from sender UI; constrain dashboard to `/sender/dashboard` or cache summaries to avoid N+1 calls.
-- Build token issuance UI for external proofs and expose beneficiary management only after aligning with backend contract fields (IBAN/bank/ID validation).
-- Surface idempotency guidance and conflict messages on deposit/funding actions; add role-aware polling messaging for 403/410 stops.
+- Switch admin escrow summary calls to `/admin/escrows/{id}/summary` with `proofs_limit`/`include_milestones`/`include_proofs` to restore unredacted admin visibility.
+- Replace external portal share links with a header-only handoff (e.g., one-time token capture page) to comply with header transport and avoid leaking tokens in URLs/history.
+- Extend `Payment`/`Proof` types and admin screens to include payout blockers, PSP refs/idempotency keys, AI flags, and invoice amounts, while hiding PSP/PII fields for non-admin/support roles.
+- Remove the `/mandates/cleanup` CTA from sender flows and gate remaining maintenance-only endpoints; prioritize wiring or explicitly deferring unused backend capabilities (beneficiaries, alerts, spend/transactions, fraud/risk snapshots).
