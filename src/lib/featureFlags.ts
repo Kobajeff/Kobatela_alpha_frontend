@@ -27,3 +27,7 @@ export function isAdminBeneficiaryLookupEnabled(): boolean {
     (process.env.NEXT_PUBLIC_FF_ADMIN_BENEFICIARY_LOOKUP ?? '').toLowerCase()
   );
 }
+
+export function isAdminKctPublicEnabled(): boolean {
+  return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_KCT_PUBLIC ?? '').toLowerCase());
+}

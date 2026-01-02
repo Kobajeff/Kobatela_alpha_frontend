@@ -98,6 +98,11 @@ export const queryKeys = {
           ['admin', 'spend', 'allowed', filters] as const
       }
     },
+    kctPublic: {
+      projectsBase: () => ['admin', 'kct-public', 'projects'] as const,
+      projects: <T extends ListFilters>(filters: T) =>
+        ['admin', 'kct-public', 'projects', filters] as const
+    },
     settings: {
       aiProof: () => ['admin', 'settings', 'ai-proof'] as const
     },

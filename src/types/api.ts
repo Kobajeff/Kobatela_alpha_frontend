@@ -480,6 +480,35 @@ export type Milestone = {
   due_date?: string;
 };
 
+export type GovProjectRead = {
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — id
+  id: number;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — label
+  label: string;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — project_type
+  project_type: string;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — country
+  country: string;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — city (optional)
+  city?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — domain
+  domain: 'public' | 'aid' | string;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — status
+  status: string;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — total_amount
+  total_amount: string;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — released_amount
+  released_amount: string;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — remaining_amount
+  remaining_amount: string;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — current_milestone (optional)
+  current_milestone?: number | null;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — risk_excluded_escrows
+  risk_excluded_escrows: number;
+  // Contract: docs/Backend_info/API_GUIDE (16).md — GovProjectRead — risk_excluded_amount
+  risk_excluded_amount: string;
+};
+
 export type AllowedUsageRead = {
   // Contract: docs/Backend_info/API_GUIDE (15).md — Spend/Usage — GET /admin/spend/allowed — id
   id: number;
