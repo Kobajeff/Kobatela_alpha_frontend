@@ -31,6 +31,7 @@ export function AdminShell({ children, user }: AdminShellProps) {
         { href: adminSendersPath, label: 'Senders' },
         { href: adminReviewQueuePath, label: 'Proof review queue' },
         { href: '/admin/alerts', label: 'Alerts' },
+        { href: '/admin/risk-snapshots', label: 'Risk snapshots' },
         { href: '/admin/advisors', label: 'Advisors' },
         { href: '/admin/settings/ai-proof', label: 'AI proof settings' },
         hasPricingScope

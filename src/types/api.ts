@@ -10,6 +10,25 @@ export interface PaginatedResponse<T> {
   offset: number;
 }
 
+export type RiskSubjectType = 'MANDATE' | 'ESCROW' | 'PROOF';
+
+export type RiskFeatureSnapshotRead = {
+  // Contract: docs/Backend_info/API_GUIDE (12).md — RiskFeatureSnapshotRead — subject_type
+  subject_type: RiskSubjectType;
+  // Contract: docs/Backend_info/API_GUIDE (12).md — RiskFeatureSnapshotRead — subject_id
+  subject_id: number;
+  // Contract: docs/Backend_info/API_GUIDE (12).md — RiskFeatureSnapshotRead — version
+  version: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (12).md — RiskFeatureSnapshotRead — features_json
+  features_json: Record<string, unknown>;
+  // Contract: docs/Backend_info/API_GUIDE (12).md — RiskFeatureSnapshotRead — computed_at
+  computed_at: string;
+  // Contract: docs/Backend_info/API_GUIDE (12).md — RiskFeatureSnapshotRead — source_event
+  source_event: string;
+  // Contract: docs/Backend_info/API_GUIDE (12).md — RiskFeatureSnapshotRead — correlation_id (optional)
+  correlation_id?: string | null;
+};
+
 export type AlertRead = {
   // Contract: docs/Backend_info/API_GUIDE (11).md — AlertRead — id
   id: string | number;

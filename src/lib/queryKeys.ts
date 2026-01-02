@@ -88,6 +88,10 @@ export const queryKeys = {
     settings: {
       aiProof: () => ['admin', 'settings', 'ai-proof'] as const
     },
+    riskSnapshots: {
+      listBase: () => ['admin', 'risk-snapshots'] as const,
+      list: <T extends ListFilters>(filters: T) => ['admin', 'risk-snapshots', filters] as const
+    },
     senders: () => ['admin-senders'] as const,
     pricing: {
       base: () => ['admin', 'pricing'] as const,

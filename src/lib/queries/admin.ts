@@ -39,6 +39,8 @@ import type {
   MilestoneCreatePayload,
   PaginatedResponse,
   Payment,
+  RiskFeatureSnapshotRead,
+  RiskSubjectType,
   Proof,
   ProofStatus,
   ProofDecisionRequest,
@@ -61,6 +63,15 @@ export interface AdminAlertsParams {
 }
 
 export type AdminAlertsResponse = PaginatedResponse<AlertRead>;
+
+export interface AdminRiskSnapshotsParams {
+  limit?: number;
+  offset?: number;
+  subject_type?: RiskSubjectType;
+  subject_id?: number;
+}
+
+export type AdminRiskSnapshotsResponse = PaginatedResponse<RiskFeatureSnapshotRead>;
 
 function mapProofReviewQueueItem(item: ProofReviewQueueApiItem): AdminProofReviewItem {
   return {
@@ -212,6 +223,38 @@ export function useAdminAlerts(
     queryKey: queryKeys.admin.alerts.list(filters),
     queryFn: async () => {
       const response = await apiClient.get<AdminAlertsResponse>('/alerts', {
+        params: filters
+      });
+      return response.data;
+    },
+    enabled: options?.enabled ?? true,
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+}
+
+export function useAdminRiskSnapshots(
+  params: AdminRiskSnapshotsParams = {},
+  options?: { enabled?: boolean }
+) {
+  const { limit = 20, offset = 0, subject_type, subject_id } = params;
+  const filters = useMemo(
+    () => ({ limit, offset, subject_type, subject_id }),
+    [limit, offset, subject_id, subject_type]
+  );
+
+  return useQuery<AdminRiskSnapshotsResponse>({
+    queryKey: queryKeys.admin.riskSnapshots.list(filters),
+    queryFn: async () => {
+      // Contract: docs/Backend_info/API_GUIDE (12).md — GET /admin/risk-snapshots — scopes admin/support
+      const response = await apiClient.get<AdminRiskSnapshotsResponse>('/admin/risk-snapshots', {
         params: filters
       });
       return response.data;
