@@ -48,7 +48,8 @@ import type {
   User,
   FraudScoreComparisonResponse,
   TransactionRead,
-  AllowedUsageRead
+  AllowedUsageRead,
+  BeneficiaryProfileAdminRead
 } from '@/types/api';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
@@ -89,6 +90,35 @@ export interface AdminSpendAllowedParams {
 }
 
 export type AdminSpendAllowedResponse = PaginatedResponse<AllowedUsageRead>;
+
+export async function fetchBeneficiaryProfileById(beneficiaryProfileId: string) {
+  // Contract: docs/Backend_info/API_GUIDE (15).md — Beneficiaries — GET /beneficiaries/{beneficiary_id} — scopes admin/support
+  const response = await apiClient.get<BeneficiaryProfileAdminRead>(
+    `/beneficiaries/${beneficiaryProfileId}`
+  );
+  return response.data;
+}
+
+export function useAdminBeneficiaryProfile(
+  beneficiaryProfileId: string,
+  options?: { enabled?: boolean }
+) {
+  const trimmedId = beneficiaryProfileId.trim();
+  return useQuery<BeneficiaryProfileAdminRead>({
+    queryKey: queryKeys.admin.beneficiaryProfile(trimmedId),
+    queryFn: () => fetchBeneficiaryProfileById(trimmedId),
+    enabled: (options?.enabled ?? true) && Boolean(trimmedId),
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+}
 
 export function useAdminFraudScoreComparison(
   proofId?: string,
