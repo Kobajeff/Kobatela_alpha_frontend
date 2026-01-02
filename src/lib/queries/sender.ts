@@ -116,15 +116,6 @@ export function useCreateMandate() {
   });
 }
 
-export function useCleanupMandates() {
-  return useMutation<{ expired_count?: number }, Error, void>({
-    mutationFn: async () => {
-      const response = await apiClient.post<{ expired_count?: number }>('/mandates/cleanup', {});
-      return response.data;
-    }
-  });
-}
-
 export function useCreateMerchantSuggestion() {
   const queryClient = useQueryClient();
   return useMutation<MerchantSuggestion, Error, MerchantSuggestionCreatePayload>({

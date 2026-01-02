@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -10,7 +11,8 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
 import { createEscrowDraftFromMandate, setEscrowDraft } from '@/lib/prefill/escrowDraft';
-import { useCleanupMandates, useCreateMandate } from '@/lib/queries/sender';
+import { queryKeys } from '@/lib/queryKeys';
+import { useCreateMandate } from '@/lib/queries/sender';
 import type {
   BeneficiaryOffPlatformCreate,
   PayoutDestinationType,
@@ -35,8 +37,8 @@ type MandateDestinationSnapshot =
 
 export default function SenderMandatesPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const createMandate = useCreateMandate();
-  const cleanupMandates = useCleanupMandates();
 
   const [targetType, setTargetType] = useState<'on-platform' | 'off-platform'>('on-platform');
   const [beneficiaryId, setBeneficiaryId] = useState('');
@@ -53,9 +55,9 @@ export default function SenderMandatesPage() {
   const [createdMandate, setCreatedMandate] = useState<UsageMandateRead | null>(null);
   const [createdDestination, setCreatedDestination] = useState<MandateDestinationSnapshot | null>(null);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
-  const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
-  const [cleanupError, setCleanupError] = useState<string | null>(null);
-  const [lastCleanupRun, setLastCleanupRun] = useState<string | null>(null);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [beneficiaryOffPlatform, setBeneficiaryOffPlatform] = useState<BeneficiaryOffPlatformCreate>(
     DEFAULT_BENEFICIARY_OFF_PLATFORM
   );
@@ -313,22 +315,19 @@ export default function SenderMandatesPage() {
     setTimeout(() => setCopySuccess(null), 2500);
   };
 
-  const handleCleanup = async () => {
-    setCleanupError(null);
-    setCleanupMessage(null);
+  const handleRefreshMandates = async () => {
+    setRefreshError(null);
+    setRefreshMessage(null);
+    setIsRefreshing(true);
     try {
-      const result = await cleanupMandates.mutateAsync();
-      const expiredCount = result?.expired_count ?? 0;
-      const timestamp = new Date().toISOString();
-      setLastCleanupRun(timestamp);
-      setCleanupMessage(`${expiredCount} mandat(s) expiré(s).`);
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.sender.mandates.base()
+      }); // Contract: docs/Backend_info/API_GUIDE (11).md — GET /mandates — sender scope cache refresh
+      setRefreshMessage('Liste des mandats rafraîchie.');
     } catch (error) {
-      const normalized = normalizeApiError(error);
-      if (normalized.status === 403) {
-        setCleanupError('Accès refusé : portée insuffisante pour expirer des mandats.');
-        return;
-      }
-      setCleanupError(normalized.message ?? extractErrorMessage(error));
+      setRefreshError(extractErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -337,7 +336,7 @@ export default function SenderMandatesPage() {
       <div>
         <h1 className="text-2xl font-semibold">Mandats d&apos;usage</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Créez un mandat pour vos bénéficiaires et expirez les mandats périmés côté expéditeur.
+          Créez un mandat pour vos bénéficiaires et rafraîchissez la liste lorsque nécessaire.
         </p>
       </div>
 
@@ -702,25 +701,23 @@ export default function SenderMandatesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Nettoyage des mandats expirés</CardTitle>
+          <CardTitle>Rafraîchir les mandats</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {cleanupError && <ErrorAlert message={cleanupError} />}
+          {refreshError && <ErrorAlert message={refreshError} />}
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" onClick={handleCleanup} disabled={cleanupMandates.isPending}>
-              {cleanupMandates.isPending ? 'Nettoyage en cours...' : 'Expire old mandates'}
+            <Button type="button" onClick={handleRefreshMandates} disabled={isRefreshing}>
+              {isRefreshing ? 'Rafraîchissement...' : 'Rafraîchir la liste des mandats'}
             </Button>
-            {cleanupMessage && (
-              <span className="text-sm font-medium text-green-700">{cleanupMessage}</span>
+            {refreshMessage && (
+              <span className="text-sm font-medium text-green-700">{refreshMessage}</span>
             )}
           </div>
-          {lastCleanupRun && (
-            <p className="text-sm text-slate-700">
-              Dernier nettoyage: {new Date(lastCleanupRun).toLocaleString()}
-            </p>
-          )}
-          </CardContent>
-        </Card>
+          <p className="text-sm text-slate-700">
+            Invalide le cache local et relance la récupération via le endpoint de liste des mandats.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

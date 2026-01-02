@@ -507,6 +507,10 @@ export type AdminProofReviewItem = {
   advisor_id?: string;
   advisor_email?: string;
   advisor_name?: string;
+  invoice_total_amount?: string | number | null;
+  invoice_currency?: string | null;
+  payout_eligible?: boolean | null;
+  payout_blocked_reasons?: string[] | null;
 } & AiAnalysis;
 
 export type ProofType = 'PHOTO' | 'DOCUMENT';

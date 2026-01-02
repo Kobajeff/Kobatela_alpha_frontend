@@ -4,7 +4,7 @@
 - **Admin surfaces use sender summaries**: Admin escrow dashboards call the sender `/escrows/{id}/summary` endpoint instead of the unredacted `/admin/escrows/{id}/summary`, preventing support/admin from requesting proof/payment expansions and exposing them to sender redaction rules. 【F:src/lib/queries/admin.ts†L734-L760】
 - **External tokens shared via query strings**: The external proof token issuer builds portal links as `?token=...`, contradicting backend guidance that query parameters are rejected to avoid leakage; this risks token exfiltration and browser history exposure for PII-bearing uploads. 【F:src/app/sender/escrows/[id]/external-proof-tokens/page.tsx†L115-L189】【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L374-L382】
 - **Schema drift on payments and proofs**: Frontend types omit sensitive fields that the backend returns (e.g., `psp_ref`, `idempotency_key`, `payout_blocked_reasons`, AI flags, invoice totals), so admin/support UI cannot render blocking reasons or enforce redaction/PII masking per contract. 【F:src/types/api.ts†L350-L368】【F:docs/Backend_info/API_GUIDE (11).md†L259-L365】
-- **Maintenance/unused surfaces**: Sender UI still exposes the maintenance-only `/mandates/cleanup` endpoint and leaves beneficiary, alerts, spend/transactions, fraud/risk snapshot, and public-sector endpoints entirely unused, increasing drift and accidental-data-loss risk. 【F:src/lib/queries/sender.ts†L137-L174】【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L332-L415】
+- **Unused surfaces**: Beneficiary, alerts, spend/transactions, fraud/risk snapshot, and public-sector endpoints remain absent from the UI, leaving backend features idle and untested. 【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L332-L415】
 
 ## Scope and methodology
 - Parsed all backend truth sources under `docs/Backend_info/**`, UX implementation/audit plans, and API usage guides.
@@ -19,7 +19,6 @@
 
 ### P1 (blocks UX completeness)
 1) **Payment/proof schema gaps** – Missing fields (`psp_ref`, `idempotency_key`, payout blockers, AI flags/invoice totals) prevent admin/support from showing payout blockers or applying required PII redaction per contract. 【F:src/types/api.ts†L350-L368】【F:docs/Backend_info/API_GUIDE (11).md†L259-L365】
-2) **Mandate maintenance surfaced to end users** – Sender page still calls `/mandates/cleanup`, a maintenance-only route, risking unintended mandate expiration. 【F:src/lib/queries/sender.ts†L137-L174】
 
 ### P2 (cleanup / quality / perf)
 1) **Unused backend capabilities** – Beneficiaries, alerts, spend/transactions, fraud/risk snapshots, and public-sector endpoints are not represented in the UI, leaving backend features idle and contract coverage untested. 【F:docs/Backend_info/FRONTEND_API_GUIDE (12).md†L332-L415】
@@ -28,7 +27,6 @@
 ## Detailed sections
 ### A) Endpoint mismatch findings
 - **Admin summary path**: Admin escrow view calls `/escrows/{id}/summary` instead of `/admin/escrows/{id}/summary` with `proofs_limit`/`include_milestones`/`include_proofs`, leading to redacted data and no pagination controls for proofs. 【F:src/lib/queries/admin.ts†L734-L760】
-- **Mandate cleanup**: Sender mutations expose `/mandates/cleanup`, which docs label maintenance/non-UI. 【F:src/lib/queries/sender.ts†L137-L174】
 - **Admin payments filters**: `payment_id`/`id` query params are sent to `/admin/payments` but are not documented, risking backend validation drift. 【F:src/lib/queries/admin.ts†L195-L221】
 
 ### B) Role/scope/routing mismatch findings
@@ -56,4 +54,4 @@
 - Switch admin escrow summary calls to `/admin/escrows/{id}/summary` with `proofs_limit`/`include_milestones`/`include_proofs` to restore unredacted admin visibility.
 - Replace external portal share links with a header-only handoff (e.g., one-time token capture page) to comply with header transport and avoid leaking tokens in URLs/history.
 - Extend `Payment`/`Proof` types and admin screens to include payout blockers, PSP refs/idempotency keys, AI flags, and invoice amounts, while hiding PSP/PII fields for non-admin/support roles.
-- Remove the `/mandates/cleanup` CTA from sender flows and gate remaining maintenance-only endpoints; prioritize wiring or explicitly deferring unused backend capabilities (beneficiaries, alerts, spend/transactions, fraud/risk snapshots).
+- Prioritize wiring or explicitly deferring unused backend capabilities (beneficiaries, alerts, spend/transactions, fraud/risk snapshots).
