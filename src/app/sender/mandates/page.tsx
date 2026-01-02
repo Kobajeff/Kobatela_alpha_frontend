@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
@@ -12,9 +12,14 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
 import { createEscrowDraftFromMandate, setEscrowDraft } from '@/lib/prefill/escrowDraft';
 import { queryKeys } from '@/lib/queryKeys';
-import { useCreateMandate } from '@/lib/queries/sender';
+import {
+  useCreateMandate,
+  useCreateMerchantSuggestion,
+  useMerchantSuggestionsList
+} from '@/lib/queries/sender';
 import type {
   BeneficiaryOffPlatformCreate,
+  MerchantSuggestion,
   PayoutDestinationType,
   UsageMandateCreate,
   UsageMandateRead
@@ -39,6 +44,8 @@ export default function SenderMandatesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const createMandate = useCreateMandate();
+  const merchantSuggestionsQuery = useMerchantSuggestionsList();
+  const createMerchantSuggestion = useCreateMerchantSuggestion();
 
   const [targetType, setTargetType] = useState<'on-platform' | 'off-platform'>('on-platform');
   const [beneficiaryId, setBeneficiaryId] = useState('');
@@ -47,11 +54,14 @@ export default function SenderMandatesPage() {
   const [expiresAt, setExpiresAt] = useState('');
   const [payoutDestinationType, setPayoutDestinationType] =
     useState<PayoutDestinationType>('BENEFICIARY_PROVIDER');
-  const [merchantMode, setMerchantMode] = useState<'registry' | 'suggestion'>('registry');
+  const [merchantMode, setMerchantMode] = useState<'registry' | 'suggestion'>('suggestion');
   const [merchantRegistryId, setMerchantRegistryId] = useState('');
   const [merchantName, setMerchantName] = useState('');
   const [merchantCountryCode, setMerchantCountryCode] = useState('');
+  const [merchantSearch, setMerchantSearch] = useState('');
+  const [selectedSuggestionId, setSelectedSuggestionId] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const [createdMandate, setCreatedMandate] = useState<UsageMandateRead | null>(null);
   const [createdDestination, setCreatedDestination] = useState<MandateDestinationSnapshot | null>(null);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
@@ -66,6 +76,30 @@ export default function SenderMandatesPage() {
     { value: 'BENEFICIARY_PROVIDER', label: 'Bénéficiaire / Provider' },
     { value: 'MERCHANT', label: 'Merchant (Direct Pay)' }
   ];
+
+  const merchantSuggestions = useMemo(
+    () => merchantSuggestionsQuery.data ?? [],
+    [merchantSuggestionsQuery.data]
+  );
+  const filteredSuggestions = useMemo(() => {
+    const term = merchantSearch.trim().toLowerCase();
+    if (!term) return merchantSuggestions;
+    return merchantSuggestions.filter((suggestion) =>
+      [suggestion.name, suggestion.country_code].some((value) =>
+        value?.toLowerCase().includes(term)
+      )
+    );
+  }, [merchantSearch, merchantSuggestions]);
+
+  const selectedSuggestionFromList: MerchantSuggestion | null =
+    merchantSuggestions.find((suggestion) => suggestion.id === selectedSuggestionId) ?? null;
+
+  const selectedSuggestionFromCreate =
+    createMerchantSuggestion.data && createMerchantSuggestion.data.id === selectedSuggestionId
+      ? createMerchantSuggestion.data
+      : null;
+
+  const selectedSuggestion = selectedSuggestionFromList ?? selectedSuggestionFromCreate;
 
   const handleTargetTypeChange = (nextType: 'on-platform' | 'off-platform') => {
     setTargetType(nextType);
@@ -83,11 +117,17 @@ export default function SenderMandatesPage() {
   const handlePayoutDestinationChange = (value: PayoutDestinationType) => {
     setPayoutDestinationType(value);
     setErrorMessage(null);
+    if (value === 'MERCHANT') {
+      setMerchantMode('suggestion');
+    }
     if (value !== 'MERCHANT') {
       setMerchantRegistryId('');
       setMerchantName('');
       setMerchantCountryCode('');
-      setMerchantMode('registry');
+      setMerchantMode('suggestion');
+      setSelectedSuggestionId('');
+      setMerchantSearch('');
+      setSuggestionError(null);
     }
   };
 
@@ -96,6 +136,33 @@ export default function SenderMandatesPage() {
     setMerchantRegistryId('');
     setMerchantName('');
     setMerchantCountryCode('');
+    setSelectedSuggestionId('');
+    setSuggestionError(null);
+  };
+
+  const handleCreateSuggestion = async () => {
+    setSuggestionError(null);
+    const trimmedName = merchantName.trim();
+    const trimmedCountry = merchantCountryCode.trim().toUpperCase();
+
+    if (!trimmedName || !trimmedCountry) {
+      setSuggestionError('Renseignez au minimum le nom et le code pays du commerçant.');
+      return;
+    }
+
+    try {
+      const created = await createMerchantSuggestion.mutateAsync({
+        name: trimmedName,
+        country_code: trimmedCountry
+      });
+      setSelectedSuggestionId(created.id);
+      setMerchantSearch('');
+      setMerchantMode('suggestion');
+      setMerchantName(trimmedName);
+      setMerchantCountryCode(trimmedCountry);
+    } catch (error) {
+      setSuggestionError(extractErrorMessage(error));
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -187,33 +254,26 @@ export default function SenderMandatesPage() {
     }
 
     if (payoutDestinationType === 'MERCHANT' && destinationPayload) {
-      const registryId = merchantRegistryId.trim();
-      const suggestionName = merchantName.trim();
-      const suggestionCountry = merchantCountryCode.trim().toUpperCase();
-      const hasRegistry = Boolean(registryId);
-      const hasSuggestion = Boolean(suggestionName && suggestionCountry);
-
-      if (hasRegistry && hasSuggestion) {
-        setErrorMessage('Sélectionnez soit un identifiant registre, soit une suggestion, pas les deux.');
-        return;
-      }
-
-      if (!hasRegistry && !hasSuggestion) {
-        setErrorMessage('Pour un payout marchand, renseignez un registre ou une suggestion complète.');
-        return;
-      }
-
-      if (hasRegistry) {
+      if (merchantMode === 'registry') {
+        const registryId = merchantRegistryId.trim();
+        if (!registryId) {
+          setErrorMessage('Pour un payout marchand via registre, indiquez un identifiant valide.');
+          return;
+        }
         destinationPayload = {
           ...destinationPayload,
           merchant_registry_id: registryId // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Direct Pay merchant_registry_id
         };
       } else {
+        if (!selectedSuggestion) {
+          setErrorMessage('Sélectionnez une suggestion existante ou créez-en une avant de soumettre.');
+          return;
+        }
         destinationPayload = {
           ...destinationPayload,
           merchant_suggestion: {
-            name: suggestionName, // Contract: docs/Backend_info/FRONTEND_API_GUIDE (8).md — UsageMandateCreate merchant_suggestion name
-            country_code: suggestionCountry // Contract: docs/Backend_info/FRONTEND_API_GUIDE (8).md — UsageMandateCreate merchant_suggestion country_code
+            name: selectedSuggestion.name, // Contract: docs/Backend_info/FRONTEND_API_GUIDE (8).md — UsageMandateCreate merchant_suggestion name
+            country_code: selectedSuggestion.country_code // Contract: docs/Backend_info/FRONTEND_API_GUIDE (8).md — UsageMandateCreate merchant_suggestion country_code
           }
         };
       }
@@ -597,26 +657,108 @@ export default function SenderMandatesPage() {
                     />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">Nom du commerçant</label>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block text-sm font-medium text-slate-700">
+                          Sélectionner une suggestion existante
+                        </label>
+                        {merchantSuggestionsQuery.isFetching && (
+                          <span className="text-xs text-slate-500">Chargement...</span>
+                        )}
+                      </div>
                       <Input
                         type="text"
-                        value={merchantName}
-                        onChange={(event) => setMerchantName(event.target.value)}
-                        placeholder="Sample Merchant"
+                        value={merchantSearch}
+                        onChange={(event) => setMerchantSearch(event.target.value)}
+                        placeholder="Rechercher un commerçant (nom ou pays)"
                         disabled={createMandate.isPending}
                       />
+                      <Select
+                        value={selectedSuggestionId}
+                        onChange={(event) => setSelectedSuggestionId(event.target.value)}
+                        disabled={createMandate.isPending || merchantSuggestionsQuery.isFetching}
+                      >
+                        <option value="">Choisir une suggestion</option>
+                        {filteredSuggestions.map((suggestion) => (
+                          <option key={suggestion.id} value={suggestion.id}>
+                            {suggestion.name} · {suggestion.country_code} · {suggestion.status}
+                          </option>
+                        ))}
+                      </Select>
+                      {!merchantSuggestionsQuery.isFetching && filteredSuggestions.length === 0 && (
+                        <p className="text-xs text-slate-500">
+                          Aucune suggestion trouvée. Créez-en une ci-dessous.
+                        </p>
+                      )}
+                      {selectedSuggestion && (
+                        <div className="space-y-1 rounded-md border border-slate-200 bg-white p-3">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {selectedSuggestion.name} ({selectedSuggestion.country_code})
+                          </p>
+                          <p className="text-xs text-slate-600">
+                            Statut: <span className="font-semibold">{selectedSuggestion.status}</span>
+                          </p>
+                          {selectedSuggestion.status === 'PENDING' && (
+                            <p className="text-xs text-amber-700">En attente de validation admin.</p>
+                          )}
+                          {selectedSuggestion.status === 'REJECTED' && (
+                            <p className="text-xs text-red-700">
+                              Suggestion refusée — proposez un autre marchand.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700">Code pays</label>
-                      <Input
-                        type="text"
-                        value={merchantCountryCode}
-                        onChange={(event) => setMerchantCountryCode(event.target.value)}
-                        placeholder="FR"
-                        disabled={createMandate.isPending}
-                      />
+
+                    <div className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+                      <p className="text-sm font-medium text-slate-800">Ou ajoutez un commerçant</p>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700">
+                            Nom du commerçant
+                          </label>
+                          <Input
+                            type="text"
+                            value={merchantName}
+                            onChange={(event) => setMerchantName(event.target.value)}
+                            placeholder="Sample Merchant"
+                            disabled={
+                              createMandate.isPending || createMerchantSuggestion.isPending
+                            }
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700">Code pays</label>
+                          <Input
+                            type="text"
+                            value={merchantCountryCode}
+                            onChange={(event) => setMerchantCountryCode(event.target.value)}
+                            placeholder="FR"
+                            disabled={
+                              createMandate.isPending || createMerchantSuggestion.isPending
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleCreateSuggestion}
+                          disabled={
+                            createMandate.isPending || createMerchantSuggestion.isPending
+                          }
+                        >
+                          {createMerchantSuggestion.isPending
+                            ? 'Création...'
+                            : 'Créer et sélectionner'}
+                        </Button>
+                        <p className="text-xs text-slate-500">
+                          Appelle POST /merchant-suggestions (sender).
+                        </p>
+                      </div>
+                      {suggestionError && <ErrorAlert message={suggestionError} />}
                     </div>
                   </div>
                 )}
@@ -642,7 +784,10 @@ export default function SenderMandatesPage() {
                   setMerchantRegistryId('');
                   setMerchantName('');
                   setMerchantCountryCode('');
-                  setMerchantMode('registry');
+                  setMerchantMode('suggestion');
+                  setMerchantSearch('');
+                  setSelectedSuggestionId('');
+                  setSuggestionError(null);
                   setErrorMessage(null);
                   setCopySuccess(null);
                   setCreatedMandate(null);
