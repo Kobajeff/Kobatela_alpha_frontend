@@ -53,6 +53,10 @@ export const queryKeys = {
     proofStatus: (proofId?: string | number | null, token?: string | null) =>
       ['external', 'proofStatus', proofId, token] as const
   },
+  externalProofTokens: {
+    list: (filters: Record<string, unknown>) => ['externalProofTokens', 'list', filters] as const,
+    detail: (tokenId?: string | number | null) => ['externalProofTokens', tokenId] as const
+  },
   admin: {
     dashboardStats: () => ['adminDashboardStats', { scope: 'canonical' }] as const,
     users: {

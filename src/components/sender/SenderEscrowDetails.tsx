@@ -119,6 +119,12 @@ export function SenderEscrowDetails({
             <Button variant="outline" onClick={onCheckDeadline} disabled={loading || forbidden || processing}>
               Vérifier l'échéance
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/sender/escrows/${summary.escrow.id}/external-proof-tokens`)}
+            >
+              Portail externe
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-2 text-slate-700">

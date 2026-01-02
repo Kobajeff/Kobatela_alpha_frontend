@@ -529,6 +529,54 @@ export type ExternalProofSubmitResponse = {
   created_at: string;
 };
 
+export type ExternalProofTokenStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'USED';
+
+export type ExternalProofTokenTarget = {
+  // Contract: docs/Backend_info/API_GUIDE (11).md — ExternalProofTokenRequest — escrow_id
+  escrow_id: number | string;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — ExternalProofTokenRequest — milestone_idx
+  milestone_idx: number;
+  beneficiary_profile_id?: number | null;
+};
+
+export type ExternalProofToken = {
+  token_id: number | string;
+  status: ExternalProofTokenStatus;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — External proof tokens — expires_at
+  expires_at: string;
+  token?: string | null;
+  max_uploads?: number | null;
+  note?: string | null;
+  target: ExternalProofTokenTarget;
+  created_at?: string;
+  revoked_at?: string | null;
+  last_used_at?: string | null;
+};
+
+export type ExternalProofTokenIssuePayload = {
+  // Contract: docs/Backend_info/API_GUIDE (11).md — POST /sender/external-proof-tokens — escrow_id
+  escrow_id: number | string;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — POST /sender/external-proof-tokens — milestone_idx
+  milestone_idx: number;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — POST /sender/external-proof-tokens — expires_in_minutes
+  expires_in_minutes?: number;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — POST /sender/external-proof-tokens — max_uploads
+  max_uploads?: number;
+  issued_to_email?: string;
+  note?: string;
+  beneficiary_profile_id?: number;
+  target_type?: string;
+};
+
+export type ExternalProofTokenListResponse =
+  | {
+      items: ExternalProofToken[];
+      total: number;
+      limit?: number;
+      offset?: number;
+    }
+  | ExternalProofToken[];
+
 export type ExternalEscrowMilestoneSummary = {
   milestone_idx: number;
   label?: string;
