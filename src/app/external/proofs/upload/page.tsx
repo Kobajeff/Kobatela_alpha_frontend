@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/Input';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import {
   clearExternalToken,
+  consumeExternalTokenFromQuery,
   getExternalToken,
-  readTokenFromQuery,
   setExternalToken
 } from '@/lib/external/externalSession';
 import { useExternalProofSubmit, useExternalProofUpload } from '@/lib/queries/external';
@@ -38,12 +38,12 @@ function ExternalProofUploadPageContent() {
   const [note, setNote] = useState('');
 
   useEffect(() => {
-    if (!searchParams) return;
-    const tokenFromQuery = readTokenFromQuery(searchParams);
+    const tokenFromQuery = consumeExternalTokenFromQuery(searchParams, {
+      replacePath: '/external/proofs/upload'
+    });
     if (tokenFromQuery) {
       setToken(tokenFromQuery);
-      setExternalToken(tokenFromQuery);
-      router.replace('/external/proofs/upload');
+      setMissingToken(false);
       return;
     }
     const stored = getExternalToken();
@@ -53,7 +53,7 @@ function ExternalProofUploadPageContent() {
       return;
     }
     setMissingToken(true);
-  }, [router, searchParams]);
+  }, [searchParams]);
 
   const uploadMutation = useExternalProofUpload(token);
   const submitMutation = useExternalProofSubmit(token);

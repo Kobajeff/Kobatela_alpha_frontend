@@ -1,13 +1,18 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
-import { clearExternalToken, readTokenFromQuery, setExternalToken } from '@/lib/external/externalSession';
+import {
+  clearExternalToken,
+  consumeExternalTokenFromQuery,
+  getExternalToken,
+  setExternalToken
+} from '@/lib/external/externalSession';
 
 function ExternalLandingPageContent() {
   const searchParams = useSearchParams();
@@ -15,10 +20,6 @@ function ExternalLandingPageContent() {
   const [inputToken, setInputToken] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const tokenFromUrl = useMemo(() => {
-    if (!searchParams) return null;
-    return readTokenFromQuery(searchParams);
-  }, [searchParams]);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -31,15 +32,22 @@ function ExternalLandingPageContent() {
   }, [searchParams]);
 
   useEffect(() => {
+    const tokenFromUrl = consumeExternalTokenFromQuery(searchParams, { replacePath: '/external' });
     if (tokenFromUrl) {
-      setExternalToken(tokenFromUrl);
       setInputToken(tokenFromUrl);
       setInfoMessage('Jeton détecté dans le lien. Vous pouvez accéder directement au dossier.');
       router.replace('/external/escrow');
-    } else {
-      setInfoMessage(null);
+      return;
     }
-  }, [router, tokenFromUrl]);
+
+    const existing = getExternalToken();
+    if (existing) {
+      setInputToken(existing);
+      setInfoMessage('Jeton déjà chargé pour cette session sécurisée.');
+      return;
+    }
+    setInfoMessage(null);
+  }, [router, searchParams]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

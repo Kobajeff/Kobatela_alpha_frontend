@@ -7,7 +7,6 @@ import type {
   ExternalProofUploadResponse
 } from '@/types/api-external';
 import { buildExternalAuthHeaders } from '../externalAuth';
-import { mapExternalErrorMessage } from '../external/externalErrorMessages';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
@@ -29,71 +28,55 @@ export async function uploadExternalProofFile(
   const formData = new FormData();
   formData.append('file', file);
 
-  try {
-    const response = await externalApiClient.post<ExternalProofUploadResponse>(
-      '/external/files/proofs',
-      formData,
-      {
-        headers: {
-          ...withToken(token).headers,
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (event) => {
-          if (!onProgress || !event.total) return;
-          const percent = Math.round((event.loaded * 100) / event.total);
-          onProgress(percent);
-        }
+  const response = await externalApiClient.post<ExternalProofUploadResponse>(
+    '/external/files/proofs',
+    formData,
+    {
+      headers: {
+        ...withToken(token).headers,
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (event) => {
+        if (!onProgress || !event.total) return;
+        const percent = Math.round((event.loaded * 100) / event.total);
+        onProgress(percent);
       }
-    );
-    return response.data;
-  } catch (error) {
-    throw new Error(mapExternalErrorMessage(error));
-  }
+    }
+  );
+  return response.data;
 }
 
 export async function submitExternalProof(
   token: string,
   payload: ExternalProofSubmit
 ): Promise<ExternalProofSubmitResponse> {
-  try {
-    const response = await externalApiClient.post<ExternalProofSubmitResponse>(
-      '/external/proofs/submit',
-      payload,
-      withToken(token)
-    );
-    return response.data;
-  } catch (error) {
-    throw new Error(mapExternalErrorMessage(error));
-  }
+  const response = await externalApiClient.post<ExternalProofSubmitResponse>(
+    '/external/proofs/submit',
+    payload,
+    withToken(token)
+  );
+  return response.data;
 }
 
 export async function getExternalEscrowSummary(
   token: string
 ): Promise<ExternalEscrowSummary> {
-  try {
-    const response = await externalApiClient.get<ExternalEscrowSummary>(
-      '/external/escrows/summary',
-      {
-        ...withToken(token)
-      }
-    );
-    return response.data;
-  } catch (error) {
-    throw new Error(mapExternalErrorMessage(error));
-  }
+  const response = await externalApiClient.get<ExternalEscrowSummary>(
+    '/external/escrows/summary',
+    {
+      ...withToken(token)
+    }
+  );
+  return response.data;
 }
 
 export async function getExternalProofStatus(
   token: string,
   proofId: string | number
 ): Promise<ExternalProofStatus> {
-  try {
-    const response = await externalApiClient.get<ExternalProofStatus>(
-      `/external/proofs/${proofId}/status`,
-      withToken(token)
-    );
-    return response.data;
-  } catch (error) {
-    throw new Error(mapExternalErrorMessage(error));
-  }
+  const response = await externalApiClient.get<ExternalProofStatus>(
+    `/external/proofs/${proofId}/status`,
+    withToken(token)
+  );
+  return response.data;
 }
