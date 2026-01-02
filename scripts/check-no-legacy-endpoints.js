@@ -16,7 +16,6 @@ const SKIP_DIRS = new Set([
 const ALLOWED_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 
 const FORBIDDEN_SUBSTRINGS = [
-  '/sender/dashboard',
   '/admin/dashboard',
   '/admin/senders',
   '/apikeys',

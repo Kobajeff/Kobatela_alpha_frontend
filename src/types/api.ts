@@ -368,9 +368,20 @@ export type AdminEscrowSummary = SenderEscrowSummary & {
 };
 
 export type SenderDashboard = {
-  recent_escrows: EscrowListItem[];
-  pending_proofs: Proof[];
-  recent_payments: Payment[];
+  // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — GET /sender/dashboard — sender
+  profile?: Record<string, unknown>;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — counts
+  counts?: Record<string, number>;
+  // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — recent_escrows
+  recent_escrows?: EscrowListItem[];
+  // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — actions (when include_actions=true)
+  actions?: unknown[];
+  // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — pending_proofs
+  pending_proofs?: Proof[];
+  // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — recent_payments
+  recent_payments?: Payment[];
+  // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — stats (legacy compatibility)
+  stats?: Record<string, unknown>;
 };
 
 export type InflationAdjustment = {
