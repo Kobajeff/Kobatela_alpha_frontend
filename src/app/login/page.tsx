@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { getPortalDestination } from '@/lib/authIdentity';
+import { getPortalDestination, PORTAL_PATHS } from '@/lib/authIdentity';
 import { clearAuthToken, clearAuthUser, getAuthToken, getAuthTokenEventName } from '@/lib/auth';
 import { useAuthMe, useLogin } from '@/lib/queries/sender';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
@@ -25,10 +25,13 @@ export default function LoginPage() {
   const isDev = process.env.NODE_ENV === 'development';
 
   const destination = getPortalDestination(user);
+  const destinationPath = destination?.path;
   const isAuthenticated = hasToken && Boolean(user);
   const isAtDestination =
-    Boolean(destination?.path) && Boolean(pathname) && pathname.startsWith(destination.path);
-  const canContinue = Boolean(destination?.path) && !isAtDestination;
+    typeof destinationPath === 'string' &&
+    typeof pathname === 'string' &&
+    pathname.startsWith(destinationPath);
+  const canContinue = Boolean(destinationPath) && !isAtDestination;
 
   useEffect(() => {
     const updateTokenState = () => {
@@ -52,7 +55,7 @@ export default function LoginPage() {
     try {
       const response = await login.mutateAsync({ email });
       const loginDestination = getPortalDestination(response.user ?? null);
-      const fallbackDestination = loginDestination?.path ?? '/sender/dashboard';
+      const fallbackDestination = loginDestination?.path ?? PORTAL_PATHS.sender;
       router.replace(fallbackDestination as Route);
     } catch (err) {
       setError(extractErrorMessage(err));

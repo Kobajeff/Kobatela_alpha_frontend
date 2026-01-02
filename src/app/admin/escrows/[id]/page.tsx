@@ -30,6 +30,8 @@ import {
   canRequestAdvisorReview,
   shouldStopAdvisorReviewPolling
 } from '@/lib/proofAdvisorReview';
+import type { NormalizedAuthUser } from '@/lib/authIdentity';
+import type { MilestoneCreatePayload, MilestoneProofRequirements } from '@/types/api';
 
 export default function AdminEscrowDetailPage() {
   const params = useParams<{ id: string }>();
@@ -39,7 +41,8 @@ export default function AdminEscrowDetailPage() {
   const createMilestone = useCreateMilestone(escrowId);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { data: authUser } = useAuthMe();
+  const authMeQuery = useAuthMe();
+  const authUser = authMeQuery.data as NormalizedAuthUser | undefined;
   const requestAdvisorReview = useRequestAdvisorReview();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [payloadJson, setPayloadJson] = useState('{\n\n}');
@@ -229,8 +232,42 @@ export default function AdminEscrowDetailPage() {
       return;
     }
 
+    const {
+      label,
+      amount,
+      currency,
+      sequence_index,
+      proof_kind,
+      proof_requirements
+    } = payload as Record<string, unknown>;
+
+    if (
+      typeof label !== 'string' ||
+      typeof amount !== 'string' ||
+      typeof currency !== 'string' ||
+      typeof sequence_index !== 'number'
+    ) {
+      setCreateError(
+        'Le payload doit inclure label, amount, currency et sequence_index aux formats attendus.'
+      );
+      return;
+    }
+
+    const proofRequirements =
+      proof_requirements && typeof proof_requirements === 'object' && !Array.isArray(proof_requirements)
+        ? (proof_requirements as MilestoneProofRequirements)
+        : undefined;
+    const typedPayload: MilestoneCreatePayload = {
+      label,
+      amount,
+      currency,
+      sequence_index,
+      proof_kind: typeof proof_kind === 'string' ? proof_kind : undefined,
+      proof_requirements: proofRequirements
+    };
+
     try {
-      await createMilestone.mutateAsync(payload as Record<string, unknown>);
+      await createMilestone.mutateAsync(typedPayload);
       setCreateSuccess('Milestone created');
       showToast('Milestone created', 'success');
       setShowCreateForm(false);

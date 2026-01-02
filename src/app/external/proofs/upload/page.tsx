@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -15,8 +15,9 @@ import {
 import { useExternalProofSubmit, useExternalProofUpload } from '@/lib/queries/external';
 import { mapExternalErrorMessage } from '@/lib/external/externalErrorMessages';
 import { normalizeApiError } from '@/lib/apiError';
+import { LoadingState } from '@/components/common/LoadingState';
 
-export default function ExternalProofUploadPage() {
+function ExternalProofUploadPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
@@ -207,5 +208,13 @@ export default function ExternalProofUploadPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ExternalProofUploadPage() {
+  return (
+    <Suspense fallback={<LoadingState label="Chargement..." />}>
+      <ExternalProofUploadPageContent />
+    </Suspense>
   );
 }

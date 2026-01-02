@@ -173,7 +173,7 @@ export function MilestonesEditor({ milestones, onChange, totalAmount, currency, 
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-medium text-slate-800">Milestone #{milestone.sequence_index}</p>
                 {localMilestones.length > 1 && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeMilestone(milestone.sequence_index)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => removeMilestone(milestone.sequence_index)}>
                     Supprimer
                   </Button>
                 )}

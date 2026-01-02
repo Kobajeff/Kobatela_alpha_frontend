@@ -493,7 +493,7 @@ export default function SenderCreateEscrowPage() {
               >
                 Réessayer création milestones
               </Button>
-              <Button variant="link" onClick={() => router.push(`/sender/escrows/${createdEscrowId}`)}>
+              <Button variant="outline" onClick={() => router.push(`/sender/escrows/${createdEscrowId}`)}>
                 Ouvrir l&apos;escrow
               </Button>
             </div>

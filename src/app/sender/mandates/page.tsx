@@ -173,9 +173,9 @@ export default function SenderMandatesPage() {
           email: email.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (contact)
           phone_number: phone_number.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (phone)
           address_line1: address_line1.trim(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (address)
-        address_country_code: address_country_code.trim().toUpperCase(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (address country)
-        bank_account: bank_account.trim(), // Contract: docs/Backend_info/BACKEND_MANDATE_MILESTONE_IDENTITY_AUDIT (1).md — Beneficiary identity requires bank_account
-          ...(national_id_number.trim()
+          address_country_code: address_country_code.trim().toUpperCase(), // Contract: docs/Backend_info/FRONTEND_MANDATE_ESCROW_UX_CONTRACT (3).md — Off-platform beneficiary identity (address country)
+          bank_account: bank_account.trim(), // Contract: docs/Backend_info/BACKEND_MANDATE_MILESTONE_IDENTITY_AUDIT (1).md — Beneficiary identity requires bank_account
+          ...(national_id_number?.trim()
             ? {
                 national_id_number: national_id_number.trim()
               }

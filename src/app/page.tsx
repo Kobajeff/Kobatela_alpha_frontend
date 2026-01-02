@@ -19,6 +19,7 @@ export default function HomePage() {
   const pathname = usePathname();
   const { data: user, isLoading, isError, error } = useAuthMe();
   const destination = getPortalDestination(user);
+  const destinationPath = destination?.path;
   const [mounted, setMounted] = useState(false);
   const [hasToken, setHasToken] = useState(false);
   const didRedirectRef = useRef(false);
@@ -27,7 +28,9 @@ export default function HomePage() {
   const isUnauthorized = normalizedError?.status === 401 || normalizedError?.status === 404;
   const isForbidden = normalizedError?.status === 403;
   const isAtDestination =
-    Boolean(destination?.path) && Boolean(pathname) && pathname.startsWith(destination.path);
+    typeof destinationPath === 'string' &&
+    typeof pathname === 'string' &&
+    pathname.startsWith(destinationPath);
 
   useEffect(() => {
     setMounted(true);

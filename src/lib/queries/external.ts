@@ -84,7 +84,7 @@ export function useExternalProofStatus(token?: string | null, proofId?: string |
       return sanitizeExternalProofStatus(response);
     },
     enabled: Boolean(token && proofId),
-    refetchInterval: (_data, query) => {
+    refetchInterval: (query) => {
       const data = query.state.data;
       const error = query.state.error as unknown;
       const hasTerminalStatus =
