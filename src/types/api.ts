@@ -29,6 +29,37 @@ export type RiskFeatureSnapshotRead = {
   correlation_id?: string | null;
 };
 
+export type FraudScoreComparisonRuleBased = {
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.rule_based.score
+  score: number | null;
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.rule_based.ai_risk_level
+  ai_risk_level: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.rule_based.fraud_flags
+  fraud_flags: string[];
+};
+
+export type FraudScoreComparisonMl = {
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.ml.model_version
+  model_version: string;
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.ml.score
+  score: number | null;
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.ml.threshold_high_risk
+  threshold_high_risk: number;
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.ml.threshold_medium_risk
+  threshold_medium_risk: number;
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.ml.suggested_decision
+  suggested_decision: 'MANUAL_REVIEW' | 'APPROVED' | null;
+};
+
+export type FraudScoreComparisonResponse = {
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.proof_id
+  proof_id: string;
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.rule_based
+  rule_based: FraudScoreComparisonRuleBased;
+  // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparisonResponse.ml
+  ml: FraudScoreComparisonMl;
+};
+
 export type AlertRead = {
   // Contract: docs/Backend_info/API_GUIDE (11).md — AlertRead — id
   id: string | number;
