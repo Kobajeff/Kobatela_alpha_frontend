@@ -85,6 +85,10 @@ export const queryKeys = {
       list: <T extends ListFilters>(filters: T) => ['admin', 'merchantSuggestions', filters] as const,
       byId: (suggestionId?: string) => ['admin', 'merchantSuggestions', suggestionId] as const
     },
+    transactions: {
+      listBase: () => ['admin', 'transactions'] as const,
+      list: <T extends ListFilters>(filters: T) => ['admin', 'transactions', filters] as const
+    },
     settings: {
       aiProof: () => ['admin', 'settings', 'ai-proof'] as const
     },

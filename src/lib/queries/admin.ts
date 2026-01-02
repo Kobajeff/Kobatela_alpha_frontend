@@ -46,7 +46,8 @@ import type {
   ProofDecisionRequest,
   ProofDecisionResponse,
   User,
-  FraudScoreComparisonResponse
+  FraudScoreComparisonResponse,
+  TransactionRead
 } from '@/types/api';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
@@ -73,6 +74,13 @@ export interface AdminRiskSnapshotsParams {
 }
 
 export type AdminRiskSnapshotsResponse = PaginatedResponse<RiskFeatureSnapshotRead>;
+
+export interface AdminTransactionsParams {
+  limit?: number;
+  offset?: number;
+}
+
+export type AdminTransactionsResponse = PaginatedResponse<TransactionRead>;
 
 export function useAdminFraudScoreComparison(
   proofId?: string,
@@ -286,6 +294,35 @@ export function useAdminRiskSnapshots(
     queryFn: async () => {
       // Contract: docs/Backend_info/API_GUIDE (12).md — GET /admin/risk-snapshots — scopes admin/support
       const response = await apiClient.get<AdminRiskSnapshotsResponse>('/admin/risk-snapshots', {
+        params: filters
+      });
+      return response.data;
+    },
+    enabled: options?.enabled ?? true,
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+}
+
+export function useAdminTransactions(
+  params: AdminTransactionsParams = {},
+  options?: { enabled?: boolean }
+) {
+  const { limit = 20, offset = 0 } = params;
+  const filters = useMemo(() => ({ limit, offset }), [limit, offset]);
+
+  return useQuery<AdminTransactionsResponse>({
+    queryKey: queryKeys.admin.transactions.list(filters),
+    queryFn: async () => {
+      // Contract: docs/Backend_info/API_GUIDE (14).md — Transactions — GET /transactions — scopes admin
+      const response = await apiClient.get<AdminTransactionsResponse>('/transactions', {
         params: filters
       });
       return response.data;

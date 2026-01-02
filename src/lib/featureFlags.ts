@@ -13,3 +13,7 @@ export function isAdminFraudScoreComparisonEnabled(): boolean {
     (process.env.NEXT_PUBLIC_FF_ADMIN_FRAUD_SCORE_COMPARISON ?? '').toLowerCase()
   );
 }
+
+export function isAdminTransactionsEnabled(): boolean {
+  return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_TRANSACTIONS ?? '').toLowerCase());
+}
