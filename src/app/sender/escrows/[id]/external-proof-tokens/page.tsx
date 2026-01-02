@@ -167,7 +167,7 @@ export default function ExternalProofTokensPage() {
   }, [escrowQuery.data?.milestones]);
 
   const hasMilestones = milestoneOptions.length > 0;
-  const portalLink = issuedToken?.token && origin ? `${origin}/external?token=${issuedToken.token}` : '';
+  const portalLink = origin ? `${origin}/external` : '';
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -340,7 +340,11 @@ export default function ExternalProofTokensPage() {
           {issuedToken?.token && (
             <div className="mt-6 space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <div className="font-semibold">Jeton généré — affiché une seule fois</div>
-              <p>Copiez le jeton ou le lien sécurisé ci-dessous. Il ne sera plus affiché après rafraîchissement.</p>
+              <p>
+                Copiez le jeton (secret) et partagez-le séparément du lien portail ci-dessous. Aucun
+                secret n&apos;est présent dans l’URL et le jeton n’est jamais ré-affiché après
+                rafraîchissement.
+              </p>
               <div className="grid gap-2 md:grid-cols-2">
                 <div className="space-y-1">
                   <div className="text-xs uppercase text-amber-800">Jeton</div>
@@ -357,7 +361,7 @@ export default function ExternalProofTokensPage() {
                 </div>
                 {portalLink && (
                   <div className="space-y-1">
-                    <div className="text-xs uppercase text-amber-800">Lien portail</div>
+                    <div className="text-xs uppercase text-amber-800">Lien portail (sans secret)</div>
                     <div className="flex items-center gap-2">
                       <Input readOnly value={portalLink} />
                       <Button

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -8,8 +8,8 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { Input } from '@/components/ui/Input';
 import {
   clearExternalToken,
+  consumeExternalTokenFromQuery,
   getExternalToken,
-  readTokenFromQuery,
   setExternalToken
 } from '@/lib/external/externalSession';
 import { useExternalEscrowSummary } from '@/lib/queries/external';
@@ -24,23 +24,17 @@ function ExternalEscrowPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [proofToFollow, setProofToFollow] = useState('');
 
-  const tokenFromUrl = useMemo(() => {
-    if (!searchParams) return null;
-    return readTokenFromQuery(searchParams);
-  }, [searchParams]);
-
   useEffect(() => {
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl);
-      setExternalToken(tokenFromUrl);
-      router.replace('/external/escrow');
-    } else {
-      const stored = getExternalToken();
-      if (stored) {
-        setToken(stored);
-      }
+    const fromQuery = consumeExternalTokenFromQuery(searchParams, { replacePath: '/external/escrow' });
+    if (fromQuery) {
+      setToken(fromQuery);
+      return;
     }
-  }, [router, tokenFromUrl]);
+    const stored = getExternalToken();
+    if (stored) {
+      setToken(stored);
+    }
+  }, [searchParams]);
 
   const {
     data,

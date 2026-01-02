@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import {
   clearExternalToken,
-  getExternalToken,
-  readTokenFromQuery,
-  setExternalToken
+  consumeExternalTokenFromQuery,
+  getExternalToken
 } from '@/lib/external/externalSession';
 import { useExternalProofStatus } from '@/lib/queries/external';
 import { mapExternalErrorMessage } from '@/lib/external/externalErrorMessages';
@@ -24,24 +23,27 @@ export default function ExternalProofStatusPage() {
   const [stoppedReason, setStoppedReason] = useState<string | null>(null);
   const proofId = params?.proofId;
 
-  const tokenFromUrl = useMemo(() => {
-    if (!searchParams) return null;
-    return readTokenFromQuery(searchParams);
-  }, [searchParams]);
-
   useEffect(() => {
+    const tokenFromUrl = consumeExternalTokenFromQuery(searchParams, {
+      replacePath: `/external/proofs/${proofId ?? ''}`
+    });
     if (tokenFromUrl) {
       setToken(tokenFromUrl);
-      setExternalToken(tokenFromUrl);
-      router.replace(`/external/proofs/${proofId ?? ''}`);
-    } else {
-      const stored = getExternalToken();
-      if (stored) setToken(stored);
+      return;
     }
-  }, [proofId, router, tokenFromUrl]);
+    const stored = getExternalToken();
+    if (stored) {
+      setToken(stored);
+    }
+  }, [proofId, searchParams]);
 
-  const { data, isLoading, error: queryError, stoppedReason: pollingStopped } =
-    useExternalProofStatus(token, proofId);
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    stoppedReason: pollingStopped,
+    lastAuthErrorStatus
+  } = useExternalProofStatus(token, proofId);
 
   useEffect(() => {
     if (!pollingStopped) {
@@ -66,12 +68,13 @@ export default function ExternalProofStatusPage() {
     if (queryError) {
       const mapped = mapExternalErrorMessage(queryError);
       setError(mapped);
-      const normalized = normalizeApiError(queryError);
-      if (normalized.status === 401 || normalized.status === 403 || normalized.status === 410) {
-        clearExternalToken();
-      }
     }
-  }, [pollingStopped, queryError, router]);
+    const normalized = queryError ? normalizeApiError(queryError) : null;
+    const statusToClear = lastAuthErrorStatus ?? normalized?.status;
+    if (statusToClear && [401, 403, 410].includes(statusToClear)) {
+      clearExternalToken();
+    }
+  }, [lastAuthErrorStatus, pollingStopped, queryError]);
 
   const statusLabel = data?.status ?? '—';
   const isTerminal = Boolean(data?.terminal);

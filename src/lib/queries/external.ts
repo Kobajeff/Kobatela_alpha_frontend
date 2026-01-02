@@ -40,10 +40,6 @@ export function useExternalProofUpload(token?: string | null) {
         throw new Error('Token requis pour le téléversement.');
       }
       return uploadExternalProofFile(token, file, onProgress);
-    },
-    onError: (error) => {
-      // Surface mapped message via thrown error.
-      throw new Error(mapExternalErrorMessage(error));
     }
   });
 }
@@ -55,9 +51,6 @@ export function useExternalProofSubmit(token?: string | null) {
         throw new Error('Token requis pour la soumission.');
       }
       return submitExternalProof(token, payload);
-    },
-    onError: (error) => {
-      throw new Error(mapExternalErrorMessage(error));
     }
   });
 }
@@ -66,11 +59,13 @@ export function useExternalProofStatus(token?: string | null, proofId?: string |
   const intervalRef = useRef(3000);
   const consecutiveErrorRef = useRef(0);
   const [stoppedReason, setStoppedReason] = useState<string | null>(null);
+  const [lastAuthErrorStatus, setLastAuthErrorStatus] = useState<number | null>(null);
 
   useEffect(() => {
     intervalRef.current = 3000;
     consecutiveErrorRef.current = 0;
     setStoppedReason(null);
+    setLastAuthErrorStatus(null);
   }, [proofId, token]);
 
   const query = useQuery({
@@ -81,6 +76,7 @@ export function useExternalProofStatus(token?: string | null, proofId?: string |
       }
       const response = await getExternalProofStatus(token, proofId);
       consecutiveErrorRef.current = 0;
+      setLastAuthErrorStatus(null);
       return sanitizeExternalProofStatus(response);
     },
     enabled: Boolean(token && proofId),
@@ -97,6 +93,7 @@ export function useExternalProofStatus(token?: string | null, proofId?: string |
       const normalizedError = error ? normalizeApiError(error) : null;
       if (normalizedError?.status && [401, 403, 404, 410].includes(normalizedError.status)) {
         setStoppedReason(mapExternalErrorMessage(error));
+        setLastAuthErrorStatus(normalizedError.status);
         return false;
       }
 
@@ -117,5 +114,5 @@ export function useExternalProofStatus(token?: string | null, proofId?: string |
     }
   });
 
-  return { ...query, stoppedReason };
+  return { ...query, stoppedReason, lastAuthErrorStatus };
 }
