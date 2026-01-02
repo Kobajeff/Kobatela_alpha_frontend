@@ -45,7 +45,8 @@ import type {
   ProofStatus,
   ProofDecisionRequest,
   ProofDecisionResponse,
-  User
+  User,
+  FraudScoreComparisonResponse
 } from '@/types/api';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
@@ -72,6 +73,36 @@ export interface AdminRiskSnapshotsParams {
 }
 
 export type AdminRiskSnapshotsResponse = PaginatedResponse<RiskFeatureSnapshotRead>;
+
+export function useAdminFraudScoreComparison(
+  proofId?: string,
+  options?: { enabled?: boolean }
+) {
+  const trimmedProofId = proofId?.trim() ?? '';
+  return useQuery<FraudScoreComparisonResponse>({
+    queryKey: queryKeys.admin.fraud.scoreComparison(trimmedProofId),
+    queryFn: async () => {
+      // Contract: docs/Backend_info/API_GUIDE (13).md — FraudScoreComparison — GET /admin/fraud/score_comparison — scopes admin/support
+      const response = await apiClient.get<FraudScoreComparisonResponse>(
+        '/admin/fraud/score_comparison',
+        {
+          params: { proof_id: trimmedProofId }
+        }
+      );
+      return response.data;
+    },
+    enabled: (options?.enabled ?? true) && Boolean(trimmedProofId),
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+}
 
 function mapProofReviewQueueItem(item: ProofReviewQueueApiItem): AdminProofReviewItem {
   return {

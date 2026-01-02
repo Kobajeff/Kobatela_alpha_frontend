@@ -92,6 +92,9 @@ export const queryKeys = {
       listBase: () => ['admin', 'risk-snapshots'] as const,
       list: <T extends ListFilters>(filters: T) => ['admin', 'risk-snapshots', filters] as const
     },
+    fraud: {
+      scoreComparison: (proofId?: string) => ['admin', 'fraud', 'score-comparison', proofId] as const
+    },
     senders: () => ['admin-senders'] as const,
     pricing: {
       base: () => ['admin', 'pricing'] as const,
