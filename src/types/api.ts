@@ -75,28 +75,40 @@ export type AlertRead = {
   updated_at?: string;
 };
 
-export type MerchantSuggestionStatus = string;
+export type MerchantSuggestionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type MerchantSuggestion = {
   id: string;
-  status?: MerchantSuggestionStatus;
+  name: string;
+  country_code: string;
+  status: MerchantSuggestionStatus;
+  promotion_registry_id?: string | null;
+  metadata?: Record<string, unknown> | null;
+  tax_id?: string | null;
+  account_number?: string | null;
   created_at?: string;
   updated_at?: string;
-  promotion_registry_id?: string | null;
-  review_reason?: string | null;
-  payload?: Record<string, unknown>;
-} & Record<string, unknown>;
+};
 
 export type MerchantSuggestionListResponse =
+  | MerchantSuggestion[]
   | {
-      items: MerchantSuggestion[];
-      total: number;
-      limit: number;
-      offset: number;
-    }
-  | MerchantSuggestion[];
+      items?: MerchantSuggestion[];
+      total?: number;
+      limit?: number;
+      offset?: number;
+    };
 
-export type MerchantSuggestionCreatePayload = Record<string, unknown>;
+export type MerchantSuggestionCreatePayload = {
+  name: string;
+  country_code: string;
+  contact?: Record<string, unknown> | null;
+  tax_id?: string | null;
+  account_number?: string | null;
+  mandate_id?: number | null;
+  escrow_id?: number | null;
+  metadata?: Record<string, unknown> | null;
+};
 
 export type PayoutDestinationType = 'BENEFICIARY_PROVIDER' | 'MERCHANT';
 

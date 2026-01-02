@@ -49,44 +49,19 @@ import type {
   UserProfile,
   UserProfileUpdatePayload
 } from '@/types/api';
-import { buildQueryString, getPaginatedLimitOffset, getPaginatedTotal, normalizePaginatedItems } from './queryUtils';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
 const ACTIVE_MILESTONE_STATUSES = new Set<MilestoneStatus>(['PENDING_REVIEW', 'PAYING']);
 
-function normalizeMerchantSuggestionList(
-  data: unknown,
-  fallbackLimit: number,
-  fallbackOffset: number
-) {
-  const items = normalizePaginatedItems<MerchantSuggestion>(data);
-  const total = getPaginatedTotal<MerchantSuggestion>(data);
-  const { limit, offset } = getPaginatedLimitOffset<MerchantSuggestion>(data);
-  return {
-    items,
-    total,
-    limit: typeof limit === 'number' ? limit : fallbackLimit,
-    offset: typeof offset === 'number' ? offset : fallbackOffset
-  };
-}
-
-export function useMerchantSuggestionsList(params: { limit?: number; offset?: number } = {}) {
-  const { limit = 10, offset = 0 } = params;
-  const queryParams = useMemo(() => ({ limit, offset }), [limit, offset]);
-  return useQuery({
-    queryKey: queryKeys.sender.merchantSuggestions.list(queryParams),
+export function useMerchantSuggestionsList() {
+  return useQuery<MerchantSuggestion[]>({
+    queryKey: queryKeys.sender.merchantSuggestions.listBase(),
     queryFn: async () => {
       if (isDemoMode()) {
-        return {
-          items: [],
-          total: 0,
-          limit,
-          offset
-        };
+        return [];
       }
-      const search = buildQueryString({ limit, offset });
-      const response = await apiClient.get(`/merchant-suggestions${search ? `?${search}` : ''}`);
-      return normalizeMerchantSuggestionList(response.data, limit, offset);
+      const response = await apiClient.get<MerchantSuggestion[]>(`/merchant-suggestions`);
+      return response.data;
     }
   });
 }
