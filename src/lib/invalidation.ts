@@ -16,8 +16,6 @@ type ProofBundleOptions = {
   viewer?: EscrowSummaryViewer;
 };
 
-const summaryViewers: EscrowSummaryViewer[] = ['sender', 'admin', 'provider'];
-
 function findProofListQueryKey(queryClient: QueryClient, escrowId: string) {
   const cachedQueries = queryClient.getQueriesData({
     queryKey: queryKeys.proofs.listBase()
@@ -41,11 +39,15 @@ function invalidateEscrowSummaries(
   escrowId: string,
   viewer?: EscrowSummaryViewer
 ) {
-  const viewers = viewer ? [viewer] : summaryViewers;
-  viewers.forEach((entry) => {
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.escrows.summary(escrowId, entry)
-    });
+  queryClient.invalidateQueries({
+    predicate: (query) => {
+      if (!Array.isArray(query.queryKey)) return false;
+      const [ns, id, segment, keyViewer] = query.queryKey;
+      if (ns !== 'escrows' || segment !== 'summary') return false;
+      if (id !== escrowId) return false;
+      if (viewer && keyViewer !== viewer) return false;
+      return true;
+    }
   });
 }
 
@@ -54,12 +56,16 @@ function refetchEscrowSummaries(
   escrowId: string,
   viewer?: EscrowSummaryViewer
 ) {
-  const viewers = viewer ? [viewer] : summaryViewers;
-  viewers.forEach((entry) => {
-    queryClient.refetchQueries({
-      queryKey: queryKeys.escrows.summary(escrowId, entry),
-      exact: true
-    });
+  queryClient.refetchQueries({
+    predicate: (query) => {
+      if (!Array.isArray(query.queryKey)) return false;
+      const [ns, id, segment, keyViewer] = query.queryKey;
+      if (ns !== 'escrows' || segment !== 'summary') return false;
+      if (id !== escrowId) return false;
+      if (viewer && keyViewer !== viewer) return false;
+      return true;
+    },
+    exact: true
   });
 }
 

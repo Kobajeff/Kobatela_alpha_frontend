@@ -668,7 +668,12 @@ type AdminEscrowSummaryPollingState = {
 
 export function useAdminEscrowSummary(
   escrowId: string,
-  options?: { fundingInProgress?: boolean }
+  options?: {
+    fundingInProgress?: boolean;
+    includeMilestones?: boolean;
+    includeProofs?: boolean;
+    proofsLimit?: number;
+  }
 ) {
   const [pollingTimeouts, setPollingTimeouts] = useState<Record<string, boolean>>({
     [pollingProfiles.fundingEscrow.name]: false,
@@ -696,6 +701,15 @@ export function useAdminEscrowSummary(
       timeoutIdsRef.current = {};
     };
   }, []);
+
+  const summaryParams = useMemo(
+    () => ({
+      include_milestones: options?.includeMilestones ?? true,
+      include_proofs: options?.includeProofs ?? true,
+      proofs_limit: options?.proofsLimit
+    }),
+    [options?.includeMilestones, options?.includeProofs, options?.proofsLimit]
+  );
 
   const refetchInterval = useCallback(
     (query: Query<AdminEscrowSummary>) => {
@@ -732,7 +746,7 @@ export function useAdminEscrowSummary(
   );
 
   const query = useQuery<AdminEscrowSummary>({
-    queryKey: queryKeys.escrows.summary(escrowId, 'admin'),
+    queryKey: queryKeys.escrows.summary(escrowId, 'admin', summaryParams),
     queryFn: async () => {
       if (isDemoMode()) {
         const summary = getDemoEscrowSummary(escrowId);
@@ -743,8 +757,12 @@ export function useAdminEscrowSummary(
           setTimeout(() => resolve(summary), 200);
         });
       }
+      // Contract: docs/Backend_info/API_GUIDE (11).md — GET /admin/escrows/{escrow_id}/summary — admin/support
       const response = await apiClient.get<AdminEscrowSummary>(
-        `/escrows/${escrowId}/summary`
+        `/admin/escrows/${escrowId}/summary`,
+        {
+          params: summaryParams
+        }
       );
       return response.data;
     },
@@ -842,8 +860,7 @@ export function useCreateMilestone(escrowId: string) {
     onSettled: () => {
       if (!escrowId) return;
       queryClient.invalidateQueries({ queryKey: queryKeys.milestones.byEscrow(escrowId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
-      queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
+      invalidateEscrowSummary(queryClient, escrowId);
       queryClient.invalidateQueries({ queryKey: queryKeys.escrows.byId(escrowId) });
     }
   });

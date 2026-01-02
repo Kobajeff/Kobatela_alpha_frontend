@@ -10,8 +10,8 @@ export const queryKeys = {
     listBase: () => ['escrows', 'list'] as const,
     list: <T extends ListFilters>(filters: T) => ['escrows', 'list', filters] as const,
     byId: (id: string) => ['escrows', id] as const,
-    summary: (id: string, viewer: EscrowSummaryViewer) =>
-      ['escrows', id, 'summary', viewer] as const
+    summary: (id: string, viewer: EscrowSummaryViewer, params?: Record<string, unknown>) =>
+      ['escrows', id, 'summary', viewer, params] as const
   },
   milestones: {
     byEscrow: (escrowId: string) => ['milestones', 'byEscrow', escrowId] as const,

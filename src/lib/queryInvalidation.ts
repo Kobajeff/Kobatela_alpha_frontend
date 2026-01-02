@@ -11,18 +11,26 @@ export function afterProofUpload(
     queryClient.invalidateQueries({ queryKey: queryKeys.proofs.byId(proofId) });
   }
   queryClient.invalidateQueries({ queryKey: queryKeys.milestones.byEscrow(escrowId) });
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'provider') });
+  queryClient.invalidateQueries({
+    predicate: (query) =>
+      Array.isArray(query.queryKey) &&
+      query.queryKey[0] === 'escrows' &&
+      query.queryKey[1] === escrowId &&
+      query.queryKey[2] === 'summary'
+  });
   queryClient.invalidateQueries({ queryKey: queryKeys.admin.proofReviewQueueBase() });
   queryClient.invalidateQueries({ queryKey: queryKeys.sender.dashboard() });
 }
 
 export function afterProofDecision(queryClient: QueryClient, escrowId: string) {
   queryClient.invalidateQueries({ queryKey: queryKeys.admin.proofReviewQueueBase() });
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'provider') });
+  queryClient.invalidateQueries({
+    predicate: (query) =>
+      Array.isArray(query.queryKey) &&
+      query.queryKey[0] === 'escrows' &&
+      query.queryKey[1] === escrowId &&
+      query.queryKey[2] === 'summary'
+  });
   queryClient.invalidateQueries({ queryKey: queryKeys.sender.dashboard() });
 }
 
@@ -36,8 +44,12 @@ export function afterPayout(
 }
 
 export function invalidateEscrowSummary(queryClient: QueryClient, escrowId: string) {
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'sender') });
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'admin') });
-  queryClient.invalidateQueries({ queryKey: queryKeys.escrows.summary(escrowId, 'provider') });
+  queryClient.invalidateQueries({
+    predicate: (query) =>
+      Array.isArray(query.queryKey) &&
+      query.queryKey[0] === 'escrows' &&
+      query.queryKey[1] === escrowId &&
+      query.queryKey[2] === 'summary'
+  });
   queryClient.invalidateQueries({ queryKey: queryKeys.milestones.byEscrow(escrowId) });
 }
