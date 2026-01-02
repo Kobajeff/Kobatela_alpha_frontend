@@ -421,6 +421,25 @@ export type Milestone = {
   due_date?: string;
 };
 
+export type TransactionRead = {
+  // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — id
+  id: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — sender_id
+  sender_id: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — receiver_id
+  receiver_id: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — amount
+  amount: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — currency
+  currency: string;
+  // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — status
+  status: string;
+  // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — created_at
+  created_at: string;
+  // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — updated_at
+  updated_at: string;
+};
+
 export type Payment = {
   id: string;
   escrow_id: string;
