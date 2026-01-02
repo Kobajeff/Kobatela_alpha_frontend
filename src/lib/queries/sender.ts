@@ -38,7 +38,6 @@ import type {
   MilestoneStatus,
   Payment,
   Proof,
-  ProofStatus,
   AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
@@ -53,52 +52,7 @@ import type {
 import { buildQueryString, getPaginatedLimitOffset, getPaginatedTotal, normalizePaginatedItems } from './queryUtils';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
-const PENDING_PROOF_STATUSES = new Set(['PENDING', 'PENDING_REVIEW']);
 const ACTIVE_MILESTONE_STATUSES = new Set<MilestoneStatus>(['PENDING_REVIEW', 'PAYING']);
-
-function filterProofsByStatus(proofs: Proof[], status: ProofStatus) {
-  const normalizedStatus = status.toUpperCase();
-  if (normalizedStatus === 'PENDING') {
-    return proofs.filter((proof) =>
-      PENDING_PROOF_STATUSES.has(String(proof.status).toUpperCase())
-    );
-  }
-  return proofs.filter(
-    (proof) => String(proof.status).toUpperCase() === normalizedStatus
-  );
-}
-
-async function fetchProofsWithStatus({
-  status,
-  mine,
-  limit,
-  offset,
-  fallbackLimit
-}: {
-  status: ProofStatus;
-  mine?: boolean;
-  limit: number;
-  offset: number;
-  fallbackLimit: number;
-}) {
-  const query = buildQueryString({ mine, status, limit, offset });
-  try {
-    const response = await apiClient.get(`/proofs?${query}`);
-    return normalizePaginatedItems<Proof>(response.data);
-  } catch (error) {
-    if (isAxiosError(error) && error.response?.status === 422) {
-      const fallbackQuery = buildQueryString({
-        mine,
-        limit: fallbackLimit,
-        offset
-      });
-      const response = await apiClient.get(`/proofs?${fallbackQuery}`);
-      const proofs = normalizePaginatedItems<Proof>(response.data);
-      return filterProofsByStatus(proofs, status);
-    }
-    throw error;
-  }
-}
 
 function normalizeMerchantSuggestionList(
   data: unknown,
@@ -340,16 +294,17 @@ export function useUpdateUserProfile() {
   });
 }
 
-export function useSenderDashboard() {
+export function useSenderDashboard(params: { limit?: number; includeActions?: boolean } = {}) {
+  const { limit = 5, includeActions = false } = params;
   return useQuery<SenderDashboard>({
     queryKey: queryKeys.sender.dashboard(),
     queryFn: async () => {
       if (isDemoMode()) {
-        const recentEscrows = demoEscrows.slice(0, 3);
-        const pendingProofs = demoProofs.filter((p) => p.status === 'PENDING');
-        const recentPayments = demoPayments;
+        const recentEscrows = demoEscrows.slice(0, limit);
+        const pendingProofs = demoProofs.filter((p) => p.status === 'PENDING').slice(0, limit);
+        const recentPayments = demoPayments.slice(0, limit);
 
-        return new Promise((resolve) => {
+        return new Promise<SenderDashboard>((resolve) => {
           setTimeout(
             () =>
               resolve({
@@ -361,40 +316,17 @@ export function useSenderDashboard() {
           );
         });
       }
-      const escrowsQuery = buildQueryString({ mine: true, limit: 5, offset: 0 });
-      const escrowsResponse = await apiClient.get(`/escrows?${escrowsQuery}`);
-      const escrows = normalizePaginatedItems<EscrowListItem>(escrowsResponse.data);
 
-      const pendingProofs = await fetchProofsWithStatus({
-        status: 'PENDING',
-        mine: true,
-        limit: 5,
-        offset: 0,
-        fallbackLimit: 50
+      const searchParams = new URLSearchParams({
+        limit: String(limit)
       });
+      if (includeActions) {
+        searchParams.set('include_actions', 'true');
+      }
 
-      const escrowsForPayments = escrows.slice(0, 5);
-      const summaries = await Promise.allSettled(
-        escrowsForPayments.map((escrow) =>
-          apiClient.get<SenderEscrowSummary>(`/escrows/${escrow.id}/summary`)
-        )
-      );
-
-      const payments = summaries.flatMap((result) =>
-        result.status === 'fulfilled'
-          ? (result.value.data.payments ?? [])
-          : []
-      );
-
-      const recentPayments = payments
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5);
-
-      return {
-        recent_escrows: escrows as EscrowListItem[],
-        pending_proofs: pendingProofs,
-        recent_payments: recentPayments
-      };
+      // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — GET /sender/dashboard — sender
+      const response = await apiClient.get<SenderDashboard>(`/sender/dashboard?${searchParams.toString()}`);
+      return response.data;
     }
   });
 }
