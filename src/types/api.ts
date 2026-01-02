@@ -147,6 +147,65 @@ export type BeneficiaryProfilePublicRead = {
   updated_at?: string;
 } & Record<string, unknown>;
 
+export type BeneficiaryProfileAdminRead = {
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — id
+  id?: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — owner_user_id
+  owner_user_id?: string | number | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — user_id
+  user_id?: string | number | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — first_name
+  first_name?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — last_name
+  last_name?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — full_name
+  full_name?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — email
+  email?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — phone
+  phone?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — address_line1
+  address_line1?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — address_line2
+  address_line2?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — city
+  city?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — postal_code
+  postal_code?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — country_code
+  country_code?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — iban
+  iban?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — bank_account
+  bank_account?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — bank_account_number
+  bank_account_number?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — bank_routing_number
+  bank_routing_number?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — mobile_money_number
+  mobile_money_number?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — mobile_money_provider
+  mobile_money_provider?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — payout_channel
+  payout_channel?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — national_id_type
+  national_id_type?: NationalIdType | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — national_id_number
+  national_id_number?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — metadata
+  metadata?: Record<string, unknown> | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — notes
+  notes?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — is_active
+  is_active?: boolean | null;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — masked
+  masked?: boolean;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — created_at
+  created_at?: string;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — updated_at
+  updated_at?: string;
+} & Record<string, unknown>;
+
 type UsageMandateBase = {
   total_amount: string;
   currency: string;

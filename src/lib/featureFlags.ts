@@ -21,3 +21,9 @@ export function isAdminTransactionsEnabled(): boolean {
 export function isAdminSpendEnabled(): boolean {
   return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_SPEND ?? '').toLowerCase());
 }
+
+export function isAdminBeneficiaryLookupEnabled(): boolean {
+  return truthyValues.has(
+    (process.env.NEXT_PUBLIC_FF_ADMIN_BENEFICIARY_LOOKUP ?? '').toLowerCase()
+  );
+}

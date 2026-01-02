@@ -58,6 +58,8 @@ export const queryKeys = {
     detail: (tokenId?: string | number | null) => ['externalProofTokens', tokenId] as const
   },
   admin: {
+    beneficiaryProfile: (beneficiaryProfileId: string) =>
+      ['admin', 'beneficiaries', beneficiaryProfileId] as const,
     dashboardStats: () => ['adminDashboardStats', { scope: 'canonical' }] as const,
     alerts: {
       listBase: () => ['admin', 'alerts'] as const,

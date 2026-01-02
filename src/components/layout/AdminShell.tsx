@@ -31,6 +31,7 @@ export function AdminShell({ children, user }: AdminShellProps) {
         { href: adminSendersPath, label: 'Senders' },
         { href: adminReviewQueuePath, label: 'Proof review queue' },
         { href: '/admin/alerts', label: 'Alerts' },
+        { href: '/admin/beneficiaries/lookup', label: 'Beneficiary lookup' },
         { href: '/admin/fraud/score-comparison', label: 'Fraud score comparison' },
         { href: '/admin/transactions', label: 'Transactions' },
         { href: '/admin/spend', label: 'Spend' },
