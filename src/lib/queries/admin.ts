@@ -22,6 +22,7 @@ import {
 import { invalidateAdminDashboards, invalidateProofBundle } from '@/lib/invalidation';
 import { invalidateEscrowSummary } from '@/lib/queryInvalidation';
 import type {
+  AlertRead,
   AdminDashboardStats,
   AdminAdvisorListItem,
   AdminAdvisorSummary,
@@ -51,6 +52,15 @@ type ProofReviewQueueApiItem = Proof & Partial<AdminProofReviewItem> & {
   sender?: { email?: string };
   advisor?: { id?: string | number; email?: string; name?: string };
 };
+
+export interface AdminAlertsParams {
+  limit?: number;
+  offset?: number;
+  type?: string;
+  status?: string;
+}
+
+export type AdminAlertsResponse = PaginatedResponse<AlertRead>;
 
 function mapProofReviewQueueItem(item: ProofReviewQueueApiItem): AdminProofReviewItem {
   return {
@@ -186,6 +196,37 @@ async function fetchProofCountByStatus(status: ProofStatus) {
     { review_mode: 'review_queue', status, limit: 1, offset: 0 },
     { review_mode: 'review_queue', limit: 100, offset: 0 }
   );
+}
+
+export function useAdminAlerts(
+  params: AdminAlertsParams = {},
+  options?: { enabled?: boolean }
+) {
+  const { limit = 20, offset = 0, type, status } = params;
+  const filters = useMemo(
+    () => ({ limit, offset, type, status }),
+    [limit, offset, status, type]
+  );
+
+  return useQuery<AdminAlertsResponse>({
+    queryKey: queryKeys.admin.alerts.list(filters),
+    queryFn: async () => {
+      const response = await apiClient.get<AdminAlertsResponse>('/alerts', {
+        params: filters
+      });
+      return response.data;
+    },
+    enabled: options?.enabled ?? true,
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
 }
 
 async function fetchEscrowsTotal() {

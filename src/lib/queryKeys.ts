@@ -59,6 +59,10 @@ export const queryKeys = {
   },
   admin: {
     dashboardStats: () => ['adminDashboardStats', { scope: 'canonical' }] as const,
+    alerts: {
+      listBase: () => ['admin', 'alerts'] as const,
+      list: <T extends ListFilters>(filters: T) => ['admin', 'alerts', filters] as const
+    },
     users: {
       list: <T extends ListFilters>(filters: T) => ['admin-users', filters] as const,
       byId: (userId?: string) => ['admin', 'users', userId] as const,
