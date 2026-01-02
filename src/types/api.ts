@@ -421,6 +421,21 @@ export type Milestone = {
   due_date?: string;
 };
 
+export type AllowedUsageRead = {
+  // Contract: docs/Backend_info/API_GUIDE (15).md — Spend/Usage — GET /admin/spend/allowed — id
+  id: number;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — Spend/Usage — GET /admin/spend/allowed — owner_id
+  owner_id: number;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — Spend/Usage — GET /admin/spend/allowed — merchant_id
+  merchant_id: number;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — Spend/Usage — GET /admin/spend/allowed — category_id
+  category_id: number;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — Spend/Usage — GET /admin/spend/allowed — created_at
+  created_at: string;
+  // Contract: docs/Backend_info/API_GUIDE (15).md — Spend/Usage — GET /admin/spend/allowed — updated_at
+  updated_at: string;
+};
+
 export type TransactionRead = {
   // Contract: docs/Backend_info/API_GUIDE (14).md — TransactionRead — id
   id: string | number;

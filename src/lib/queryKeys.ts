@@ -89,6 +89,13 @@ export const queryKeys = {
       listBase: () => ['admin', 'transactions'] as const,
       list: <T extends ListFilters>(filters: T) => ['admin', 'transactions', filters] as const
     },
+    spend: {
+      allowed: {
+        listBase: () => ['admin', 'spend', 'allowed'] as const,
+        list: <T extends ListFilters>(filters: T) =>
+          ['admin', 'spend', 'allowed', filters] as const
+      }
+    },
     settings: {
       aiProof: () => ['admin', 'settings', 'ai-proof'] as const
     },
