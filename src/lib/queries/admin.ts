@@ -121,34 +121,62 @@ function filterProofsByStatus(proofs: Proof[], status: ProofStatus) {
 }
 
 async function fetchProofCountByStatus(status: ProofStatus) {
-  const query = buildQueryString({
-    review_mode: true,
-    status,
-    limit: 1,
-    offset: 0
-  });
-  try {
-    const response = await apiClient.get(`/proofs?${query}`);
-    return { count: getPaginatedTotal<Proof>(response.data), denied: false };
-  } catch (error) {
-    if (isAxiosError(error)) {
-      const statusCode = error.response?.status;
-      if (statusCode === 403) {
-        return { count: null, denied: true };
+  const buildUrl = (endpoint: string, params: QueryParams) => {
+    const query = buildQueryString(params);
+    return query ? `${endpoint}?${query}` : endpoint;
+  };
+
+  const fetchFromEndpoint = async (
+    endpoint: string,
+    params: QueryParams,
+    fallbackParams: QueryParams
+  ) => {
+    try {
+      const response = await apiClient.get(buildUrl(endpoint, params));
+      return { count: getPaginatedTotal<Proof>(response.data), denied: false };
+    } catch (error) {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 403) {
+          return { count: null, denied: true };
+        }
+        if (statusCode === 422) {
+          try {
+            const response = await apiClient.get(buildUrl(endpoint, fallbackParams));
+            const proofs = normalizePaginatedItems<Proof>(response.data);
+            return { count: filterProofsByStatus(proofs, status).length, denied: false };
+          } catch (fallbackError) {
+            if (isAxiosError(fallbackError) && fallbackError.response?.status === 403) {
+              return { count: null, denied: true };
+            }
+            throw fallbackError;
+          }
+        }
       }
-      if (statusCode === 422) {
-        const fallbackQuery = buildQueryString({
-          review_mode: true,
-          limit: 100,
-          offset: 0
-        });
-        const response = await apiClient.get(`/proofs?${fallbackQuery}`);
-        const proofs = normalizePaginatedItems<Proof>(response.data);
-        return { count: filterProofsByStatus(proofs, status).length, denied: false };
-      }
+      throw error;
     }
-    throw error;
+  };
+
+  try {
+    return await fetchFromEndpoint(
+      '/admin/proofs/review-queue',
+      { status, limit: 1, offset: 0 },
+      { limit: 100, offset: 0 }
+    );
+  } catch (error) {
+    if (
+      !isAxiosError(error) ||
+      (error.response?.status !== 404 && error.response?.status !== 405)
+    ) {
+      throw error;
+    }
   }
+
+  return fetchFromEndpoint(
+    '/proofs',
+    { review_mode: 'review_queue', status, limit: 1, offset: 0 },
+    { review_mode: 'review_queue', limit: 100, offset: 0 }
+  );
 }
 
 async function fetchEscrowsTotal() {
