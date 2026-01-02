@@ -47,7 +47,8 @@ import type {
   ProofDecisionResponse,
   User,
   FraudScoreComparisonResponse,
-  TransactionRead
+  TransactionRead,
+  AllowedUsageRead
 } from '@/types/api';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
@@ -81,6 +82,13 @@ export interface AdminTransactionsParams {
 }
 
 export type AdminTransactionsResponse = PaginatedResponse<TransactionRead>;
+
+export interface AdminSpendAllowedParams {
+  limit?: number;
+  offset?: number;
+}
+
+export type AdminSpendAllowedResponse = PaginatedResponse<AllowedUsageRead>;
 
 export function useAdminFraudScoreComparison(
   proofId?: string,
@@ -323,6 +331,35 @@ export function useAdminTransactions(
     queryFn: async () => {
       // Contract: docs/Backend_info/API_GUIDE (14).md — Transactions — GET /transactions — scopes admin
       const response = await apiClient.get<AdminTransactionsResponse>('/transactions', {
+        params: filters
+      });
+      return response.data;
+    },
+    enabled: options?.enabled ?? true,
+    retry: (failureCount, error) => {
+      if (isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          return false;
+        }
+      }
+      return failureCount < 2;
+    }
+  });
+}
+
+export function useAdminSpendAllowed(
+  params: AdminSpendAllowedParams = {},
+  options?: { enabled?: boolean }
+) {
+  const { limit = 20, offset = 0 } = params;
+  const filters = useMemo(() => ({ limit, offset }), [limit, offset]);
+
+  return useQuery<AdminSpendAllowedResponse>({
+    queryKey: queryKeys.admin.spend.allowed.list(filters),
+    queryFn: async () => {
+      // Contract: docs/Backend_info/API_GUIDE (15).md — Spend/Usage — GET /admin/spend/allowed — scopes admin/support
+      const response = await apiClient.get<AdminSpendAllowedResponse>('/admin/spend/allowed', {
         params: filters
       });
       return response.data;

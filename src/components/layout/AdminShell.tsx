@@ -33,6 +33,7 @@ export function AdminShell({ children, user }: AdminShellProps) {
         { href: '/admin/alerts', label: 'Alerts' },
         { href: '/admin/fraud/score-comparison', label: 'Fraud score comparison' },
         { href: '/admin/transactions', label: 'Transactions' },
+        { href: '/admin/spend', label: 'Spend' },
         { href: '/admin/risk-snapshots', label: 'Risk snapshots' },
         { href: '/admin/advisors', label: 'Advisors' },
         { href: '/admin/settings/ai-proof', label: 'AI proof settings' },

@@ -17,3 +17,7 @@ export function isAdminFraudScoreComparisonEnabled(): boolean {
 export function isAdminTransactionsEnabled(): boolean {
   return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_TRANSACTIONS ?? '').toLowerCase());
 }
+
+export function isAdminSpendEnabled(): boolean {
+  return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_SPEND ?? '').toLowerCase());
+}
