@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -15,8 +15,9 @@ import {
 import { useExternalEscrowSummary } from '@/lib/queries/external';
 import { mapExternalErrorMessage } from '@/lib/external/externalErrorMessages';
 import { normalizeApiError } from '@/lib/apiError';
+import { LoadingState } from '@/components/common/LoadingState';
 
-export default function ExternalEscrowPage() {
+function ExternalEscrowPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
@@ -177,5 +178,13 @@ export default function ExternalEscrowPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ExternalEscrowPage() {
+  return (
+    <Suspense fallback={<LoadingState label="Chargement..." />}>
+      <ExternalEscrowPageContent />
+    </Suspense>
   );
 }

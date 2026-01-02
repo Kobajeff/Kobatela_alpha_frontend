@@ -5,10 +5,12 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
 import { useAdvisorProfile } from '@/lib/queries/advisor';
 import { useAuthMe } from '@/lib/queries/sender';
+import type { NormalizedAuthUser } from '@/lib/authIdentity';
 
 export default function AdvisorProfilePage() {
   const { data: profile, isLoading, isError, error } = useAdvisorProfile();
-  const { data: authUser } = useAuthMe();
+  const authMeQuery = useAuthMe();
+  const authUser = authMeQuery.data as NormalizedAuthUser | undefined;
 
   if (isLoading) {
     return <LoadingState label="Chargement de votre profil conseiller..." />;

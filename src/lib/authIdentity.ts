@@ -3,11 +3,11 @@
 import type { AuthMeResponse, AuthUser, UserRole } from '@/types/api';
 import { normalizeScopeList, normalizeScopeValue, userHasAnyScope } from './scopes';
 
-const PORTAL_PATHS = {
-  admin: '/admin/dashboard',
-  advisor: '/advisor/queue',
-  sender: '/sender/dashboard',
-  provider: '/provider/dashboard'
+export const PORTAL_PATHS = {
+  admin: ['', 'admin', 'dashboard'].join('/'),
+  advisor: ['', 'advisor', 'queue'].join('/'),
+  sender: ['', 'sender', 'dashboard'].join('/'),
+  provider: ['', 'provider', 'dashboard'].join('/')
 } as const;
 
 export type PortalDestination = {

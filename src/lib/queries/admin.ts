@@ -568,9 +568,9 @@ export function useAdminProofReviewQueue(params: {
           setTimeout(() => resolve(demoAdminProofQueue), 200);
         });
       }
-      const response = await apiClient.get('/proofs', {
+      // Contract: GET /admin/proofs/review-queue (API_GUIDE.md — Admin tools / support operations)
+      const response = await apiClient.get('/admin/proofs/review-queue', {
         params: {
-          review_mode: 'review_queue',
           limit,
           offset,
           advisor_id,

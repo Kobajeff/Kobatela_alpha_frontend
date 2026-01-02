@@ -124,6 +124,9 @@ export function ProofForm({
         setFileError(validationError);
         return;
       }
+    } else {
+      setFileError('Veuillez sélectionner un fichier de preuve.');
+      return;
     }
 
     setIsUploading(true);
@@ -135,7 +138,7 @@ export function ProofForm({
         type: proofType
       };
 
-      let uploadResponse: ProofFileUploadResponse;
+      let uploadResponse: ProofFileUploadResponse | null = null;
 
       if (selectedFile) {
         const validationMessage = validateFile(selectedFile);
@@ -174,6 +177,11 @@ export function ProofForm({
         }
 
         setUploadProgress(100);
+      }
+
+      if (!uploadResponse) {
+        setErrorMessage('Le fichier de preuve est manquant.');
+        return;
       }
 
       const createdProof = await createProof.mutateAsync({

@@ -49,22 +49,25 @@ export function RequireScope({
   const isUnauthorized = status === 401 || status === 404;
   const isForbidden = status === 403;
   const destination = getPortalDestination(user ?? null);
+  const destinationPath = destination?.path;
   const hasAllowedRole = allowRoles.length === 0 || allowRoles.includes(user?.role as UserRole);
   const hasAllowedScope =
     anyScopes.length === 0 || (user ? anyScopes.some((scope) => hasScope(user, scope)) : false);
   const isAtDestination =
-    Boolean(destination?.path) && Boolean(pathname) && pathname.startsWith(destination.path);
+    typeof destinationPath === 'string' &&
+    typeof pathname === 'string' &&
+    pathname.startsWith(destinationPath);
   const needsPortalRedirect =
     Boolean(user) &&
     (!hasAllowedRole || !hasAllowedScope) &&
-    Boolean(destination?.path) &&
+    Boolean(destinationPath) &&
     Boolean(pathname) &&
     !isAtDestination;
   const shouldPortalRedirect =
     mounted &&
     hasToken &&
     Boolean(user) &&
-    Boolean(destination?.path) &&
+    Boolean(destinationPath) &&
     Boolean(pathname) &&
     !isAtDestination &&
     (isForbidden || needsPortalRedirect);

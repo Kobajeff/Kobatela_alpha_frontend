@@ -2,7 +2,8 @@
 
 // React Query hooks encapsulating sender-specific API calls.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import type { Route } from 'next';
 import type { Query } from '@tanstack/query-core';
 import { isAxiosError } from 'axios';
 import { usePathname, useRouter } from 'next/navigation';
@@ -247,7 +248,7 @@ export function useMyAdvisor() {
   });
 }
 
-export function useAuthMe() {
+export function useAuthMe(): UseQueryResult<NormalizedAuthUser, Error> {
   const [hasToken, setHasToken] = useState(false);
 
   useEffect(() => {
@@ -292,11 +293,14 @@ export function useAuthMe() {
       if (status === 401 || status === 403) return false;
       return failureCount < 1;
     },
-    enabled,
-    onSuccess: (data) => {
-      setAuthUser(data);
-    }
+    enabled
   });
+
+  useEffect(() => {
+    if (query.data) {
+      setAuthUser(query.data);
+    }
+  }, [query.data]);
 
   return query;
 }
@@ -691,7 +695,7 @@ async function listEscrowMilestones(escrowId: string) {
 async function getMilestone(milestoneId: string) {
   if (isDemoMode()) {
     const milestone = demoEscrows
-      .map((escrow) => getDemoEscrowSummary(escrow.id))
+      .map((escrow) => getDemoEscrowSummary(String(escrow.id)))
       .flatMap((summary) => summary?.milestones ?? [])
       .find((entry) => entry.id === milestoneId);
     return new Promise<Milestone>((resolve, reject) => {
@@ -1061,7 +1065,7 @@ export function useProofReviewPolling(
       setStopPolling(true);
       const destination = getPortalDestination(authUser ?? null);
       if (destination?.path && pathname && !pathname.startsWith(destination.path)) {
-        router.replace(destination.path);
+        router.replace(destination.path as Route);
       }
     }
   }, [authUser, pathname, query.error, router]);

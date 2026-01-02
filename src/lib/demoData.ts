@@ -64,6 +64,7 @@ export const demoEscrows: EscrowListItem[] = [
   {
     id: 'escrow-1',
     status: 'FUNDED',
+    amount_total: '1500',
     amount: 1500,
     currency: 'EUR',
     created_at: '2025-01-10T10:00:00Z',
@@ -72,6 +73,7 @@ export const demoEscrows: EscrowListItem[] = [
   {
     id: 'escrow-2',
     status: 'RELEASED',
+    amount_total: '800',
     amount: 800,
     currency: 'EUR',
     created_at: '2025-01-01T09:00:00Z',
@@ -80,6 +82,7 @@ export const demoEscrows: EscrowListItem[] = [
   {
     id: 'escrow-3',
     status: 'CANCELLED',
+    amount_total: '2200',
     amount: 2200,
     currency: 'EUR',
     created_at: '2025-01-05T12:00:00Z',
@@ -178,6 +181,7 @@ export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummary | nu
     milestones: [
       {
         id: 'm1',
+        escrow_id: escrowId,
         label: 'Foundation',
         sequence_index: 1,
         amount: '500.00',
@@ -187,6 +191,7 @@ export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummary | nu
       },
       {
         id: 'm2',
+        escrow_id: escrowId,
         label: 'Walls',
         sequence_index: 2,
         amount: '1000.00',
