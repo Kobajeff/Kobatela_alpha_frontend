@@ -73,10 +73,6 @@ function scanFile(filePath) {
       addViolation(filePath, lineNumber, '/admin/proofs/.../reject', line);
     }
 
-    if (line.includes('/admin/escrows/') && line.includes('/summary')) {
-      addViolation(filePath, lineNumber, '/admin/escrows/.../summary', line);
-    }
-
     if (adminScope && line.includes('/users/')) {
       addViolation(filePath, lineNumber, '/users/ (admin scope)', line);
     }

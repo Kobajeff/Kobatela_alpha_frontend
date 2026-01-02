@@ -364,6 +364,7 @@ export type SenderEscrowSummary = {
 };
 
 export type AdminEscrowSummary = SenderEscrowSummary & {
+  // Contract: docs/Backend_info/API_GUIDE (11).md — AdminEscrowSummaryRead — GET /admin/escrows/{escrow_id}/summary
   advisor?: AdvisorProfile | null;
 };
 
