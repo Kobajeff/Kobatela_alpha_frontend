@@ -212,6 +212,12 @@ export default function AdminPaymentDetailPage() {
   const showExecute = !isTerminalStatus;
   const executeDisabled =
     executeLocked || executePayment.isPending || alreadyExecuted || statusLabel !== 'PENDING';
+  const payoutBlockedReasons = Array.isArray(payment.payout_blocked_reasons)
+    ? payment.payout_blocked_reasons.filter((reason) => Boolean(reason))
+    : [];
+  const pspReference =
+    payment.psp_ref ?? payment.psp_reference ?? payment.provider_reference ?? null;
+  const idempotencyKey = payment.idempotency_key ?? null;
 
   return (
     <div className="space-y-6">
@@ -254,12 +260,33 @@ export default function AdminPaymentDetailPage() {
             <p className="text-xs uppercase text-slate-500">Escrow</p>
             <p className="font-medium">{payment.escrow_id ?? '—'}</p>
           </div>
-          {(payment.psp_reference || payment.provider_reference) && (
-            <div className="md:col-span-2">
-              <p className="text-xs uppercase text-slate-500">PSP référence</p>
-              <p className="font-medium">{payment.psp_reference ?? payment.provider_reference}</p>
-            </div>
-          )}
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase text-slate-500">Blocages de paiement</p>
+            {payoutBlockedReasons.length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                {payoutBlockedReasons.map((reason, index) => (
+                  <li key={`${reason}-${index}`}>{reason}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-600">Aucun blocage de paiement signalé.</p>
+            )}
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase text-slate-500">Identifiants PSP (ops uniquement)</p>
+            <dl className="mt-2 space-y-2 text-sm text-slate-700">
+              <div className="flex items-start justify-between gap-2">
+                <dt className="text-slate-500">Référence PSP</dt>
+                <dd className="font-medium break-all text-right">{pspReference ?? '—'}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-2">
+                <dt className="text-slate-500">Clé d'idempotence</dt>
+                <dd className="font-medium break-all text-right">{idempotencyKey ?? '—'}</dd>
+              </div>
+            </dl>
+          </div>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <Button variant="outline" onClick={handleRefresh}>

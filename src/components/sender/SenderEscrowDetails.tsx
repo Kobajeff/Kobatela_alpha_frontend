@@ -258,6 +258,7 @@ export function SenderEscrowDetails({
             </div>
           )}
           {summary.proofs.length === 0 && <p className="text-slate-600">Aucune preuve pour le moment.</p>}
+          {/* Sender view intentionally omits AI internals and invoice totals that are restricted to ops roles. */}
           {summary.proofs.map((proof) => (
             <div key={proof.id} className="rounded-md border border-slate-100 px-3 py-2">
               <div className="flex items-center justify-between">
@@ -310,6 +311,7 @@ export function SenderEscrowDetails({
         </CardHeader>
         <CardContent className="space-y-2">
           {summary.payments.length === 0 && <p className="text-slate-600">Aucun paiement enregistré.</p>}
+          {/* PSP references and idempotency keys are ops-only and intentionally hidden in the sender view. */}
           {summary.payments.map((payment) => (
             <div
               key={payment.id}
