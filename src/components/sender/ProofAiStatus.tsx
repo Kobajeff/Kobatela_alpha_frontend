@@ -3,7 +3,7 @@ import { formatDateTime } from '@/lib/format';
 import type { AiAnalysis } from '@/types/api';
 import { mapAiRiskToBadge } from '@/lib/uiMappings';
 import { useAuthMe } from '@/lib/queries/sender';
-import { hasScope } from '@/lib/authIdentity';
+import { canViewSensitiveProofFields } from '@/lib/authIdentity';
 
 type Props = {
   proof: AiAnalysis & { status?: string };
@@ -17,11 +17,7 @@ const formatScore = (value: AiAnalysis['ai_score']): string => {
 
 export function ProofAiStatus({ proof, compact = false }: Props) {
   const { data: user } = useAuthMe();
-  const canViewAi =
-    user?.role === 'admin' ||
-    user?.role === 'support' ||
-    hasScope(user ?? undefined, 'ADMIN') ||
-    hasScope(user ?? undefined, 'SUPPORT');
+  const canViewAi = canViewSensitiveProofFields(user ?? null);
 
   if (!canViewAi) {
     return null;

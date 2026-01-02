@@ -259,6 +259,11 @@ export type AiAnalysis = {
   ai_score: number | null;
   ai_explanation: string | null;
   ai_checked_at: string | null;
+  ai_score_ml?: number | null;
+  ai_risk_level_ml?: string | null;
+  ai_flags?: string[] | null;
+  ai_reviewed_by?: string | number | null;
+  ai_reviewed_at?: string | null;
 };
 
 export type ProofStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -287,6 +292,10 @@ export type Proof = {
   file_url?: string;
   status: ProofStatus;
   created_at: string;
+  invoice_total_amount?: string | number | null;
+  invoice_currency?: string | null;
+  payout_eligible?: boolean | null;
+  payout_blocked_reasons?: string[] | null;
 } & AiAnalysis;
 
 export type ProofDecisionResponse = Proof;
@@ -354,6 +363,9 @@ export type Payment = {
   currency: string;
   status: PaymentStatus;
   created_at: string;
+  psp_ref?: string | null;
+  idempotency_key?: string | null;
+  payout_blocked_reasons?: string[] | null;
 };
 
 export type SenderEscrowSummary = {

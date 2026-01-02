@@ -71,7 +71,16 @@ function mapProofReviewQueueItem(item: ProofReviewQueueApiItem): AdminProofRevie
     ai_risk_level: item.ai_risk_level ?? null,
     ai_score: item.ai_score ?? null,
     ai_explanation: item.ai_explanation ?? null,
-    ai_checked_at: item.ai_checked_at ?? null
+    ai_checked_at: item.ai_checked_at ?? null,
+    ai_score_ml: item.ai_score_ml ?? null,
+    ai_risk_level_ml: item.ai_risk_level_ml ?? null,
+    ai_flags: item.ai_flags ?? null,
+    ai_reviewed_by: item.ai_reviewed_by ?? null,
+    ai_reviewed_at: item.ai_reviewed_at ?? null,
+    invoice_total_amount: item.invoice_total_amount ?? null,
+    invoice_currency: item.invoice_currency ?? null,
+    payout_eligible: item.payout_eligible ?? null,
+    payout_blocked_reasons: item.payout_blocked_reasons ?? null
   };
 }
 

@@ -134,3 +134,22 @@ export function getPortalDestination(
 
   return null;
 }
+
+function isAdminOrSupportRole(role?: UserRole | string | null): boolean {
+  if (!role) return false;
+  const normalizedRole = typeof role === 'string' ? role.toLowerCase() : role;
+  return normalizedRole === 'admin' || normalizedRole === 'support';
+}
+
+function hasAdminOrSupportScope(user?: AuthUser | NormalizedAuthUser | null): boolean {
+  const scopes = user ? getNormalizedScopes(user) : [];
+  return scopes.includes(normalizeScopeValue('ADMIN')) || scopes.includes(normalizeScopeValue('SUPPORT'));
+}
+
+export function canViewOpsPaymentFields(user?: AuthUser | NormalizedAuthUser | null): boolean {
+  return isAdminOrSupportRole(user?.role) || hasAdminOrSupportScope(user);
+}
+
+export function canViewSensitiveProofFields(user?: AuthUser | NormalizedAuthUser | null): boolean {
+  return canViewOpsPaymentFields(user);
+}
