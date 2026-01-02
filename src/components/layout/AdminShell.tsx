@@ -36,6 +36,7 @@ export function AdminShell({ children, user }: AdminShellProps) {
         { href: '/admin/transactions', label: 'Transactions' },
         { href: '/admin/spend', label: 'Spend' },
         { href: '/admin/risk-snapshots', label: 'Risk snapshots' },
+        { href: '/admin/kct-public', label: 'KCT Public' },
         { href: '/admin/advisors', label: 'Advisors' },
         { href: '/admin/settings/ai-proof', label: 'AI proof settings' },
         hasPricingScope
