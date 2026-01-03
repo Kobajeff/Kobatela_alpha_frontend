@@ -3,15 +3,14 @@
 import { useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
-import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 import { formatDateTime } from '@/lib/format';
-import { isAdminAlertsEnabled } from '@/lib/featureFlags';
+import { opsAlertsEnabled } from '@/lib/featureFlags';
 import { useAdminAlerts } from '@/lib/queries/admin';
 import { getPaginatedLimitOffset } from '@/lib/queries/queryUtils';
-import { extractErrorMessage } from '@/lib/apiClient';
+import { OpsErrorState } from '@/components/admin/OpsErrorState';
+import { OpsPagination } from '@/components/admin/OpsPagination';
 import type { AlertRead } from '@/types/api';
 
 const DEFAULT_LIMIT = 20;
@@ -27,7 +26,7 @@ function getPayloadSummary(payload?: AlertRead['payload']) {
 export default function AdminAlertsPage() {
   const [offset, setOffset] = useState(0);
   const [limit] = useState(DEFAULT_LIMIT);
-  const alertsEnabled = isAdminAlertsEnabled();
+  const alertsEnabled = opsAlertsEnabled();
 
   const alertsQuery = useAdminAlerts(
     {
@@ -45,9 +44,6 @@ export default function AdminAlertsPage() {
 
   const items = useMemo(() => alertsQuery.data?.items ?? [], [alertsQuery.data?.items]);
   const total = alertsQuery.data?.total ?? items.length;
-
-  const canGoPrev = currentOffset > 0;
-  const canGoNext = currentOffset + pageSize < total;
 
   const handlePrev = () => {
     setOffset((prev) => Math.max(prev - pageSize, 0));
@@ -76,17 +72,13 @@ export default function AdminAlertsPage() {
   }
 
   if (alertsQuery.isError) {
-    const status = isAxiosError(alertsQuery.error)
-      ? alertsQuery.error.response?.status
-      : null;
-    const message =
-      status === 401 || status === 403
-        ? "Accès refusé : les scopes admin ou support sont requis pour consulter les alertes."
-        : extractErrorMessage(alertsQuery.error);
+    const status = isAxiosError(alertsQuery.error) ? alertsQuery.error.response?.status : null;
     return (
-      <div className="p-4">
-        <ErrorAlert message={message} />
-      </div>
+      <OpsErrorState
+        error={alertsQuery.error}
+        statusCode={status}
+        onRetry={() => alertsQuery.refetch()}
+      />
     );
   }
 
@@ -103,20 +95,14 @@ export default function AdminAlertsPage() {
             Feed en lecture seule pour les scopes admin et support.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <span>
-            Affichage {currentOffset + 1}-
-            {Math.min(currentOffset + pageSize, total)} sur {total}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={handlePrev} disabled={!canGoPrev}>
-              Précédent
-            </Button>
-            <Button variant="secondary" size="sm" onClick={handleNext} disabled={!canGoNext}>
-              Suivant
-            </Button>
-          </div>
-        </div>
+        <OpsPagination
+          limit={pageSize}
+          offset={currentOffset}
+          total={total}
+          pageItemCount={items.length}
+          onPrev={handlePrev}
+          onNext={handleNext}
+        />
       </div>
 
       <div className="overflow-hidden rounded-md border border-slate-200 bg-white">

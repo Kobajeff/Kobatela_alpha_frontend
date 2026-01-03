@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import type { Route } from 'next';
+import { useRouter } from 'next/navigation';
 import { useMerchantSuggestionsList } from '@/lib/queries/sender';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -11,35 +9,10 @@ import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage, isForbiddenError } from '@/lib/apiClient';
 
-const DEFAULT_LIMIT = 10;
-
 export default function MerchantSuggestionsPage() {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
   const router = useRouter();
 
-  const limit = useMemo(
-    () => Number(searchParams?.get('limit')) || DEFAULT_LIMIT,
-    [searchParams]
-  );
-  const offset = useMemo(() => Number(searchParams?.get('offset')) || 0, [searchParams]);
-
-  const { data, isLoading, isError, error, refetch } = useMerchantSuggestionsList({
-    limit,
-    offset
-  });
-
-  const handlePageChange = (direction: 'next' | 'prev') => {
-    const nextOffset =
-      direction === 'next'
-        ? offset + limit
-        : Math.max(0, offset - limit);
-
-    const params = new URLSearchParams(searchParams?.toString());
-    params.set('limit', String(limit));
-    params.set('offset', String(nextOffset));
-    router.push(`${pathname}?${params.toString()}` as Route);
-  };
+  const { data, isLoading, isError, error, refetch } = useMerchantSuggestionsList();
 
   const isForbidden = isError && isForbiddenError(error);
   const accessDeniedMessage = 'Access denied.';
@@ -63,11 +36,7 @@ export default function MerchantSuggestionsPage() {
 
   if (!data) return null;
 
-  const { items, total } = data;
-  const start = total === 0 ? 0 : Math.min(offset + 1, total);
-  const end = total === 0 ? 0 : Math.min(offset + limit, total);
-  const hasNext = offset + limit < total;
-  const hasPrevious = offset > 0;
+  const items = data ?? [];
 
   return (
     <div className="space-y-6">
@@ -86,9 +55,7 @@ export default function MerchantSuggestionsPage() {
       <Card>
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <CardTitle className="text-lg">Vos suggestions</CardTitle>
-          <div className="text-sm text-slate-600">
-            Résultats {start} - {end} sur {total}
-          </div>
+          <div className="text-sm text-slate-600">Total : {items.length}</div>
         </CardHeader>
         <CardContent className="space-y-4">
           {items.length === 0 ? (
@@ -122,17 +89,7 @@ export default function MerchantSuggestionsPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between">
-            <Button variant="outline" disabled={!hasPrevious} onClick={() => handlePageChange('prev')}>
-              Précédent
-            </Button>
-            <span className="text-sm text-slate-600">
-              Page {Math.floor(offset / limit) + 1}
-            </span>
-            <Button variant="outline" disabled={!hasNext} onClick={() => handlePageChange('next')}>
-              Suivant
-            </Button>
-          </div>
+          <div className="text-sm text-slate-600">Pagination non disponible (liste complète).</div>
         </CardContent>
       </Card>
     </div>

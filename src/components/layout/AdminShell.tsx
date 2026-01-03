@@ -23,27 +23,32 @@ export function AdminShell({ children, user }: AdminShellProps) {
   const pathname = usePathname();
   const hasPricingScope = useMemo(() => userHasScope(user, 'pricing_admin'), [user]);
 
-  const adminLinks = useMemo(
+  const coreLinks = useMemo(
     () =>
       [
         { href: adminDashboardPath, label: 'Dashboard' },
         { href: '/admin/users', label: 'Users' },
         { href: adminSendersPath, label: 'Senders' },
         { href: adminReviewQueuePath, label: 'Proof review queue' },
-        { href: '/admin/alerts', label: 'Alerts' },
-        { href: '/admin/beneficiaries/lookup', label: 'Beneficiary lookup' },
-        { href: '/admin/fraud/score-comparison', label: 'Fraud score comparison' },
-        { href: '/admin/transactions', label: 'Transactions' },
-        { href: '/admin/spend', label: 'Spend' },
-        { href: '/admin/risk-snapshots', label: 'Risk snapshots' },
-        { href: '/admin/kct-public', label: 'KCT Public' },
         { href: '/admin/advisors', label: 'Advisors' },
         { href: '/admin/settings/ai-proof', label: 'AI proof settings' },
-        hasPricingScope
-          ? { href: '/admin/pricing', label: 'Pricing' }
-          : null
+        hasPricingScope ? { href: '/admin/pricing', label: 'Pricing' } : null
       ].filter(Boolean) as Array<{ href: string; label: string }>,
     [hasPricingScope]
+  );
+
+  const opsLinks = useMemo(
+    () =>
+      [
+        { href: '/admin/alerts', label: 'Alerts' },
+        { href: '/admin/risk-snapshots', label: 'Risk snapshots' },
+        { href: '/admin/fraud/score-comparison', label: 'Fraud score comparison' },
+        { href: '/admin/beneficiaries/lookup', label: 'Beneficiary lookup' },
+        { href: '/admin/spend', label: 'Spend' },
+        { href: '/admin/transactions', label: 'Transactions' },
+        { href: '/admin/kct-public', label: 'KCT Public' }
+      ],
+    []
   );
 
   return (
@@ -52,7 +57,27 @@ export function AdminShell({ children, user }: AdminShellProps) {
       <div className="flex">
         <aside className="w-60 border-r border-slate-200 bg-white px-4 py-6">
           <nav className="flex flex-col gap-2">
-            {adminLinks.map((link) => {
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Core
+            </div>
+            {coreLinks.map((link) => {
+              const active = pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href as Route}
+                  className={`rounded-md px-3 py-2 text-sm font-medium hover:bg-indigo-50 ${
+                    active ? 'bg-indigo-100 text-indigo-700' : 'text-slate-700'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Operations
+            </div>
+            {opsLinks.map((link) => {
               const active = pathname.startsWith(link.href);
               return (
                 <Link

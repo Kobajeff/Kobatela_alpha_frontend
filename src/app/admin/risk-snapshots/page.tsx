@@ -5,13 +5,14 @@ import { useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
 import { EmptyState } from '@/components/common/EmptyState';
 import { formatDateTime } from '@/lib/format';
-import { isAdminRiskSnapshotsEnabled } from '@/lib/featureFlags';
+import { opsRiskSnapshotsEnabled } from '@/lib/featureFlags';
 import { useAdminRiskSnapshots } from '@/lib/queries/admin';
 import { getPaginatedLimitOffset } from '@/lib/queries/queryUtils';
+import { OpsErrorState } from '@/components/admin/OpsErrorState';
+import { OpsPagination } from '@/components/admin/OpsPagination';
 import type { RiskFeatureSnapshotRead, RiskSubjectType } from '@/types/api';
 
 const DEFAULT_LIMIT = 20;
@@ -31,7 +32,7 @@ export default function AdminRiskSnapshotsPage() {
   const [offset, setOffset] = useState(0);
   const [subjectType, setSubjectType] = useState<RiskSubjectType | ''>('');
   const [subjectIdInput, setSubjectIdInput] = useState('');
-  const flagEnabled = isAdminRiskSnapshotsEnabled();
+  const flagEnabled = opsRiskSnapshotsEnabled();
 
   const parsedSubjectId = useMemo(() => {
     const trimmed = subjectIdInput.trim();
@@ -62,9 +63,6 @@ export default function AdminRiskSnapshotsPage() {
   const items = useMemo(() => snapshotsQuery.data?.items ?? [], [snapshotsQuery.data?.items]);
   const total = snapshotsQuery.data?.total ?? items.length;
 
-  const canGoPrev = currentOffset > 0;
-  const canGoNext = currentOffset + pageSize < total;
-
   const handlePrev = () => setOffset((prev) => Math.max(prev - pageSize, 0));
   const handleNext = () => setOffset((prev) => prev + pageSize);
 
@@ -92,17 +90,13 @@ export default function AdminRiskSnapshotsPage() {
   }
 
   if (snapshotsQuery.isError) {
-    const status = isAxiosError(snapshotsQuery.error)
-      ? snapshotsQuery.error.response?.status
-      : null;
-    const message =
-      status === 401 || status === 403
-        ? "Accès refusé : les scopes admin ou support sont requis pour consulter les risk snapshots."
-        : 'Erreur lors du chargement des risk snapshots.';
+    const status = isAxiosError(snapshotsQuery.error) ? snapshotsQuery.error.response?.status : null;
     return (
-      <div className="p-4">
-        <ErrorAlert message={message} />
-      </div>
+      <OpsErrorState
+        error={snapshotsQuery.error}
+        statusCode={status}
+        onRetry={() => snapshotsQuery.refetch()}
+      />
     );
   }
 
@@ -141,19 +135,14 @@ export default function AdminRiskSnapshotsPage() {
             Lecture seule, scopes admin/support. Pagination via limit/offset.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <span>
-            Affichage {currentOffset + 1}-{Math.min(currentOffset + pageSize, total)} sur {total}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={handlePrev} disabled={!canGoPrev}>
-              Précédent
-            </Button>
-            <Button variant="secondary" size="sm" onClick={handleNext} disabled={!canGoNext}>
-              Suivant
-            </Button>
-          </div>
-        </div>
+        <OpsPagination
+          limit={pageSize}
+          offset={currentOffset}
+          total={total}
+          pageItemCount={items.length}
+          onPrev={handlePrev}
+          onNext={handleNext}
+        />
       </div>
 
       <div className="rounded-md border border-slate-200 bg-white p-4">
