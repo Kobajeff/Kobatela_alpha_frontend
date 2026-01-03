@@ -6,11 +6,11 @@ import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { LoadingState } from '@/components/common/LoadingState';
-import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { EmptyState } from '@/components/common/EmptyState';
-import { isAdminFraudScoreComparisonEnabled } from '@/lib/featureFlags';
+import { opsFraudScoreComparisonEnabled } from '@/lib/featureFlags';
 import { useAdminFraudScoreComparison } from '@/lib/queries/admin';
 import type { FraudScoreComparisonResponse } from '@/types/api';
+import { OpsErrorState } from '@/components/admin/OpsErrorState';
 
 function formatScore(score: number | null | undefined) {
   if (score === null || typeof score === 'undefined') return '—';
@@ -102,7 +102,7 @@ export default function FraudScoreComparisonPage() {
   const [inputValue, setInputValue] = useState('');
   const [proofId, setProofId] = useState<string | undefined>(undefined);
 
-  const flagEnabled = isAdminFraudScoreComparisonEnabled();
+  const flagEnabled = opsFraudScoreComparisonEnabled();
   const normalizedProofId = useMemo(() => proofId?.trim() ?? '', [proofId]);
 
   const comparisonQuery = useAdminFraudScoreComparison(normalizedProofId, {
@@ -165,17 +165,11 @@ export default function FraudScoreComparisonPage() {
       ) : comparisonQuery.isLoading ? (
         <LoadingState label="Chargement de la comparaison de scores..." />
       ) : comparisonQuery.isError ? (
-        <div className="p-4">
-          <ErrorAlert
-            message={
-              isAxiosError(comparisonQuery.error) &&
-              (comparisonQuery.error.response?.status === 401 ||
-                comparisonQuery.error.response?.status === 403)
-                ? "Accès refusé : les scopes admin ou support sont requis pour consulter la comparaison."
-                : 'Erreur lors du chargement de la comparaison de scores.'
-            }
-          />
-        </div>
+        <OpsErrorState
+          error={comparisonQuery.error}
+          statusCode={isAxiosError(comparisonQuery.error) ? comparisonQuery.error.response?.status : null}
+          onRetry={() => comparisonQuery.refetch()}
+        />
       ) : comparisonQuery.data ? (
         <FraudScoresView data={comparisonQuery.data} />
       ) : (

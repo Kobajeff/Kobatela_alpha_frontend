@@ -43,22 +43,24 @@ function isActionable(status?: string) {
   return normalized.includes('PENDING');
 }
 
-function bestEffortDisplayName(payload?: Record<string, unknown>) {
-  if (!payload) return '';
-  const nameKeys = ['display_name', 'name', 'merchant_name', 'business_name'];
-  for (const key of nameKeys) {
-    const value = payload[key];
-    if (typeof value === 'string' && value.trim()) return value;
+function bestEffortDisplayName(suggestion?: MerchantSuggestion | null) {
+  if (!suggestion) return '';
+  if (suggestion.name) return suggestion.name;
+  const metadata = suggestion.metadata;
+  if (metadata && typeof metadata['name'] === 'string') {
+    const value = String(metadata['name']).trim();
+    if (value) return value;
   }
   return '';
 }
 
-function bestEffortCountry(payload?: Record<string, unknown>) {
-  if (!payload) return '';
-  const countryKeys = ['country', 'country_code', 'countryName'];
-  for (const key of countryKeys) {
-    const value = payload[key];
-    if (typeof value === 'string' && value.trim()) return value;
+function bestEffortCountry(suggestion?: MerchantSuggestion | null) {
+  if (!suggestion) return '';
+  if (suggestion.country_code) return suggestion.country_code;
+  const metadata = suggestion.metadata;
+  if (metadata && typeof metadata['country'] === 'string') {
+    const value = String(metadata['country']).trim();
+    if (value) return value;
   }
   return '';
 }
@@ -112,8 +114,8 @@ export default function AdminMerchantSuggestionsPage() {
       : items.filter((item) => String(item.status || '').toLowerCase().includes(statusFilter.toLowerCase()));
     if (!normalizedSearch) return filteredByStatus;
     return filteredByStatus.filter((item) => {
-      const displayName = bestEffortDisplayName(item.payload).toLowerCase();
-      const country = bestEffortCountry(item.payload).toLowerCase();
+      const displayName = bestEffortDisplayName(item).toLowerCase();
+      const country = bestEffortCountry(item).toLowerCase();
       return (
         item.id.toLowerCase().includes(normalizedSearch) ||
         displayName.includes(normalizedSearch) ||
@@ -161,11 +163,16 @@ export default function AdminMerchantSuggestionsPage() {
   };
 
   const getDisplayName = (suggestion: MerchantSuggestion) => {
-    return bestEffortDisplayName(suggestion.payload) || '—';
+    return bestEffortDisplayName(suggestion) || '—';
   };
 
   const getCountry = (suggestion: MerchantSuggestion) => {
-    return bestEffortCountry(suggestion.payload) || '—';
+    return bestEffortCountry(suggestion) || '—';
+  };
+
+  const getReviewReason = (suggestion: MerchantSuggestion) => {
+    const value = (suggestion as { review_reason?: string | null }).review_reason;
+    return value && value.trim ? value.trim() : value || '—';
   };
 
   const isPromotable = (suggestion: MerchantSuggestion) => {
@@ -368,7 +375,7 @@ export default function AdminMerchantSuggestionsPage() {
               <div className="space-y-1 sm:col-span-2">
                 <p className="text-xs uppercase text-slate-500">Review reason</p>
                 <p className="text-sm text-slate-700 whitespace-pre-wrap">
-                  {selected.review_reason || '—'}
+                  {getReviewReason(selected)}
                 </p>
               </div>
             </div>

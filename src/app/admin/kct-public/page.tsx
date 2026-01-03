@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
 import { RequireScope } from '@/components/system/RequireScope';
-import { isAdminKctPublicEnabled } from '@/lib/featureFlags';
+import { opsKctPublicEnabled } from '@/lib/featureFlags';
 import { useKctPublicProjects, type KctPublicProjectsParams } from '@/lib/queries/kctPublic';
 import type { GovProjectRead } from '@/types/api';
+import { OpsErrorState } from '@/components/admin/OpsErrorState';
 
 const DOMAIN_OPTIONS: Array<{ value: '' | 'public' | 'aid'; label: string }> = [
   { value: '', label: 'Tous les domaines' },
@@ -151,7 +151,7 @@ function ProjectsTable({ projects }: { projects: GovProjectRead[] }) {
 function AdminKctPublicContent() {
   const [formFilters, setFormFilters] = useState<KctPublicProjectsParams>({});
   const [appliedFilters, setAppliedFilters] = useState<KctPublicProjectsParams>({});
-  const flagEnabled = isAdminKctPublicEnabled();
+  const flagEnabled = opsKctPublicEnabled();
 
   const projectsQuery = useKctPublicProjects(appliedFilters, { enabled: flagEnabled });
   const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
@@ -183,14 +183,13 @@ function AdminKctPublicContent() {
     const status = isAxiosError(projectsQuery.error)
       ? projectsQuery.error.response?.status
       : null;
-    const message =
-      status === 401 || status === 403
-        ? 'Accès refusé : une clé API admin (ou sender) liée à un utilisateur GOV/ONG est requise pour lire /kct_public/projects.'
-        : 'Erreur lors du chargement des projets KCT Public.';
     return (
-      <div className="p-4">
-        <ErrorAlert message={message} />
-      </div>
+      <OpsErrorState
+        error={projectsQuery.error}
+        statusCode={status}
+        fallbackMessage="Erreur lors du chargement des projets KCT Public."
+        onRetry={() => projectsQuery.refetch()}
+      />
     );
   }
 

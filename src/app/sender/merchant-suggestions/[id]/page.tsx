@@ -50,7 +50,7 @@ export default function MerchantSuggestionDetailPage({
 
   if (!data) return null;
 
-  const formattedPayload = JSON.stringify(data.payload ?? data, null, 2);
+  const formattedPayload = JSON.stringify(data, null, 2);
 
   return (
     <div className="space-y-4">

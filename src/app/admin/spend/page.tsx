@@ -3,17 +3,16 @@
 import { useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
-import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 import { RequireScope } from '@/components/system/RequireScope';
-import { extractErrorMessage } from '@/lib/apiClient';
 import { formatDateTime } from '@/lib/format';
-import { isAdminSpendEnabled } from '@/lib/featureFlags';
+import { opsSpendEnabled } from '@/lib/featureFlags';
 import { useAdminSpendAllowed } from '@/lib/queries/admin';
 import { getPaginatedLimitOffset } from '@/lib/queries/queryUtils';
 import type { AllowedUsageRead } from '@/types/api';
+import { OpsErrorState } from '@/components/admin/OpsErrorState';
+import { OpsPagination } from '@/components/admin/OpsPagination';
 
 const DEFAULT_LIMIT = 20;
 
@@ -21,7 +20,7 @@ function SpendAllowlistContent() {
   const [offset, setOffset] = useState(0);
   const [limit] = useState(DEFAULT_LIMIT);
 
-  const spendEnabled = isAdminSpendEnabled();
+  const spendEnabled = opsSpendEnabled();
 
   const spendQuery = useAdminSpendAllowed(
     { limit, offset },
@@ -35,9 +34,6 @@ function SpendAllowlistContent() {
 
   const items = useMemo(() => spendQuery.data?.items ?? [], [spendQuery.data?.items]);
   const total = spendQuery.data?.total ?? items.length;
-
-  const canGoPrev = currentOffset > 0;
-  const canGoNext = currentOffset + pageSize < total;
 
   const handlePrev = () => setOffset((prev) => Math.max(prev - pageSize, 0));
   const handleNext = () => setOffset((prev) => prev + pageSize);
@@ -62,14 +58,13 @@ function SpendAllowlistContent() {
 
   if (spendQuery.isError) {
     const status = isAxiosError(spendQuery.error) ? spendQuery.error.response?.status : null;
-    const message =
-      status === 401 || status === 403
-        ? 'Accès refusé : seuls les scopes admin/support peuvent consulter cette liste.'
-        : extractErrorMessage(spendQuery.error);
     return (
-      <div className="p-4">
-        <ErrorAlert message={message} />
-      </div>
+      <OpsErrorState
+        error={spendQuery.error}
+        statusCode={status}
+        onRetry={() => spendQuery.refetch()}
+        fallbackMessage="Lecture impossible de la liste des dépenses autorisées."
+      />
     );
   }
 
@@ -91,19 +86,14 @@ function SpendAllowlistContent() {
             Lecture seule de l&apos;endpoint GET /admin/spend/allowed (admin/support).
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <span>
-            Affichage {currentOffset + 1}-{Math.min(currentOffset + pageSize, total)} sur {total}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={handlePrev} disabled={!canGoPrev}>
-              Précédent
-            </Button>
-            <Button variant="secondary" size="sm" onClick={handleNext} disabled={!canGoNext}>
-              Suivant
-            </Button>
-          </div>
-        </div>
+        <OpsPagination
+          limit={pageSize}
+          offset={currentOffset}
+          total={total}
+          pageItemCount={items.length}
+          onPrev={handlePrev}
+          onNext={handleNext}
+        />
       </div>
 
       <div className="overflow-hidden rounded-md border border-slate-200 bg-white">

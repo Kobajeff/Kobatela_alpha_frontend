@@ -1,33 +1,33 @@
 const truthyValues = new Set(['true']);
 
-export function isAdminAlertsEnabled(): boolean {
-  return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_ALERTS ?? '').toLowerCase());
+function envFlagEnabled(value?: string) {
+  return truthyValues.has((value ?? '').toLowerCase());
 }
 
-export function isAdminRiskSnapshotsEnabled(): boolean {
-  return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_RISK_SNAPSHOTS ?? '').toLowerCase());
+export function opsAlertsEnabled(): boolean {
+  return envFlagEnabled(process.env.NEXT_PUBLIC_FF_ADMIN_ALERTS);
 }
 
-export function isAdminFraudScoreComparisonEnabled(): boolean {
-  return truthyValues.has(
-    (process.env.NEXT_PUBLIC_FF_ADMIN_FRAUD_SCORE_COMPARISON ?? '').toLowerCase()
-  );
+export function opsRiskSnapshotsEnabled(): boolean {
+  return envFlagEnabled(process.env.NEXT_PUBLIC_FF_ADMIN_RISK_SNAPSHOTS);
 }
 
-export function isAdminTransactionsEnabled(): boolean {
-  return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_TRANSACTIONS ?? '').toLowerCase());
+export function opsFraudScoreComparisonEnabled(): boolean {
+  return envFlagEnabled(process.env.NEXT_PUBLIC_FF_ADMIN_FRAUD_SCORE_COMPARISON);
 }
 
-export function isAdminSpendEnabled(): boolean {
-  return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_SPEND ?? '').toLowerCase());
+export function opsTransactionsEnabled(): boolean {
+  return envFlagEnabled(process.env.NEXT_PUBLIC_FF_ADMIN_TRANSACTIONS);
 }
 
-export function isAdminBeneficiaryLookupEnabled(): boolean {
-  return truthyValues.has(
-    (process.env.NEXT_PUBLIC_FF_ADMIN_BENEFICIARY_LOOKUP ?? '').toLowerCase()
-  );
+export function opsSpendEnabled(): boolean {
+  return envFlagEnabled(process.env.NEXT_PUBLIC_FF_ADMIN_SPEND);
 }
 
-export function isAdminKctPublicEnabled(): boolean {
-  return truthyValues.has((process.env.NEXT_PUBLIC_FF_ADMIN_KCT_PUBLIC ?? '').toLowerCase());
+export function opsBeneficiaryLookupEnabled(): boolean {
+  return envFlagEnabled(process.env.NEXT_PUBLIC_FF_ADMIN_BENEFICIARY_LOOKUP);
+}
+
+export function opsKctPublicEnabled(): boolean {
+  return envFlagEnabled(process.env.NEXT_PUBLIC_FF_ADMIN_KCT_PUBLIC);
 }
