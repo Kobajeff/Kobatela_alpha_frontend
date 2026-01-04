@@ -330,6 +330,11 @@ export type EscrowReleaseConditions = {
   milestones?: EscrowReleaseConditionMilestone[];
 };
 
+export type FundingSessionRead = {
+  funding_id: number;
+  client_secret: string;
+};
+
 export type BeneficiaryCreate = {
   // Contract: docs/Backend_info/API_GUIDE (7).md — BeneficiaryCreate — full_name
   full_name: string;
@@ -392,10 +397,10 @@ export type CreateProofPayload = {
 
 export type AiAnalysis = {
   ai_risk_level: 'warning' | 'suspect' | null;
-  ai_score: number | null;
+  ai_score: number | string | null;
   ai_explanation: string | null;
   ai_checked_at: string | null;
-  ai_score_ml?: number | null;
+  ai_score_ml?: number | string | null;
   ai_risk_level_ml?: string | null;
   ai_flags?: string[] | null;
   ai_reviewed_by?: string | number | null;
@@ -692,25 +697,29 @@ export interface AdminSender {
 }
 
 export type AdminProofReviewItem = {
-  id: string;
-  escrow_id: string;
-  milestone_name?: string;
-  sender_email?: string;
-  description?: string;
-  type?: ProofType;
+  proof_id: number;
+  escrow_id: number;
+  milestone_id?: number | null;
   status: ProofStatus;
+  type: ProofType;
+  storage_key?: string | null;
+  storage_url?: string | null;
+  sha256?: string | null;
   created_at: string;
-  attachment_url?: string;
-  file_id?: string;
-  file_url?: string;
-  advisor_id?: string;
-  advisor_email?: string;
-  advisor_name?: string;
-  invoice_total_amount?: string | number | null;
+  invoice_total_amount?: string | null;
   invoice_currency?: string | null;
+  ai_risk_level: AiAnalysis['ai_risk_level'];
+  ai_score: AiAnalysis['ai_score'];
+  ai_flags?: AiAnalysis['ai_flags'];
+  ai_explanation: AiAnalysis['ai_explanation'];
+  ai_checked_at: AiAnalysis['ai_checked_at'];
+  ai_reviewed_by: AiAnalysis['ai_reviewed_by'];
+  ai_reviewed_at: AiAnalysis['ai_reviewed_at'];
+  metadata?: ProofMetadata | null;
+  advisor?: AdvisorSummary | null;
   payout_eligible?: boolean | null;
   payout_blocked_reasons?: string[] | null;
-} & AiAnalysis;
+};
 
 export type ProofType = 'PHOTO' | 'DOCUMENT';
 
@@ -911,8 +920,23 @@ export interface AdvisorSenderItem {
   assigned_at: string;
 }
 
-export interface AiProofSetting {
-  bool_value: boolean;
-  source?: string | null;
-  updated_at?: string | null;
+export interface AdvisorSummary {
+  id: number;
+  advisor_id?: string | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  country?: string | null;
+  language?: string | null;
+  advisor_grade?: string | null;
+  advisor_review?: string | null;
+  sender_managed?: number | null;
+  total_number_of_case_managed?: number | null;
+}
+
+export interface AdminSettingRead {
+  key: string;
+  value?: boolean | null;
+  effective: boolean;
 }

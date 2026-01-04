@@ -32,14 +32,14 @@
 - **GET /escrows?mine=true**
   - **Used in**: `useSenderEscrows` (sender list view).【src/lib/queries/sender.ts#L300-L323】
   - **Query params**: `mine=true`, `limit`, `offset`, optional `status` filter.【src/lib/queries/sender.ts#L320-L322】
-  - **Response fields used**: `id`, `status`, `amount`, `currency`, `created_at` rendered in list rows.【src/components/sender/SenderEscrowList.tsx#L29-L40】
+  - **Response fields used**: `id`, `status`, `amount_total`, `currency`, `created_at` rendered in list rows.【src/components/sender/SenderEscrowList.tsx#L29-L40】
 - **POST /escrows**
   - **Used in**: `useCreateEscrow` mutation (create escrow flow).【src/lib/queries/sender.ts#L328-L350】
   - **Request fields**: `EscrowCreatePayload` is passed through (keys defined by form components, not enumerated in this file).【src/lib/queries/sender.ts#L330-L349】
   - **Response fields used**: `id`, `status`, `amount_total`, `currency`, `created_at` used in demo fallback and data refresh logic.【src/lib/queries/sender.ts#L332-L343】
 - **GET /escrows/{escrow_id}/summary**
   - **Used in**: `useSenderEscrowSummary` query (sender escrow detail).【src/lib/queries/sender.ts#L419-L499】
-  - **Response fields used**: `summary.escrow.id/status/amount/currency/created_at`, `summary.milestones[*]` fields (`id`, `label/name`, `sequence_index`, `status`, `due_date`), `summary.proofs[*]` fields (`id`, `status`, `created_at`), `summary.payments[*]` fields (`id`, `amount`, `currency`, `status`, `created_at`).【src/components/sender/SenderEscrowDetails.tsx#L100-L227】【src/components/sender/SenderEscrowDetails.tsx#L240-L332】
+  - **Response fields used**: `summary.escrow.id/status/amount_total/currency/deadline_at`, `summary.milestones[*]` fields (`id`, `label`, `sequence_index`, `status`), `summary.proofs[*]` fields (`id`, `status`, `created_at`, `storage_url`), `summary.payments[*]` fields (`id`, `amount`, `status`, `created_at`) plus `summary.escrow.currency` for display.【src/components/sender/SenderEscrowDetails.tsx#L100-L227】【src/components/sender/SenderEscrowDetails.tsx#L240-L340】
 - **GET /escrows/{escrow_id}/milestones**
   - **Used in**: `useEscrowMilestones` query (milestone list/polling).【src/lib/queries/sender.ts#L576-L590】
 - **GET /escrows/milestones/{milestone_id}**
@@ -49,12 +49,12 @@
   - **Request fields (sender)**: `label`, `amount`, `currency`, `sequence_index`, `proof_kind`, `proof_requirements` explicitly set in payload.【src/lib/queries/sender.ts#L368-L380】
 
 ## Escrow lifecycle actions (sender)
-- **POST /escrows/{escrow_id}/mark-delivered** — `useMarkDelivered` action hook.【src/lib/queries/sender.ts#L722-L724】
-- **POST /escrows/{escrow_id}/client-approve** — `useClientApprove` action hook.【src/lib/queries/sender.ts#L726-L728】
-- **POST /escrows/{escrow_id}/client-reject** — `useClientReject` action hook.【src/lib/queries/sender.ts#L730-L732】
+- **POST /escrows/{escrow_id}/mark-delivered** — `useMarkDelivered` action hook (empty payload).【src/lib/queries/sender.ts#L722-L724】
+- **POST /escrows/{escrow_id}/client-approve** — `useClientApprove` action hook (empty payload).【src/lib/queries/sender.ts#L726-L728】
+- **POST /escrows/{escrow_id}/client-reject** — `useClientReject` action hook (empty payload).【src/lib/queries/sender.ts#L730-L732】
 - **POST /escrows/{escrow_id}/check-deadline** — `useCheckDeadline` action hook.【src/lib/queries/sender.ts#L734-L735】
 - **POST /escrows/{escrow_id}/funding-session** — `useCreateFundingSession` mutation (PSP session).【src/lib/queries/sender.ts#L740-L753】
-- **POST /escrows/{escrow_id}/deposit** — `useDepositEscrow` mutation with `Idempotency-Key` header.【src/lib/queries/sender.ts#L783-L801】
+- **POST /escrows/{escrow_id}/deposit** — `useDepositEscrow` mutation with `{ amount }` body and `Idempotency-Key` header.【src/lib/queries/sender.ts#L783-L806】
 
 ## Proof uploads & lifecycle
 - **POST /files/proofs**
@@ -94,10 +94,10 @@
 - **GET /alerts** — `useAdminAlerts` (admin/support).【src/lib/queries/admin.ts#L300-L306】
 - **GET /admin/risk-snapshots** — `useAdminRiskSnapshots` (admin/support).【src/lib/queries/admin.ts#L320-L337】
 - **GET /admin/fraud/score_comparison** — `useAdminFraudScoreComparison` (admin/support).【src/lib/queries/admin.ts#L123-L138】
-- **GET /admin/proofs/review-queue** — `useAdminProofReviewQueue` (admin/support). UI maps fields such as `id`, `escrow_id`, `milestone_name`, `sender_email`, `ai_score`, `invoice_total_amount`, etc.【src/lib/queries/admin.ts#L153-L182】【src/lib/queries/admin.ts#L808-L837】
+- **GET /admin/proofs/review-queue** — `useAdminProofReviewQueue` (admin/support). UI maps fields such as `proof_id`, `escrow_id`, `milestone_id`, `status`, `type`, `created_at`, AI fields, and advisor summary when present.【src/lib/queries/admin.ts#L153-L182】【src/lib/queries/admin.ts#L808-L837】
 - **GET /admin/advisors/overview** — admin advisors workload overview.【src/lib/adminApi.ts#L97-L101】
-- **GET /admin/settings/ai-proof** — admin settings read.【src/lib/adminApi.ts#L104-L108】
-- **POST /admin/settings/ai-proof** — admin settings update with `{ bool_value }` body.【src/lib/adminApi.ts#L111-L115】
+- **GET /admin/settings/ai-proof** — admin settings read (`key`, `value`, `effective`).【src/lib/adminApi.ts#L104-L108】
+- **POST /admin/settings/ai-proof** — admin settings update with `enabled` query param (no body).【src/lib/adminApi.ts#L111-L117】
 - **GET /admin/users** — list admin users (admin).【src/lib/adminApi.ts#L38-L50】
 - **GET /admin/users/{user_id}** — admin user detail (admin).【src/lib/adminApi.ts#L53-L56】
 - **POST /admin/users** — admin user creation (admin).【src/lib/adminApi.ts#L22-L27】

@@ -132,9 +132,11 @@ export function SenderEscrowDetails({
             <ForbiddenBanner title={forbiddenTitle} subtitle={forbiddenSubtitle} code={forbiddenCode} />
           )}
           <p>
-            Montant : {summary.escrow.amount} {summary.escrow.currency}
+            Montant : {summary.escrow.amount_total} {summary.escrow.currency}
           </p>
-          <p className="text-sm text-slate-500">Créé le {formatDateTime(summary.escrow.created_at)}</p>
+          <p className="text-sm text-slate-500">
+            Échéance : {summary.escrow.deadline_at ? formatDateTime(summary.escrow.deadline_at) : '—'}
+          </p>
           {lastUpdatedAt && (
             <p className="text-xs text-slate-500">Last updated : {formatDateTime(lastUpdatedAt)}</p>
           )}
@@ -215,10 +217,7 @@ export function SenderEscrowDetails({
               className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2"
             >
               <div>
-                <p className="font-medium">
-                  {milestone.label ?? milestone.name ?? `Jalon ${milestone.sequence_index}`}
-                </p>
-                <p className="text-sm text-slate-500">Échéance : {milestone.due_date ?? 'N/A'}</p>
+                <p className="font-medium">{milestone.label ?? `Jalon ${milestone.sequence_index}`}</p>
               </div>
               {(() => {
                 const badge = mapMilestoneStatusToBadge(milestone.status);
@@ -262,7 +261,7 @@ export function SenderEscrowDetails({
           {summary.proofs.map((proof) => (
             <div key={proof.id} className="rounded-md border border-slate-100 px-3 py-2">
               <div className="flex items-center justify-between">
-                <p className="font-medium">{proof.description ?? 'Preuve fournie'}</p>
+                <p className="font-medium">Preuve fournie</p>
                 <div className="flex items-center gap-2">
                   {(() => {
                     const badge = mapProofStatusToBadge(proof.status);
@@ -271,15 +270,18 @@ export function SenderEscrowDetails({
                 </div>
               </div>
               <p className="text-xs text-slate-500">{formatDateTime(proof.created_at)}</p>
-              {(() => {
-                const hasFile =
-                  Boolean(proof.storage_key) ||
-                  Boolean(proof.storage_url) ||
-                  Boolean(proof.attachment_url) ||
-                  Boolean(proof.file_url);
-                if (!hasFile) return null;
-                return <p className="text-sm text-slate-600">Fichier reçu.</p>;
-              })()}
+              {proof.storage_url ? (
+                <a
+                  href={proof.storage_url}
+                  className="text-sm text-indigo-600 underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Télécharger la preuve
+                </a>
+              ) : (
+                <p className="text-sm text-slate-400">Aucun fichier attaché.</p>
+              )}
               <div className="mt-2 space-y-2">
                 {onRequestAdvisorReview && (
                   <div className="flex flex-wrap gap-2">
@@ -319,7 +321,7 @@ export function SenderEscrowDetails({
             >
               <div>
                 <p className="font-medium">
-                  {payment.amount} {payment.currency}
+                  {payment.amount} {summary.escrow.currency}
                 </p>
                 <p className="text-xs text-slate-500">{formatDateTime(payment.created_at)}</p>
               </div>

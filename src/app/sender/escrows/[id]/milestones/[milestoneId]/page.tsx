@@ -9,7 +9,6 @@ import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
-import { formatDateTime } from '@/lib/format';
 import { queryKeys } from '@/lib/queryKeys';
 import { useMilestoneDetail } from '@/lib/queries/sender';
 import { mapMilestoneStatusToBadge } from '@/lib/uiMappings';
@@ -84,16 +83,16 @@ export default function SenderMilestoneDetailPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-slate-700">
           <div>
-            <p className="text-sm text-slate-500">Nom</p>
-            <p className="font-medium">{milestone.name}</p>
+            <p className="text-sm text-slate-500">Label</p>
+            <p className="font-medium">{milestone.label}</p>
           </div>
           <div>
             <p className="text-sm text-slate-500">Statut</p>
             <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
           <div>
-            <p className="text-sm text-slate-500">Échéance</p>
-            <p>{milestone.due_date ? formatDateTime(milestone.due_date) : '—'}</p>
+            <p className="text-sm text-slate-500">Séquence</p>
+            <p>{milestone.sequence_index}</p>
           </div>
         </CardContent>
       </Card>

@@ -35,7 +35,7 @@ export function SenderEscrowList({ escrows }: { escrows: EscrowListItem[] }) {
                     <StatusBadge type="escrow" status={escrow.status} />
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-700">
-                    {escrow.amount} {escrow.currency}
+                    {escrow.amount_total} {escrow.currency}
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-500">{formatDateTime(escrow.created_at)}</td>
                 </tr>

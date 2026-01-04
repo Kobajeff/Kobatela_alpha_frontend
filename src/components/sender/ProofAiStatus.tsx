@@ -12,6 +12,7 @@ type Props = {
 
 const formatScore = (value: AiAnalysis['ai_score']): string => {
   if (value === null || value === undefined) return 'N/A';
+  if (typeof value === 'string') return value;
   return value.toFixed(2);
 };
 
