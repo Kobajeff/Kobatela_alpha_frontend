@@ -27,7 +27,7 @@ import type {
   AdminAdvisorListItem,
   AdminAdvisorSummary,
   AdminProofReviewItem,
-  AiProofSetting,
+  AdminSettingRead,
   AdvisorProfile,
   AdvisorProfileCreatePayload,
   AdvisorProfileUpdatePayload,
@@ -53,11 +53,7 @@ import type {
 } from '@/types/api';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
-type ProofReviewQueueApiItem = Proof & Partial<AdminProofReviewItem> & {
-  milestone?: { name?: string };
-  sender?: { email?: string };
-  advisor?: { id?: string | number; email?: string; name?: string };
-};
+type ProofReviewQueueApiItem = AdminProofReviewItem;
 
 export interface AdminAlertsParams {
   limit?: number;
@@ -152,31 +148,26 @@ export function useAdminFraudScoreComparison(
 
 function mapProofReviewQueueItem(item: ProofReviewQueueApiItem): AdminProofReviewItem {
   return {
-    id: String(item.id),
-    escrow_id: String(item.escrow_id ?? ''),
-    milestone_name: item.milestone_name ?? item.milestone?.name,
-    sender_email: item.sender_email ?? item.sender?.email,
-    description: item.description,
+    proof_id: item.proof_id,
+    escrow_id: item.escrow_id,
+    milestone_id: item.milestone_id ?? null,
+    status: item.status,
     type: item.type,
-    status: item.status ?? 'PENDING',
-    created_at: item.created_at ?? new Date().toISOString(),
-    attachment_url: item.attachment_url,
-    file_id: item.file_id,
-    file_url: item.file_url,
-    advisor_id: item.advisor_id ?? item.advisor?.id?.toString(),
-    advisor_email: item.advisor_email ?? item.advisor?.email,
-    advisor_name: item.advisor_name ?? item.advisor?.name,
-    ai_risk_level: item.ai_risk_level ?? null,
-    ai_score: item.ai_score ?? null,
-    ai_explanation: item.ai_explanation ?? null,
-    ai_checked_at: item.ai_checked_at ?? null,
-    ai_score_ml: item.ai_score_ml ?? null,
-    ai_risk_level_ml: item.ai_risk_level_ml ?? null,
-    ai_flags: item.ai_flags ?? null,
-    ai_reviewed_by: item.ai_reviewed_by ?? null,
-    ai_reviewed_at: item.ai_reviewed_at ?? null,
+    storage_key: item.storage_key ?? null,
+    storage_url: item.storage_url ?? null,
+    sha256: item.sha256 ?? null,
+    created_at: item.created_at,
     invoice_total_amount: item.invoice_total_amount ?? null,
     invoice_currency: item.invoice_currency ?? null,
+    ai_risk_level: item.ai_risk_level ?? null,
+    ai_score: item.ai_score ?? null,
+    ai_flags: item.ai_flags ?? null,
+    ai_explanation: item.ai_explanation ?? null,
+    ai_checked_at: item.ai_checked_at ?? null,
+    ai_reviewed_by: item.ai_reviewed_by ?? null,
+    ai_reviewed_at: item.ai_reviewed_at ?? null,
+    metadata: item.metadata ?? null,
+    advisor: item.advisor ?? null,
     payout_eligible: item.payout_eligible ?? null,
     payout_blocked_reasons: item.payout_blocked_reasons ?? null
   };
@@ -866,7 +857,7 @@ export function useAdminAdvisorsList(active?: boolean) {
 }
 
 export function useAiProofSetting() {
-  return useQuery<AiProofSetting>({
+  return useQuery<AdminSettingRead>({
     queryKey: queryKeys.admin.settings.aiProof(),
     queryFn: async () => {
       return fetchAiProofSetting();

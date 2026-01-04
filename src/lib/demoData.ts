@@ -150,19 +150,29 @@ export const demoAdminStats: AdminDashboardStats = {
 
 export const demoAdminProofQueue: AdminProofReviewItem[] = demoProofs
   .filter((p) => p.status === 'PENDING')
-  .map((p) => ({
-    id: p.id,
-    escrow_id: p.escrow_id,
-    milestone_name: 'Demo milestone',
-    sender_email: 'demo.sender@kobatela.com',
-    description: p.description,
-    attachment_url: p.storage_url,
+  .map((p, index) => ({
+    proof_id: index + 1,
+    escrow_id: index + 1,
+    milestone_id: p.milestone_id ? index + 1 : null,
     status: p.status,
+    type: p.type ?? 'PHOTO',
+    storage_key: p.storage_key ?? null,
+    storage_url: p.storage_url ?? null,
+    sha256: p.sha256 ?? null,
     created_at: p.created_at,
+    invoice_total_amount: p.invoice_total_amount ?? null,
+    invoice_currency: p.invoice_currency ?? null,
     ai_risk_level: p.ai_risk_level,
     ai_score: p.ai_score,
+    ai_flags: p.ai_flags ?? null,
     ai_explanation: p.ai_explanation,
-    ai_checked_at: p.ai_checked_at
+    ai_checked_at: p.ai_checked_at,
+    ai_reviewed_by: p.ai_reviewed_by ?? null,
+    ai_reviewed_at: p.ai_reviewed_at ?? null,
+    metadata: p.metadata ?? null,
+    advisor: null,
+    payout_eligible: p.payout_eligible ?? null,
+    payout_blocked_reasons: p.payout_blocked_reasons ?? null
   }));
 
 export function getDemoUserByRole(role: DemoRole): AuthUser {

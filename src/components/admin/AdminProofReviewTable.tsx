@@ -43,7 +43,7 @@ export function AdminProofReviewTable({
                 <th className="px-4 py-3">Preuve</th>
                 <th className="px-4 py-3">Escrow</th>
                 <th className="px-4 py-3">Jalon</th>
-                <th className="px-4 py-3">Sender</th>
+                <th className="px-4 py-3">Advisor</th>
                 <th className="px-4 py-3">Créée</th>
                 <th className="px-4 py-3">Analyse IA</th>
                 <th className="px-4 py-3">Statut</th>
@@ -52,11 +52,15 @@ export function AdminProofReviewTable({
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {items.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-4 py-3 font-medium text-slate-800">{item.id}</td>
+                <tr key={item.proof_id}>
+                  <td className="px-4 py-3 font-medium text-slate-800">{item.proof_id}</td>
                   <td className="px-4 py-3 text-slate-700">{item.escrow_id}</td>
-                  <td className="px-4 py-3 text-slate-700">{item.milestone_name ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-700">{item.sender_email ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-700">{item.milestone_id ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-700">
+                    {item.advisor
+                      ? `${item.advisor.first_name} ${item.advisor.last_name}`
+                      : '—'}
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{formatDateTime(item.created_at)}</td>
                   <td className="px-4 py-3 text-slate-700">
                     <ProofAiStatus proof={item} compact />
@@ -70,8 +74,8 @@ export function AdminProofReviewTable({
                         type="button"
                         size="sm"
                         variant="secondary"
-                        disabled={processingId === item.id || actionsDisabled}
-                        onClick={() => confirmAndApprove(item.id)}
+                        disabled={processingId === String(item.proof_id) || actionsDisabled}
+                        onClick={() => confirmAndApprove(String(item.proof_id))}
                       >
                         Approuver
                       </Button>
@@ -79,8 +83,8 @@ export function AdminProofReviewTable({
                         type="button"
                         size="sm"
                         variant="danger"
-                        disabled={processingId === item.id || actionsDisabled}
-                        onClick={() => confirmAndReject(item.id)}
+                        disabled={processingId === String(item.proof_id) || actionsDisabled}
+                        onClick={() => confirmAndReject(String(item.proof_id))}
                       >
                         Rejeter
                       </Button>

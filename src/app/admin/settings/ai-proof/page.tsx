@@ -9,7 +9,8 @@ export default function AdminAiProofSettingsPage() {
   const { data, isLoading, isError, error } = useAiProofSetting();
   const updateMutation = useUpdateAiProofSetting();
 
-  const enabled = data?.bool_value ?? false;
+  const enabled = data?.value ?? false;
+  const effective = data?.effective ?? false;
 
   const handleToggle = () => {
     updateMutation.mutate(!enabled);
@@ -36,9 +37,9 @@ export default function AdminAiProofSettingsPage() {
               <p className="font-medium">
                 AI Proof Advisor is {enabled ? 'enabled' : 'disabled'}
               </p>
-              {data.source && (
-                <p className="text-xs text-muted-foreground">Source: {data.source}</p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Effective: {effective ? 'enabled' : 'disabled'}
+              </p>
             </div>
             <button
               type="button"

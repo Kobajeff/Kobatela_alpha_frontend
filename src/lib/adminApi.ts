@@ -3,7 +3,7 @@ import type {
   AdminAdvisorSummary,
   AdminUserCreatePayload,
   AdminUserCreateResponse,
-  AiProofSetting,
+  AdminSettingRead,
   ApiKey,
   PaginatedResponse,
   UserCreatePayload,
@@ -101,17 +101,17 @@ export async function fetchAdvisorsOverview(): Promise<AdminAdvisorSummary[]> {
   }, 'GET /admin/advisors/overview');
 }
 
-export async function fetchAiProofSetting(): Promise<AiProofSetting> {
+export async function fetchAiProofSetting(): Promise<AdminSettingRead> {
   return withAdminError(async () => {
-    const { data } = await apiClient.get<AiProofSetting>('/admin/settings/ai-proof');
+    const { data } = await apiClient.get<AdminSettingRead>('/admin/settings/ai-proof');
     return data;
   }, 'GET /admin/settings/ai-proof');
 }
 
-export async function updateAiProofSetting(enabled: boolean): Promise<AiProofSetting> {
+export async function updateAiProofSetting(enabled: boolean): Promise<AdminSettingRead> {
   return withAdminError(async () => {
-    const { data } = await apiClient.post<AiProofSetting>('/admin/settings/ai-proof', {
-      bool_value: enabled
+    const { data } = await apiClient.post<AdminSettingRead>('/admin/settings/ai-proof', null, {
+      params: { enabled }
     });
     return data;
   }, 'POST /admin/settings/ai-proof');

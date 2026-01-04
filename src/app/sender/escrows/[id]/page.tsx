@@ -375,8 +375,16 @@ export default function SenderEscrowDetailsPage() {
     setFundingInProgress(true);
     setFundingStartedAt(Date.now());
     try {
+      const amount = data?.escrow?.amount_total;
+      if (!amount) {
+        const message = 'Montant indisponible pour le dépôt.';
+        setDepositError(message);
+        showToast(message, 'error');
+        setFundingInProgress(false);
+        return;
+      }
       const idempotencyKey = generateIdempotencyKey();
-      await depositEscrow.mutateAsync({ idempotencyKey });
+      await depositEscrow.mutateAsync({ idempotencyKey, amount });
       showToast('Dépôt envoyé. En attente de confirmation.', 'success');
       refreshEscrowBundle();
     } catch (error) {
@@ -451,7 +459,7 @@ export default function SenderEscrowDetailsPage() {
           >
             {data.milestones.map((milestone) => (
               <option key={milestone.id} value={milestone.sequence_index}>
-                {milestone.label ?? milestone.name ?? `Jalon ${milestone.sequence_index}`}
+                {milestone.label ?? `Jalon ${milestone.sequence_index}`}
               </option>
             ))}
           </select>

@@ -41,6 +41,7 @@ import type {
   AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
+  FundingSessionRead,
   AuthMeResponse,
   MerchantSuggestion,
   MerchantSuggestionCreatePayload,
@@ -694,7 +695,8 @@ export function useMilestoneDetail(milestoneId: string) {
 
 function useEscrowAction(
   escrowId: string,
-  path: string
+  path: string,
+  payload?: Record<string, unknown>
 ) {
   const queryClient = useQueryClient();
   return useMutation<void, Error, void>({
@@ -704,7 +706,7 @@ function useEscrowAction(
           setTimeout(() => resolve(), 200);
         });
       }
-      await apiClient.post(`/escrows/${escrowId}/${path}`);
+      await apiClient.post(`/escrows/${escrowId}/${path}`, payload);
     },
     onSuccess: () => {
       invalidateEscrowBundle(queryClient, {
@@ -720,33 +722,31 @@ function useEscrowAction(
 }
 
 export function useMarkDelivered(escrowId: string) {
-  return useEscrowAction(escrowId, 'mark-delivered');
+  return useEscrowAction(escrowId, 'mark-delivered', {});
 }
 
 export function useClientApprove(escrowId: string) {
-  return useEscrowAction(escrowId, 'client-approve');
+  return useEscrowAction(escrowId, 'client-approve', {});
 }
 
 export function useClientReject(escrowId: string) {
-  return useEscrowAction(escrowId, 'client-reject');
+  return useEscrowAction(escrowId, 'client-reject', {});
 }
 
 export function useCheckDeadline(escrowId: string) {
   return useEscrowAction(escrowId, 'check-deadline');
 }
 
-export type FundingSessionResponse = unknown;
-
 export function useCreateFundingSession(escrowId: string) {
   const queryClient = useQueryClient();
-  return useMutation<FundingSessionResponse, Error, void>({
+  return useMutation<FundingSessionRead, Error, void>({
     mutationFn: async () => {
       if (isDemoMode()) {
         return new Promise((resolve) => {
-          setTimeout(() => resolve({}), 200);
+          setTimeout(() => resolve({ funding_id: 0, client_secret: '' }), 200);
         });
       }
-      const response = await apiClient.post<FundingSessionResponse>(
+      const response = await apiClient.post<FundingSessionRead>(
         `/escrows/${escrowId}/funding-session`,
         {}
       );
@@ -774,24 +774,23 @@ export function useCreateFundingSession(escrowId: string) {
   });
 }
 
-export type EscrowDepositResponse = unknown;
-
 type DepositPayload = {
   idempotencyKey: string;
+  amount: string;
 };
 
 export function useDepositEscrow(escrowId: string) {
   const queryClient = useQueryClient();
-  return useMutation<EscrowDepositResponse, Error, DepositPayload>({
-    mutationFn: async ({ idempotencyKey }) => {
+  return useMutation<EscrowRead, Error, DepositPayload>({
+    mutationFn: async ({ idempotencyKey, amount }) => {
       if (isDemoMode()) {
         return new Promise((resolve) => {
-          setTimeout(() => resolve({}), 200);
+          setTimeout(() => resolve({} as EscrowRead), 200);
         });
       }
-      const response = await apiClient.post<EscrowDepositResponse>(
+      const response = await apiClient.post<EscrowRead>(
         `/escrows/${escrowId}/deposit`,
-        {},
+        { amount },
         {
           headers: {
             'Idempotency-Key': idempotencyKey

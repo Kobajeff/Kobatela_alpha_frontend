@@ -104,9 +104,9 @@ export default function SenderEscrowMilestonesPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">ID</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Nom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Label</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Statut</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Échéance</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Séquence</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -117,7 +117,7 @@ export default function SenderEscrowMilestonesPage() {
                           {milestone.id}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{milestone.name}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{milestone.label}</td>
                       <td className="px-4 py-3 text-sm text-slate-700">
                         {(() => {
                           const badge = mapMilestoneStatusToBadge(milestone.status);
@@ -125,7 +125,7 @@ export default function SenderEscrowMilestonesPage() {
                         })()}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-500">
-                        {milestone.due_date ? formatDateTime(milestone.due_date) : '—'}
+                        {milestone.sequence_index}
                       </td>
                     </tr>
                   ))}
