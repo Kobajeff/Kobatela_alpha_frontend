@@ -7,7 +7,7 @@ import { getPortalMode } from './portalMode';
 export const PORTAL_PATHS = {
   admin: ['', 'admin', 'dashboard'].join('/'),
   advisor: ['', 'advisor', 'queue'].join('/'),
-  sender: ['', 'sender', 'dashboard'].join('/'),
+  sender: ['', 'dashboard'].join('/'),
   provider: ['', 'provider', 'dashboard'].join('/')
 } as const;
 

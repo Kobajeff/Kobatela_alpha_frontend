@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
 import { formatDateTime } from '@/lib/format';
-import { useProviderInboxEscrows } from '@/lib/queries/sender';
+import { useProviderInboxEscrows } from '@/lib/queries/provider';
 
 const DEFAULT_LIMIT = 20;
 
