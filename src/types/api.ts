@@ -387,7 +387,8 @@ export type ProofMetadata = Record<string, unknown>;
 
 export type CreateProofPayload = {
   escrow_id: string;
-  milestone_idx: number;
+  milestone_id?: string | number;
+  milestone_idx?: number;
   type: ProofType;
   storage_key: string;
   storage_url: string;
