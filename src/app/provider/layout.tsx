@@ -1,18 +1,15 @@
 'use client';
 
 // Layout guarding provider routes and wrapping them in a basic container.
-import { RequireScope } from '@/components/system/RequireScope';
+import { PortalModeSetter } from '@/components/system/PortalModeSetter';
 
 export default function ProviderLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RequireScope
-      anyScopes={['PROVIDER']}
-      allowRoles={['provider', 'both']}
-      loadingLabel="Chargement de votre espace prestataire..."
-    >
+    <>
+      <PortalModeSetter mode="provider" />
       <div className="min-h-screen bg-slate-100 p-6">
         <div className="mx-auto max-w-5xl space-y-6">{children}</div>
       </div>
-    </RequireScope>
+    </>
   );
 }

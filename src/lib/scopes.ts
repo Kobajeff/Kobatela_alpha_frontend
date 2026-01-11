@@ -1,4 +1,4 @@
-import type { AuthUser } from '@/types/api';
+import type { AuthUser } from '@/types/auth';
 
 export function normalizeScopeValue(scope: string): string {
   return scope.trim().replace(/\s+/g, '_').toUpperCase();

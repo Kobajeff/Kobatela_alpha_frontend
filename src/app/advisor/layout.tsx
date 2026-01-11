@@ -8,7 +8,6 @@ export default function AdvisorLayout({ children }: { children: React.ReactNode 
   return (
     <RequireScope
       anyScopes={['ADVISOR']}
-      allowRoles={['advisor', 'admin', 'support', 'both']}
       loadingLabel="Vérification de l'accès conseiller..."
     >
       <AdvisorShell>{children}</AdvisorShell>

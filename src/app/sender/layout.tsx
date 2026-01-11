@@ -2,16 +2,13 @@
 
 // Layout guarding sender routes and wrapping them in the application shell.
 import { AppShell } from '@/components/layout/AppShell';
-import { RequireScope } from '@/components/system/RequireScope';
+import { PortalModeSetter } from '@/components/system/PortalModeSetter';
 
 export default function SenderLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RequireScope
-      anyScopes={['SENDER']}
-      allowRoles={['sender', 'both']}
-      loadingLabel="Chargement de votre espace expéditeur..."
-    >
+    <>
+      <PortalModeSetter mode="sender" />
       <AppShell>{children}</AppShell>
-    </RequireScope>
+    </>
   );
 }

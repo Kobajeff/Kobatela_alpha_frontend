@@ -681,14 +681,14 @@ export function useAdminUsers(params: AdminUsersParams = {}, options?: { enabled
 export function useAdminSenders(params: AdminSendersParams = {}) {
   const { limit = 50, offset = 0, q, active } = params;
   const filters = useMemo(
-    () => ({ role: 'sender', limit, offset, q, active }),
+    () => ({ role: 'user', limit, offset, q, active }),
     [active, limit, offset, q]
   );
 
   return useQuery({
     queryKey: queryKeys.admin.users.list(filters),
     queryFn: async () => {
-      return getAdminUsers({ role: 'sender', limit, offset, q, active });
+      return getAdminUsers({ role: 'user', limit, offset, q, active });
     }
   });
 }

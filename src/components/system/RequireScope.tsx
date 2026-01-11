@@ -9,19 +9,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuthMe } from '@/lib/queries/sender';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
-import {
-  getPortalDestination,
-  hasScope,
-  type NormalizedAuthUser
-} from '@/lib/authIdentity';
+import { getPortalDestination, type NormalizedAuthUser } from '@/lib/authIdentity';
 import { getAuthToken, getAuthTokenEventName, setAuthNotice } from '@/lib/auth';
 import { getQueryClient } from '@/lib/queryClient';
 import { resetSession } from '@/lib/sessionReset';
-import type { UserRole } from '@/types/api';
+import type { GlobalRole } from '@/types/auth';
 
 type RequireScopeProps = {
   anyScopes?: string[];
-  allowRoles?: UserRole[];
+  allowRoles?: GlobalRole[];
   loadingLabel?: string;
   unauthorizedMessage?: string;
   children: ReactNode | ((user: NormalizedAuthUser) => ReactNode);
@@ -50,9 +46,14 @@ export function RequireScope({
   const isForbidden = status === 403;
   const destination = getPortalDestination(user ?? null);
   const destinationPath = destination?.path;
-  const hasAllowedRole = allowRoles.length === 0 || allowRoles.includes(user?.role as UserRole);
+  const normalizedRole = user?.globalRole ?? user?.role;
+  const normalizedScopes = Array.isArray(user?.effectiveScopes)
+    ? user.effectiveScopes.map((scope) => scope.toUpperCase())
+    : [];
+  const hasAllowedRole = allowRoles.length === 0 || (normalizedRole ? allowRoles.includes(normalizedRole) : false);
   const hasAllowedScope =
-    anyScopes.length === 0 || (user ? anyScopes.some((scope) => hasScope(user, scope)) : false);
+    anyScopes.length === 0 ||
+    (user ? anyScopes.some((scope) => normalizedScopes.includes(scope.toUpperCase())) : false);
   const isAtDestination =
     typeof destinationPath === 'string' &&
     typeof pathname === 'string' &&
@@ -137,13 +138,13 @@ export function RequireScope({
     const rawApiScopes = user?.api_scopes;
     const rawPermissions = user?.permissions;
     const rawScope = user?.scope;
-    const scopeList = Array.isArray(user?.normalizedScopes) ? user.normalizedScopes : [];
+    const scopeList = Array.isArray(user?.effectiveScopes) ? user.effectiveScopes : [];
     console.debug('[RequireScope]', {
       pathname,
       hasToken,
       isLoading,
       status,
-      role: user?.role,
+      role: normalizedRole,
       scopes: {
         scopesCount: Array.isArray(rawScopes) ? rawScopes.length : rawScopes ? 1 : 0,
         apiScopesCount: Array.isArray(rawApiScopes) ? rawApiScopes.length : rawApiScopes ? 1 : 0,

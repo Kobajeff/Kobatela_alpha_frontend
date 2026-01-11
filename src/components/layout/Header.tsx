@@ -9,7 +9,8 @@ import { useAuthMe } from '@/lib/queries/sender';
 import { getDemoRole, isDemoMode, setDemoRole } from '@/lib/config';
 import { queryKeys } from '@/lib/queryKeys';
 import { useToast } from '@/components/ui/ToastProvider';
-import { AuthUser } from '@/types/api';
+import { getPortalDestination, type NormalizedAuthUser } from '@/lib/authIdentity';
+import { usePortalMode } from '@/hooks/usePortalMode';
 import { LogoutButton } from './LogoutButton';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
@@ -21,14 +22,23 @@ export function Header() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { data } = useAuthMe();
-  const user = data as AuthUser | undefined;
-  const isAdmin = user?.role === 'admin' || user?.role === 'both' || user?.role === 'support';
-  const isSender = user?.role === 'sender' || user?.role === 'both';
-  const isAdvisor = user?.role === 'advisor';
+  const user = data as NormalizedAuthUser | undefined;
+  const [portalMode, setPortalMode] = usePortalMode();
+  const effectiveScopes = Array.isArray(user?.effectiveScopes) ? user.effectiveScopes : [];
+  const isAdmin =
+    user?.globalRole === 'admin' ||
+    user?.globalRole === 'support' ||
+    effectiveScopes.includes('ADMIN') ||
+    effectiveScopes.includes('SUPPORT') ||
+    effectiveScopes.includes('PRICING_ADMIN') ||
+    effectiveScopes.includes('RISK_ADMIN');
+  const isAdvisor = user?.globalRole === 'advisor' || effectiveScopes.includes('ADVISOR');
   const displayName = user?.full_name ?? user?.email ?? 'Chargement...';
   const demoMode = isDemoMode();
   const currentDemoRole = demoMode ? getDemoRole() : null;
-  const homePath = isAdmin ? adminDashboardPath : isAdvisor ? advisorQueuePath : senderDashboardPath;
+  const homePath =
+    getPortalDestination(user ?? null, portalMode)?.path ??
+    (isAdmin ? adminDashboardPath : isAdvisor ? advisorQueuePath : senderDashboardPath);
 
   const handleSwitchToSender = () => {
     setDemoRole('sender');
@@ -44,6 +54,11 @@ export function Header() {
     queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
     router.replace(adminDashboardPath as Route);
     showToast?.('Switched to demo admin view', 'info');
+  };
+
+  const handlePortalSwitch = (mode: 'sender' | 'provider') => {
+    setPortalMode(mode);
+    router.replace((mode === 'provider' ? '/provider/dashboard' : '/sender/dashboard') as Route);
   };
 
   return (
@@ -82,6 +97,32 @@ export function Header() {
             </button>
           </div>
         )}
+        {user?.globalRole === 'user' && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handlePortalSwitch('sender')}
+              className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
+                portalMode === 'sender'
+                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Sender
+            </button>
+            <button
+              type="button"
+              onClick={() => handlePortalSwitch('provider')}
+              className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
+                portalMode === 'provider'
+                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Provider
+            </button>
+          </div>
+        )}
         {isAdmin && (
           <Link
             href={adminDashboardPath as Route}
@@ -90,7 +131,7 @@ export function Header() {
             Admin
           </Link>
         )}
-        {isSender && (
+        {user?.globalRole === 'user' && portalMode === 'sender' && (
           <Link
             href="/sender/profile"
             className="rounded-md px-2 py-1 text-sm font-medium text-indigo-700 hover:bg-indigo-50"

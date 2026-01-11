@@ -9,7 +9,7 @@ import { normalizeApiError } from '@/lib/apiError';
 import { useUploadInflationCsv, useUploadReferenceCsv } from '@/lib/queries/pricingAdmin';
 import { useAuthMe } from '@/lib/queries/sender';
 import { userHasScope } from '@/lib/scopes';
-import type { AuthUser } from '@/types/api';
+import type { AuthUser } from '@/types/auth';
 
 type UploadState = {
   file: File | null;

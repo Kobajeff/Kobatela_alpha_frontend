@@ -7,7 +7,7 @@ import type { Route } from 'next';
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { userHasScope } from '@/lib/scopes';
-import type { AuthUser } from '@/types/api';
+import type { AuthUser } from '@/types/auth';
 import { Header } from './Header';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');

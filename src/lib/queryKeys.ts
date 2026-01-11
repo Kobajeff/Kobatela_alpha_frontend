@@ -48,6 +48,10 @@ export const queryKeys = {
       byId: (id?: string | null) => ['merchantSuggestions', id] as const
     }
   },
+  provider: {
+    inboxBase: () => ['provider', 'inbox'] as const,
+    inbox: <T extends ListFilters>(filters: T) => ['provider', 'inbox', filters] as const
+  },
   external: {
     escrowSummary: (token?: string | null) => ['external', 'escrow', token] as const,
     proofStatus: (proofId?: string | number | null, token?: string | null) =>
