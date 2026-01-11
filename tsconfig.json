@@ -24,6 +24,7 @@
       "@/hooks/*": ["./src/hooks/*"],
       "@/backend-contract/*": ["./src/backend-contract/*"],
       "@/lib/*": ["./src/lib/*"],
+      "@/policy/*": ["./src/policy/*"],
       "@/types/*": ["./src/types/*"]
     }
   },
