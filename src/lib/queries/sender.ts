@@ -373,6 +373,7 @@ export function useCreateEscrow() {
             currency: payload.currency,
             status: 'DRAFT',
             domain: payload.domain ?? 'private',
+            payment_mode: payload.payment_mode ?? 'MILESTONE',
             release_conditions_json: payload.release_conditions ?? {},
             deadline_at: payload.deadline_at ?? now,
             created_at: now
