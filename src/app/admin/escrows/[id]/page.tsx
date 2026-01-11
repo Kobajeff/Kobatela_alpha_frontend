@@ -544,7 +544,7 @@ export default function AdminEscrowDetailPage() {
           {payments.map((payment) => (
             <div key={payment.id} className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2">
               <div>
-                <p className="font-medium">{payment.amount ?? '—'} {payment.currency ?? ''}</p>
+                <p className="font-medium">{payment.amount ?? '—'}</p>
                 <p className="text-xs text-slate-500">{formatOptionalDate(payment.created_at)}</p>
               </div>
               <div className="flex items-center gap-3">

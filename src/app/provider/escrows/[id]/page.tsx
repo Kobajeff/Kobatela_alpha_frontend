@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
-import { ProviderEscrowDetails } from '@/components/provider/ProviderEscrowDetails';
+import { EscrowDetailView } from '@/components/escrows/EscrowDetailView';
 import { ProofForm } from '@/components/sender/ProofForm';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
@@ -69,7 +69,7 @@ export default function ProviderEscrowDetailsPage() {
           >
             {data.milestones.map((milestone) => (
               <option key={milestone.id} value={milestone.sequence_index}>
-                {milestone.label ?? milestone.name ?? `Jalon ${milestone.sequence_index}`}
+                {milestone.label ?? `Jalon ${milestone.sequence_index}`}
               </option>
             ))}
           </select>
@@ -87,8 +87,9 @@ export default function ProviderEscrowDetailsPage() {
   ) : null;
 
   return (
-    <ProviderEscrowDetails
+    <EscrowDetailView
       summary={data}
+      portalMode="provider"
       proofForm={proofForm}
       proofReviewActive={proofReview.polling.active}
       proofReviewError={proofReview.polling.errorMessage ?? null}

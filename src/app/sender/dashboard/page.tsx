@@ -94,7 +94,7 @@ export default function SenderDashboardPage() {
           {recentPayments.map((payment) => (
             <div key={payment.id} className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2">
               <div>
-                <p className="font-medium">{payment.amount} {payment.currency}</p>
+                <p className="font-medium">{payment.amount}</p>
                 <p className="text-xs text-slate-500">Escrow {payment.escrow_id}</p>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500">
