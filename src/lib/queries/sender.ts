@@ -43,7 +43,6 @@ import type {
   FundingSessionRead,
   MerchantSuggestion,
   MerchantSuggestionCreatePayload,
-  ProviderInboxResponse,
   UsageMandateCreate,
   UsageMandateRead,
   UserProfile,
@@ -332,37 +331,6 @@ export function useSenderEscrows(params: { status?: string; limit?: number; offs
       const searchParams = new URLSearchParams({ mine: 'true', limit: String(limit), offset: String(offset) });
       if (status) searchParams.append('status', status);
       const response = await apiClient.get<EscrowListItem[]>(`/escrows?${searchParams.toString()}`);
-      return response.data;
-    }
-  });
-}
-
-export function useProviderInboxEscrows(params: { limit?: number; offset?: number } = {}) {
-  const { limit = 20, offset = 0 } = params;
-  return useQuery<ProviderInboxResponse, Error>({
-    queryKey: queryKeys.provider.inbox({ limit, offset }),
-    queryFn: async () => {
-      if (isDemoMode()) {
-        return new Promise<ProviderInboxResponse>((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                items: [],
-                total: 0,
-                limit,
-                offset
-              }),
-            200
-          );
-        });
-      }
-      const searchParams = new URLSearchParams({
-        limit: String(limit),
-        offset: String(offset)
-      });
-      const response = await apiClient.get<ProviderInboxResponse>(
-        `/provider/inbox/escrows?${searchParams.toString()}`
-      );
       return response.data;
     }
   });
