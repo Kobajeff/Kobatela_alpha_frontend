@@ -21,8 +21,6 @@ import type {
   BeneficiaryCreate,
   EscrowDestination,
   EscrowCreatePayload,
-  EscrowReleaseConditionMilestone,
-  EscrowReleaseConditions,
   MilestoneCreatePayload
 } from '@/types/api';
 import type { EscrowReadUI } from '@/types/ui';
@@ -35,7 +33,6 @@ import { MilestonesEditor } from '@/components/sender/milestones/MilestonesEdito
 import { EscrowDestinationSelector } from '@/components/sender/escrows/EscrowDestinationSelector';
 
 const DEFAULT_CURRENCY = 'EUR';
-const DEFAULT_DOMAIN: 'private' = 'private';
 const ALLOWED_CURRENCIES = ['USD', 'EUR'] as const;
 
 export default function SenderCreateEscrowClient() {
@@ -50,8 +47,7 @@ export default function SenderCreateEscrowClient() {
   const [amountTotal, setAmountTotal] = useState('');
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [deadlineAt, setDeadlineAt] = useState('');
-  const [domain, setDomain] = useState<'private' | 'public' | 'aid'>(DEFAULT_DOMAIN);
-  const [requiresProof, setRequiresProof] = useState(true);
+  const [paymentMode, setPaymentMode] = useState<'MILESTONE' | 'DIRECT_PAY'>('MILESTONE');
   const [milestoneDrafts, setMilestoneDrafts] = useState<MilestoneCreatePayload[]>([]);
   const [destination, setDestination] = useState<EscrowDestination | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -73,6 +69,10 @@ export default function SenderCreateEscrowClient() {
     if (typeof payload.currency === 'string') {
       // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — currency
       setCurrency(String(payload.currency).toUpperCase());
+    }
+    if (payload.payment_mode === 'DIRECT_PAY' || payload.payment_mode === 'MILESTONE') {
+      // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (5).json — EscrowCreate — payment_mode
+      setPaymentMode(payload.payment_mode);
     }
     if (typeof payload.provider_user_id === 'number' || typeof payload.provider_user_id === 'string') {
       // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — provider_user_id
@@ -141,6 +141,8 @@ export default function SenderCreateEscrowClient() {
     setAmountTotal('');
     setCurrency(DEFAULT_CURRENCY);
     setDestination(null);
+    setPaymentMode('MILESTONE');
+    setMilestoneDrafts([]);
     setCreatedEscrow(null);
     setCreatedEscrowId(null);
   };
@@ -184,13 +186,8 @@ export default function SenderCreateEscrowClient() {
       providerUserId = parsedProviderUserId;
     }
 
-    const releaseConditions: EscrowReleaseConditions = {
-      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — release_conditions.requires_proof
-      requires_proof: requiresProof
-    };
-
-    const hasMilestones = milestoneDrafts.length > 0;
-    if (hasMilestones) {
+    const shouldCreateMilestones = paymentMode === 'MILESTONE' && milestoneDrafts.length > 0;
+    if (paymentMode === 'MILESTONE' && milestoneDrafts.length > 0) {
       const seenIndexes = new Set<number>();
       let cumulativeAmount = 0;
       for (const milestone of milestoneDrafts) {
@@ -218,11 +215,6 @@ export default function SenderCreateEscrowClient() {
         }
         seenIndexes.add(milestone.sequence_index);
       }
-      releaseConditions.milestones = milestoneDrafts.map<EscrowReleaseConditionMilestone>((milestone) => ({
-        // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate.release_conditions.milestones — label
-        label: milestone.label,
-        idx: milestone.sequence_index
-      }));
     }
 
     const payload: EscrowCreatePayload = {
@@ -233,11 +225,9 @@ export default function SenderCreateEscrowClient() {
       // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — deadline_at
       deadline_at: deadlineIso,
       // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — release_conditions
-      release_conditions: releaseConditions,
-      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — requires_proof
-      requires_proof: requiresProof,
-      // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — domain
-      domain,
+      release_conditions: {},
+      // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (5).json — EscrowCreate — payment_mode
+      payment_mode: paymentMode,
       // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — beneficiary
       beneficiary: destination.type === 'beneficiary' ? destination.beneficiary : undefined,
       // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowCreate — provider_user_id
@@ -250,7 +240,7 @@ export default function SenderCreateEscrowClient() {
       setCreatedEscrowId(response.id);
       clearEscrowDraft();
 
-      if (!hasMilestones) return;
+      if (!shouldCreateMilestones) return;
       const milestonesPayload = milestoneDrafts.map((milestone) => ({
         ...milestone,
         // Contract: docs/Backend_info/API_GUIDE (7).md — MilestoneCreate — escrow_id
@@ -276,18 +266,12 @@ export default function SenderCreateEscrowClient() {
       amount_total: amountTotal,
       currency,
       deadline_at: deadlineAt ? new Date(deadlineAt).toISOString() : undefined,
+      payment_mode: paymentMode,
       provider_user_id:
         destination?.type === 'provider' && typeof draftProviderId === 'number' && Number.isFinite(draftProviderId)
           ? draftProviderId
           : undefined,
-      beneficiary: destination?.type === 'beneficiary' ? destination.beneficiary : undefined,
-      release_conditions: {
-        requires_proof: requiresProof,
-        milestones: milestoneDrafts.map((milestone) => ({
-          label: milestone.label,
-          idx: milestone.sequence_index
-        }))
-      }
+      beneficiary: destination?.type === 'beneficiary' ? destination.beneficiary : undefined
     };
     const draft = createLocalEscrowDraft(draftPayload);
 
@@ -301,18 +285,18 @@ export default function SenderCreateEscrowClient() {
 
   return (
     <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Créer un escrow</h1>
-        <p className="text-sm text-slate-600">
-          Configurez un escrow et ajoutez les milestones requises pour libérer les fonds.
-        </p>
+      <div className="space-y-3">
+        <h1 className="text-2xl font-semibold">Création de l’escrow</h1>
+        <div className="rounded-lg border border-amber-100 bg-amber-50/70 px-4 py-3 text-sm text-amber-900">
+          💡 Créez un nouvel escrow en définissant les étapes séquestrées. Pour un paiement unique, sélectionnez
+          Direct Pay.
+        </div>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Escrow principal</h2>
-            <p className="text-sm text-slate-500">Paramètres de l’escrow principal.</p>
+            <h2 className="text-lg font-semibold">Informations générales</h2>
           </div>
           {draftInfo ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
@@ -327,36 +311,91 @@ export default function SenderCreateEscrowClient() {
             onChange={(event) => setAmountTotal(event.target.value)}
             type="number"
           />
-          <LabeledInput
-            label="Devise"
-            value={currency}
-            onChange={(event) => setCurrency(event.target.value.toUpperCase())}
-          />
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">Devise</label>
+            <select
+              className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none"
+              value={currency}
+              onChange={(event) => setCurrency(event.target.value)}
+            >
+              {ALLOWED_CURRENCIES.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
           <LabeledInput
             label="Date limite"
             type="datetime-local"
             value={deadlineAt}
             onChange={(event) => setDeadlineAt(event.target.value)}
           />
-          <LabeledInput
-            label="Domaine"
-            value={domain}
-            onChange={(event) => setDomain(event.target.value as 'private' | 'public' | 'aid')}
-          />
-          <div className="flex items-center gap-2">
-            <input
-              id="requires-proof"
-              type="checkbox"
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
-              checked={requiresProof}
-              onChange={(event) => setRequiresProof(event.target.checked)}
-            />
-            <label htmlFor="requires-proof" className="text-sm text-slate-600">
-              Requiert une preuve
-            </label>
-          </div>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Paiement unique (Direct Pay)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <button
+            type="button"
+            onClick={() =>
+              setPaymentMode((mode) => (mode === 'DIRECT_PAY' ? 'MILESTONE' : 'DIRECT_PAY'))
+            }
+            className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition ${
+              paymentMode === 'DIRECT_PAY'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                  paymentMode === 'DIRECT_PAY'
+                    ? 'border-emerald-400 bg-emerald-500 text-white'
+                    : 'border-slate-300 bg-white text-slate-400'
+                }`}
+              >
+                ✓
+              </span>
+              <div>
+                <p className="text-sm font-semibold">Direct Pay</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
+                  <li>Paiement unique, sans étapes séquestrées.</li>
+                  <li>Le financement se fait en une seule fois.</li>
+                  <li>Les conditions de paiement dépendent des règles de la plateforme.</li>
+                </ul>
+              </div>
+            </div>
+          </button>
+
+          <div className="mt-4 rounded-md border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Direct Pay permet un seul paiement unique sans étapes.
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Milestones</CardTitle>
+          <p className="text-sm text-slate-600">Définissez les étapes pour libérer les fonds.</p>
+        </CardHeader>
+        <CardContent>
+          {paymentMode === 'DIRECT_PAY' ? (
+            <p className="text-sm text-slate-500">
+              Les étapes séquestrées sont désactivées lorsque Direct Pay est sélectionné.
+            </p>
+          ) : (
+            <MilestonesEditor
+              currency={currency}
+              milestones={milestoneDrafts}
+              onChange={setMilestoneDrafts}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -368,41 +407,24 @@ export default function SenderCreateEscrowClient() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Milestones</CardTitle>
-          <p className="text-sm text-slate-600">Définissez les étapes pour libérer les fonds.</p>
-        </CardHeader>
-        <CardContent>
-          <MilestonesEditor
-            currency={currency}
-            milestones={milestoneDrafts}
-            onChange={setMilestoneDrafts}
-          />
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button onClick={handleSaveDraft} variant="outline">
-          Sauvegarder le brouillon
-        </Button>
-        <Button onClick={resetDraft} variant="secondary">
-          Réinitialiser
-        </Button>
-      </div>
-
       {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
       {milestoneCreationError ? <ErrorAlert message={milestoneCreationError} /> : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button onClick={handleSubmit} disabled={createEscrow.isPending}>
-          {createEscrow.isPending ? 'Création en cours...' : 'Créer l’escrow'}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Button variant="outline" onClick={() => router.back()}>
+          Retour
         </Button>
-        {createdEscrow ? (
-          <Button variant="outline" onClick={() => router.push(`/sender/escrows/${createdEscrow.id}`)}>
-            Voir l’escrow
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button onClick={handleSaveDraft} variant="secondary">
+            Sauvegarder le brouillon
           </Button>
-        ) : null}
+          <Button onClick={resetDraft} variant="outline">
+            Réinitialiser
+          </Button>
+          <Button onClick={handleSubmit} disabled={createEscrow.isPending}>
+            {createEscrow.isPending ? 'Création en cours...' : 'Confirmer la création de l’escrow'}
+          </Button>
+        </div>
       </div>
 
       {createdMilestonesQuery.data?.length ? (

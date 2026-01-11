@@ -306,6 +306,7 @@ export type EscrowListItem = {
   currency: string;
   created_at: string;
   deadline_at?: string;
+  payment_mode?: 'MILESTONE' | 'DIRECT_PAY';
   provider_user_id?: number;
   beneficiary_id?: number;
   beneficiary_profile_id?: number | null;
@@ -324,10 +325,7 @@ export type EscrowReleaseConditionMilestone = {
   idx: number;
 };
 
-export type EscrowReleaseConditions = {
-  requires_proof: boolean;
-  milestones?: EscrowReleaseConditionMilestone[];
-};
+export type EscrowReleaseConditions = Record<string, unknown>;
 
 export type FundingSessionRead = {
   funding_id: number;
@@ -359,9 +357,9 @@ export type EscrowCreatePayload = {
   amount_total: string;
   currency: 'USD' | 'EUR' | string;
   release_conditions: EscrowReleaseConditions;
-  requires_proof?: boolean;
   deadline_at: string;
   domain?: 'private' | 'public' | 'aid';
+  payment_mode?: 'MILESTONE' | 'DIRECT_PAY';
 };
 
 export type EscrowDestination =
