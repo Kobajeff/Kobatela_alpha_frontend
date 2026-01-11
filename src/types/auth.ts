@@ -12,6 +12,7 @@ export interface AuthUser {
   scopes?: EffectiveScope[];
   capabilities?: string[];
   full_name?: string;
+  payout_channel?: string | null;
   api_scopes?: string[];
   scope?: string | string[];
   permissions?: string[];

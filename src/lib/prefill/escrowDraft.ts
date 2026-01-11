@@ -3,13 +3,20 @@ import type { EscrowCreatePayload } from '@/types/api';
 const STORAGE_KEY = 'kobatela:escrowDraft';
 const TTL_MINUTES = 30;
 
-export type EscrowDraftPrefill = {
-  source: 'mandate';
-  mandate_id: string | number;
+type EscrowDraftBase = {
   created_at: string;
   expires_at: string;
   payload: Partial<EscrowCreatePayload>;
 };
+
+export type EscrowDraftPrefill =
+  | (EscrowDraftBase & {
+      source: 'mandate';
+      mandate_id: string | number;
+    })
+  | (EscrowDraftBase & {
+      source: 'local';
+    });
 
 const isBrowser = () => typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';
 
@@ -81,5 +88,16 @@ export const createEscrowDraftFromMandate = (mandate: { id?: string | number } &
     created_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
     payload: buildEscrowDraftFromMandate(mandate)
+  };
+};
+
+export const createLocalEscrowDraft = (payload: Partial<EscrowCreatePayload>): EscrowDraftPrefill => {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + TTL_MINUTES * 60 * 1000);
+  return {
+    source: 'local',
+    created_at: now.toISOString(),
+    expires_at: expiresAt.toISOString(),
+    payload
   };
 };
