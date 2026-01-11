@@ -20,9 +20,15 @@ export default function LoginPage() {
   const login = useLogin();
   const { data: user, isLoading: isAuthLoading, isError, error: authError } = useAuthMe();
   const [email, setEmail] = useState('');
+  const [scope, setScope] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [hasToken, setHasToken] = useState(false);
   const isDev = process.env.NODE_ENV === 'development';
+  const availableScopes = (process.env.NEXT_PUBLIC_LOGIN_SCOPES ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const showScopeSelector = availableScopes.length > 0;
 
   const destination = getPortalDestination(user);
   const destinationPath = destination?.path;
@@ -53,7 +59,7 @@ export default function LoginPage() {
     event.preventDefault();
     setError(null);
     try {
-      const response = await login.mutateAsync({ email });
+      const response = await login.mutateAsync({ email, ...(scope ? { scope } : {}) });
       const loginDestination = getPortalDestination(response.user ?? null);
       const fallbackDestination = loginDestination?.path ?? PORTAL_PATHS.sender;
       router.replace(fallbackDestination as Route);
@@ -119,6 +125,24 @@ export default function LoginPage() {
               placeholder="vous@example.com"
             />
           </label>
+          {showScopeSelector && (
+            <label className="block text-sm font-medium text-slate-700">
+              Scope (optionnel)
+              <select
+                value={scope}
+                onChange={(event) => setScope(event.target.value)}
+                disabled={login.isPending}
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+              >
+                <option value="">Scope automatique</option>
+                {availableScopes.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {authErrorMessage && <ErrorAlert message={authErrorMessage} />}
           {error && <ErrorAlert message={error} />}
           <button
