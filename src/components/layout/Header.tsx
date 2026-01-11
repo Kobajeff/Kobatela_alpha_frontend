@@ -14,7 +14,8 @@ import { usePortalMode } from '@/hooks/usePortalMode';
 import { LogoutButton } from './LogoutButton';
 
 const adminDashboardPath = ['', 'admin', 'dashboard'].join('/');
-const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
+const supportLandingPath = ['', 'admin', 'proofs', 'review-queue'].join('/');
+const dashboardPath = ['', 'dashboard'].join('/');
 const advisorQueuePath = ['', 'advisor', 'queue'].join('/');
 
 export function Header() {
@@ -24,27 +25,36 @@ export function Header() {
   const { data } = useAuthMe();
   const user = data as NormalizedAuthUser | undefined;
   const [portalMode, setPortalMode] = usePortalMode();
-  const effectiveScopes = Array.isArray(user?.effectiveScopes) ? user.effectiveScopes : [];
-  const isAdmin =
-    user?.globalRole === 'admin' ||
-    user?.globalRole === 'support' ||
-    effectiveScopes.includes('ADMIN') ||
-    effectiveScopes.includes('SUPPORT') ||
-    effectiveScopes.includes('PRICING_ADMIN') ||
-    effectiveScopes.includes('RISK_ADMIN');
-  const isAdvisor = user?.globalRole === 'advisor' || effectiveScopes.includes('ADVISOR');
+  const effectiveScopes = Array.isArray(user?.effectiveScopes)
+    ? user.effectiveScopes.map((scope) => scope.toUpperCase())
+    : [];
+  const isAdmin = effectiveScopes.includes('ADMIN');
+  const isSupport = effectiveScopes.includes('SUPPORT');
+  const isAdvisor = effectiveScopes.includes('ADVISOR');
+  const isUser = effectiveScopes.includes('USER');
+  const isPricingAdmin = effectiveScopes.includes('PRICING_ADMIN');
+  const isRiskAdmin = effectiveScopes.includes('RISK_ADMIN');
+  const hasPricingOps = isPricingAdmin || isRiskAdmin;
   const displayName = user?.full_name ?? user?.email ?? 'Chargement...';
   const demoMode = isDemoMode();
   const currentDemoRole = demoMode ? getDemoRole() : null;
   const homePath =
     getPortalDestination(user ?? null, portalMode)?.path ??
-    (isAdmin ? adminDashboardPath : isAdvisor ? advisorQueuePath : senderDashboardPath);
+    (isAdmin
+      ? adminDashboardPath
+      : isSupport
+        ? supportLandingPath
+        : hasPricingOps
+          ? '/admin/pricing'
+          : isAdvisor
+            ? advisorQueuePath
+            : dashboardPath);
 
   const handleSwitchToSender = () => {
     setDemoRole('sender');
     queryClient.clear();
     queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
-    router.replace(senderDashboardPath as Route);
+    router.replace(dashboardPath as Route);
     showToast?.('Switched to demo sender view', 'info');
   };
 
@@ -58,7 +68,7 @@ export function Header() {
 
   const handlePortalSwitch = (mode: 'sender' | 'provider') => {
     setPortalMode(mode);
-    router.replace((mode === 'provider' ? '/provider/dashboard' : '/sender/dashboard') as Route);
+    router.replace((mode === 'provider' ? '/provider/inbox' : dashboardPath) as Route);
   };
 
   return (
@@ -97,7 +107,7 @@ export function Header() {
             </button>
           </div>
         )}
-        {user?.globalRole === 'user' && (
+        {user && isUser && (
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -108,7 +118,7 @@ export function Header() {
                   : 'border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              Sender
+              Mes escrows envoyés
             </button>
             <button
               type="button"
@@ -119,19 +129,33 @@ export function Header() {
                   : 'border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              Provider
+              Mes escrows prestataire
             </button>
           </div>
         )}
-        {isAdmin && (
+        {isAdmin ? (
           <Link
             href={adminDashboardPath as Route}
             className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100"
           >
             Admin
           </Link>
-        )}
-        {user?.globalRole === 'user' && portalMode === 'sender' && (
+        ) : isSupport ? (
+          <Link
+            href={supportLandingPath as Route}
+            className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100"
+          >
+            Support
+          </Link>
+        ) : hasPricingOps ? (
+          <Link
+            href="/admin/pricing"
+            className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100"
+          >
+            Pricing
+          </Link>
+        ) : null}
+        {user && isUser && portalMode === 'sender' && (
           <Link
             href="/sender/profile"
             className="rounded-md px-2 py-1 text-sm font-medium text-indigo-700 hover:bg-indigo-50"

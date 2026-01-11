@@ -1,15 +1,14 @@
 'use client';
 
-// Sidebar navigation for sender-specific sections.
+// Sidebar navigation for authenticated user sections.
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 
-const senderDashboardPath = ['', 'sender', 'dashboard'].join('/');
-
 const links = [
-  { href: senderDashboardPath, label: 'Dashboard' },
-  { href: '/sender/escrows', label: 'Escrows' },
+  { href: '/dashboard', label: 'Tableau de bord' },
+  { href: '/sender/escrows', label: 'Mes escrows envoyés' },
+  { href: '/provider/dashboard', label: 'Mes escrows prestataire' },
   { href: '/sender/mandates', label: 'Mandats' },
   { href: '/sender/merchant-suggestions', label: 'Merchant suggestions' },
   { href: '/sender/profile', label: 'Mon profil' }
