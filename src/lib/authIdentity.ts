@@ -6,6 +6,7 @@ import { getPortalMode } from './portalMode';
 
 export const PORTAL_PATHS = {
   admin: ['', 'admin', 'dashboard'].join('/'),
+  support: ['', 'admin', 'proofs', 'review-queue'].join('/'),
   advisor: ['', 'advisor', 'queue'].join('/'),
   sender: ['', 'dashboard'].join('/'),
   provider: ['', 'provider', 'dashboard'].join('/')
@@ -107,26 +108,17 @@ export function getPortalDestination(
   const scopes = getEffectiveScopes(user);
   const roleLabel = getRoleLabel(user.role);
   const hasScope = (scope: string) => scopes.includes(normalizeScopeValue(scope));
-  const normalizedRole =
-    typeof user.role === 'string' ? (user.role.toLowerCase() as GlobalRole) : user.role;
 
-  if (
-    user.role === 'admin' ||
-    user.role === 'support' ||
-    hasScope('ADMIN') ||
-    hasScope('SUPPORT') ||
-    hasScope('PRICING_ADMIN') ||
-    hasScope('RISK_ADMIN')
-  ) {
+  if (hasScope('ADMIN')) {
     return { path: PORTAL_PATHS.admin, label: roleLabel ?? 'administrateur' };
   }
 
-  if (user.role === 'advisor' || hasScope('ADVISOR')) {
-    return { path: PORTAL_PATHS.advisor, label: roleLabel ?? 'conseiller' };
+  if (hasScope('SUPPORT')) {
+    return { path: PORTAL_PATHS.support, label: roleLabel ?? 'support' };
   }
 
-  if (normalizedRole === 'user') {
-    return { path: PORTAL_PATHS.sender, label: roleLabel ?? 'utilisateur' };
+  if (hasScope('ADVISOR')) {
+    return { path: PORTAL_PATHS.advisor, label: roleLabel ?? 'conseiller' };
   }
 
   const portalMode = portalModeOverride ?? getPortalMode();
@@ -134,7 +126,7 @@ export function getPortalDestination(
     return { path: PORTAL_PATHS.provider, label: 'prestataire' };
   }
 
-  return { path: PORTAL_PATHS.sender, label: roleLabel ?? 'expéditeur' };
+  return { path: PORTAL_PATHS.sender, label: roleLabel ?? 'utilisateur' };
 
 }
 

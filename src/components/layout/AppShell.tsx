@@ -1,6 +1,6 @@
 'use client';
 
-// High-level shell used by sender routes with header, sidebar and main content areas.
+// High-level shell used by authenticated portal routes with header, sidebar and main content areas.
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
