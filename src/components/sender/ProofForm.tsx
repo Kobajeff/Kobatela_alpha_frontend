@@ -3,8 +3,8 @@
 // Small form allowing a sender to attach a new proof to an escrow and optionally a milestone.
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useCreateProof } from '@/lib/queries/sender';
-import { uploadProofFile } from '@/lib/apiClient';
+import { useSubmitProof } from '@/hooks/useSubmitProof';
+import { useUploadProofFile } from '@/hooks/useUploadProofFile';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -34,10 +34,13 @@ export function ProofForm({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadMetadata, setUploadMetadata] = useState<ProofFileUploadResponse | null>(null);
   const [proofType, setProofType] = useState<ProofType>('PHOTO');
-  const createProof = useCreateProof({ viewer });
+  const uploadProof = useUploadProofFile();
+  const submitProof = useSubmitProof({ viewer });
   const { showToast } = useToast();
 
   const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -74,6 +77,9 @@ export function ProofForm({
     const file = event.target.files?.[0] ?? null;
     setFileError(null);
     setUploadProgress(null);
+    setUploadError(null);
+    setSubmitError(null);
+    setUploadMetadata(null);
 
     if (!file) {
       setSelectedFile(null);
@@ -101,35 +107,128 @@ export function ProofForm({
     setSelectedFile(null);
     setUploadProgress(null);
     setFileError(null);
+    setUploadError(null);
+    setSubmitError(null);
+    setUploadMetadata(null);
     setFileInputKey((key) => key + 1);
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setErrorMessage('');
+  const mapUploadError = (error: unknown) => {
+    const normalized = normalizeApiError(error);
+    if (normalized.status === 401) {
+      return 'Session expirée. Veuillez vous reconnecter.';
+    }
+    if (normalized.status === 403) {
+      return 'Accès refusé : vous ne pouvez pas déposer ce fichier.';
+    }
+    if (normalized.status === 409) {
+      return 'Ce fichier a déjà été téléversé.';
+    }
+    if (normalized.status && normalized.status >= 500) {
+      return 'Le stockage est temporairement indisponible. Réessayez plus tard.';
+    }
+    return normalized.message;
+  };
+
+  const mapSubmitError = (error: unknown) => {
+    const normalized = normalizeApiError(error);
+    if (normalized.status === 401) {
+      return 'Session expirée. Veuillez vous reconnecter.';
+    }
+    if (normalized.status === 403) {
+      return normalized.code === 'RELATION_MISMATCH'
+        ? "La preuve ne correspond pas à ce jalon."
+        : 'Accès refusé : vous ne pouvez pas soumettre cette preuve.';
+    }
+    if (normalized.status === 409) {
+      return 'Une preuve identique existe déjà pour ce jalon.';
+    }
+    if (normalized.status && normalized.status >= 500) {
+      return 'Soumission impossible pour le moment. Réessayez plus tard.';
+    }
+    return normalized.message;
+  };
+
+  const handleUpload = async () => {
+    setUploadError(null);
+    setSubmitError(null);
     setFileError(null);
+    setUploadMetadata(null);
+
     if (milestoneRequired && (milestoneIdx === undefined || milestoneIdx === null)) {
-      setErrorMessage('Sélectionnez un jalon avant de soumettre la preuve.');
+      setUploadError('Sélectionnez un jalon avant de déposer la preuve.');
       return;
     }
 
     if (!selectedFile) {
-      setErrorMessage('Ajoutez un fichier pour soumettre la preuve.');
+      setUploadError('Ajoutez un fichier pour téléverser la preuve.');
       return;
     }
 
-    if (selectedFile) {
-      const validationError = validateFile(selectedFile);
-      if (validationError) {
-        setFileError(validationError);
-        return;
-      }
-    } else {
-      setFileError('Veuillez sélectionner un fichier de preuve.');
+    const validationError = validateFile(selectedFile);
+    if (validationError) {
+      setFileError(validationError);
       return;
     }
 
     setIsUploading(true);
+
+    try {
+      if (isDemoMode()) {
+        await new Promise((resolve) => {
+          setUploadProgress(0);
+          setTimeout(() => setUploadProgress(40), 150);
+          setTimeout(() => setUploadProgress(80), 300);
+          setTimeout(() => setUploadProgress(100), 450);
+          setTimeout(resolve, 500);
+        });
+
+        setUploadMetadata({
+          file_id: 'demo-file-id',
+          storage_key: 'proofs/demo-proof.pdf',
+          storage_url: 'https://demo.kobatela.com/files/demo-proof.pdf',
+          sha256: 'demo-sha256',
+          content_type: selectedFile.type,
+          size_bytes: selectedFile.size,
+          escrow_id: escrowId,
+          uploaded_by_role: viewer,
+          uploaded_by_user_id: 'demo-user',
+          bound: false
+        });
+      } else {
+        const response = await uploadProof.mutateAsync({
+          file: selectedFile,
+          escrowId,
+          onProgress: (percent) => setUploadProgress(percent)
+        });
+        setUploadMetadata(response);
+      }
+      setUploadProgress(100);
+      showToast('Fichier téléversé. Vous pouvez soumettre la preuve.', 'success');
+    } catch (error) {
+      const message = mapUploadError(error);
+      setUploadError(message);
+      showToast(message, 'error');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitError(null);
+    setUploadError(null);
+    setFileError(null);
+    if (milestoneRequired && (milestoneIdx === undefined || milestoneIdx === null)) {
+      setSubmitError('Sélectionnez un jalon avant de soumettre la preuve.');
+      return;
+    }
+
+    if (!selectedFile || !uploadMetadata) {
+      setSubmitError('Téléversez un fichier avant de soumettre la preuve.');
+      return;
+    }
 
     try {
       const basePayload = {
@@ -138,57 +237,11 @@ export function ProofForm({
         type: proofType
       };
 
-      let uploadResponse: ProofFileUploadResponse | null = null;
-
-      if (selectedFile) {
-        const validationMessage = validateFile(selectedFile);
-        if (validationMessage) {
-          setFileError(validationMessage);
-          return;
-        }
-
-        setUploadProgress(0);
-
-        if (isDemoMode()) {
-          await new Promise((resolve) => {
-            setUploadProgress(0);
-            setTimeout(() => setUploadProgress(40), 150);
-            setTimeout(() => setUploadProgress(80), 300);
-            setTimeout(() => setUploadProgress(100), 450);
-            setTimeout(resolve, 500);
-          });
-
-          uploadResponse = {
-            file_id: 'demo-file-id',
-            storage_key: 'proofs/demo-proof.pdf',
-            storage_url: 'https://demo.kobatela.com/files/demo-proof.pdf',
-            sha256: 'demo-sha256',
-            content_type: selectedFile.type,
-            size_bytes: selectedFile.size,
-            escrow_id: escrowId,
-            uploaded_by_role: viewer,
-            uploaded_by_user_id: 'demo-user',
-            bound: false
-          };
-        } else {
-          uploadResponse = await uploadProofFile(selectedFile, escrowId, (percent) => {
-            setUploadProgress(percent);
-          });
-        }
-
-        setUploadProgress(100);
-      }
-
-      if (!uploadResponse) {
-        setErrorMessage('Le fichier de preuve est manquant.');
-        return;
-      }
-
-      const createdProof = await createProof.mutateAsync({
+      const createdProof = await submitProof.mutateAsync({
         ...basePayload,
-        storage_key: uploadResponse.storage_key,
-        storage_url: uploadResponse.storage_url,
-        sha256: uploadResponse.sha256,
+        storage_key: uploadMetadata.storage_key,
+        storage_url: uploadMetadata.storage_url,
+        sha256: uploadMetadata.sha256,
         metadata: note ? { note } : undefined
       });
       const proofId = createdProof.id ?? createdProof.proof_id;
@@ -197,29 +250,23 @@ export function ProofForm({
       }
       setNote('');
       setSelectedFile(null);
+      setUploadMetadata(null);
       setFileInputKey((key) => key + 1);
       setUploadProgress(null);
       setFileError(null);
+      setUploadError(null);
+      setSubmitError(null);
       showToast('Proof created successfully', 'success');
     } catch (error) {
-      const normalized = normalizeApiError(error);
-      const message =
-        normalized.status === 401
-          ? 'Session expirée. Veuillez vous reconnecter.'
-          : normalized.status === 403
-            ? 'Accès refusé : vous ne pouvez pas soumettre de preuve.'
-            : normalized.message;
-      setErrorMessage(message);
+      const message = mapSubmitError(error);
+      setSubmitError(message);
       showToast(message, 'error');
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(null);
     }
   };
 
   const milestoneMissing =
     Boolean(milestoneRequired) && (milestoneIdx === undefined || milestoneIdx === null);
-  const isSubmitting = createProof.isPending || isUploading;
+  const isSubmitting = submitProof.isPending;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
@@ -294,7 +341,7 @@ export function ProofForm({
             {uploadProgress !== null && (
               <div className="mt-2">
                 <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                  <span>Uploading...</span>
+                  <span>Téléversement…</span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <div className="h-1.5 w-full rounded bg-gray-200">
@@ -312,14 +359,30 @@ export function ProofForm({
           </p>
         )}
       </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleUpload}
+          disabled={isUploading || !selectedFile}
+        >
+          {isUploading ? 'Téléversement…' : 'Uploader le fichier'}
+        </Button>
+        {uploadMetadata && (
+          <span className="text-xs text-slate-600">
+            Fichier prêt. Vous pouvez soumettre la preuve.
+          </span>
+        )}
+      </div>
+      {uploadError && <p className="text-xs text-rose-600">{uploadError}</p>}
       <div className="flex items-center justify-between">
         <div className="text-sm">
           {milestoneMissing && (
             <p className="text-amber-700">Sélectionnez un jalon pour continuer.</p>
           )}
-          {errorMessage && <p className="text-rose-600">{errorMessage}</p>}
+          {submitError && <p className="text-rose-600">{submitError}</p>}
         </div>
-        <Button type="submit" disabled={isSubmitting || milestoneMissing}>
+        <Button type="submit" disabled={isSubmitting || milestoneMissing || !uploadMetadata}>
           {isSubmitting ? 'Submitting proof…' : 'Ajouter une preuve'}
         </Button>
       </div>
