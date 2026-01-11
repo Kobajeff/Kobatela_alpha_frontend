@@ -53,6 +53,12 @@ export const queryKeys = {
     inbox: <T extends ListFilters>(filters: T) =>
       ['provider', 'inbox', 'escrows', filters] as const
   },
+  dashboard: {
+    sentEscrowsPreview: <T extends ListFilters>(filters: T) =>
+      ['dashboard', 'sent-escrows', filters] as const,
+    providerInboxPreview: <T extends ListFilters>(filters: T) =>
+      ['dashboard', 'provider-inbox', filters] as const
+  },
   external: {
     escrowSummary: (token?: string | null) => ['external', 'escrow', token] as const,
     proofStatus: (proofId?: string | number | null, token?: string | null) =>
