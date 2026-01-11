@@ -89,7 +89,6 @@ export default function SenderEscrowsPage() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                     <tr>
-                      <th className="px-3 py-2">Relation</th>
                       <th className="px-3 py-2">Escrow ID</th>
                       <th className="px-3 py-2">Statut</th>
                       <th className="px-3 py-2">Montant</th>
@@ -101,9 +100,6 @@ export default function SenderEscrowsPage() {
                   <tbody className="divide-y divide-slate-100">
                     {senderQuery.data.map((escrow) => (
                       <tr key={escrow.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2">
-                          <Badge variant="info">Expéditeur</Badge>
-                        </td>
                         <td className="px-3 py-2 font-medium text-indigo-600">
                           <Link href={`/sender/escrows/${escrow.id}`}>{escrow.id}</Link>
                         </td>
@@ -174,7 +170,7 @@ export default function SenderEscrowsPage() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                     <tr>
-                      <th className="px-3 py-2">Relation</th>
+                      <th className="px-3 py-2">Expéditeur</th>
                       <th className="px-3 py-2">Escrow ID</th>
                       <th className="px-3 py-2">Statut</th>
                       <th className="px-3 py-2">Montant</th>
@@ -188,7 +184,7 @@ export default function SenderEscrowsPage() {
                     {providerItems.map((item) => (
                       <tr key={item.escrow_id} className="hover:bg-slate-50">
                         <td className="px-3 py-2">
-                          <Badge variant="outline">Prestataire</Badge>
+                          <span className="font-medium text-slate-700">{item.sender_display}</span>
                         </td>
                         <td className="px-3 py-2 font-medium text-indigo-600">
                           <Link href={`/provider/escrows/${item.escrow_id}`}>{item.escrow_id}</Link>
