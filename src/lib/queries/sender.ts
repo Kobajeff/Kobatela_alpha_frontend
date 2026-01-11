@@ -903,13 +903,13 @@ type ProofLookupParams = {
   proofId: string;
 };
 
-async function fetchProofById({ proofId }: ProofLookupParams) {
+async function fetchProofById({ proofId }: ProofLookupParams): Promise<ProofUI> {
   const response = await apiClient.get<Proof>(`/proofs/${proofId}`);
   return normalizeProof(response.data);
 }
 
 export function useProofDetail(proofId?: string) {
-  return useQuery<Proof>({
+  return useQuery<ProofUI, Error>({
     queryKey: queryKeys.proofs.byId(proofId ?? null),
     queryFn: async () => {
       if (!proofId) {
