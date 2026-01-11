@@ -10,7 +10,7 @@ const links = [
   { href: '/sender/escrows', label: 'Mes escrows envoyés' },
   { href: '/provider/dashboard', label: 'Mes escrows prestataire' },
   { href: '/sender/mandates', label: 'Mandats' },
-  { href: '/sender/merchant-suggestions', label: 'Merchant suggestions' },
+  { href: '/sender/merchant-suggestions', label: 'Vos marchands' },
   { href: '/sender/profile', label: 'Mon profil' }
 ];
 
