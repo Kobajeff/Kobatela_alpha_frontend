@@ -9,7 +9,7 @@ import type { EscrowListItem } from '@/types/api';
 
 export function SenderEscrowList({ escrows }: { escrows: EscrowListItem[] }) {
   if (!escrows.length) {
-    return <p className="text-slate-600">Aucun escrow trouvé.</p>;
+    return <p className="text-slate-600">No escrows found.</p>;
   }
 
   return (

@@ -16,6 +16,7 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 const STATUS_OPTIONS: { label: string; value: '' | EscrowStatus }[] = [
   { label: 'Tous les statuts', value: '' },
   { label: 'Brouillon', value: 'DRAFT' },
+  { label: 'Actif', value: 'ACTIVE' },
   { label: 'Financé', value: 'FUNDED' },
   { label: 'Prêt à libérer', value: 'RELEASABLE' },
   { label: 'Libéré', value: 'RELEASED' },

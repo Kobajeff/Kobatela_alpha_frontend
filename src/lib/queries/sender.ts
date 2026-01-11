@@ -319,7 +319,7 @@ export function useSenderEscrows(params: { status?: string; limit?: number; offs
     queryFn: async () => {
       if (isDemoMode()) {
         let items = demoEscrows;
-        if (status && status !== 'all') {
+        if (status) {
           items = items.filter((e) => e.status === status);
         }
         const slice = items.slice(offset, offset + limit);
