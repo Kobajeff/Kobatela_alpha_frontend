@@ -26,14 +26,16 @@ import { useForbiddenAction } from '@/lib/hooks/useForbiddenAction';
 import { Button } from '@/components/ui/Button';
 import { invalidateEscrowSummary } from '@/lib/queryInvalidation';
 import { invalidateEscrowBundle } from '@/lib/invalidation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { normalizeApiError } from '@/lib/apiError';
-import { isDirectDepositEnabled } from '@/lib/config';
+import { isDemoMode, isDirectDepositEnabled } from '@/lib/config';
 import { isFundingInProgress, isFundingTerminal } from '@/lib/escrowFunding';
-import {
-  canRequestAdvisorReview,
-  shouldStopAdvisorReviewPolling
-} from '@/lib/proofAdvisorReview';
+import { clearIdempotencyKey, getOrCreateIdempotencyKey } from '@/lib/idempotency';
+import { shouldStopAdvisorReviewPolling } from '@/lib/proofAdvisorReview';
+import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
+import { apiClient } from '@/lib/apiClient';
+import { queryKeys } from '@/lib/queryKeys';
+import type { Payment, SenderEscrowSummary } from '@/types/api';
 
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -56,9 +58,11 @@ export default function SenderEscrowDetailsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [fundingError, setFundingError] = useState<string | null>(null);
   const [depositError, setDepositError] = useState<string | null>(null);
+  const [depositConflict, setDepositConflict] = useState<string | null>(null);
   const [fundingNote, setFundingNote] = useState<string | null>(null);
   const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState<string>('');
   const [latestProofId, setLatestProofId] = useState<string | null>(null);
+  const [paymentPollingEnabled, setPaymentPollingEnabled] = useState(false);
   const [proofRequestMessage, setProofRequestMessage] = useState<{
     tone: 'success' | 'info' | 'error';
     text: string;
@@ -101,6 +105,12 @@ export default function SenderEscrowDetailsPage() {
   const requestAdvisorReview = useRequestAdvisorReview();
   const isFundingTerminalState = isFundingTerminal(query.data);
   const isFundingActiveState = isFundingInProgress(query.data) || fundingInProgress;
+  const paymentPollingStartRef = useRef<number | null>(null);
+  const depositIdempotencyIntent = useMemo(
+    () => `escrow:${escrowId}:deposit`,
+    [escrowId]
+  );
+  const depositIdempotencyRef = useRef<string | null>(null);
   const PSP_RETURN_TIMEOUT_MS = 60_000;
 
   const stopAdvisorReviewPolling = useCallback(() => {
@@ -163,8 +173,12 @@ export default function SenderEscrowDetailsPage() {
       setPspReturnStartedAt(null);
       setPspReturnElapsedMs(0);
       setPspReturnTimedOut(false);
+      setPaymentPollingEnabled(false);
+      paymentPollingStartRef.current = null;
+      clearIdempotencyKey(depositIdempotencyIntent);
+      depositIdempotencyRef.current = null;
     }
-  }, [isFundingTerminalState]);
+  }, [depositIdempotencyIntent, isFundingTerminalState]);
 
   useEffect(() => {
     if (!isFundingActiveState) return;
@@ -334,6 +348,102 @@ export default function SenderEscrowDetailsPage() {
     return normalized.message ?? extractErrorMessage(error);
   };
 
+  const shouldBlockDeposit = (summary?: SenderEscrowSummary | null) => {
+    const status = summary?.escrow?.status?.toUpperCase();
+    if (!status) return false;
+    if (status !== 'DRAFT') return true;
+    const amountTotal = Number(summary?.escrow?.amount_total);
+    if (!Number.isFinite(amountTotal)) return false;
+    const totalPaid = (summary?.payments ?? []).reduce((total, payment) => {
+      const paymentAmount = Number(payment.amount);
+      return total + (Number.isFinite(paymentAmount) ? paymentAmount : 0);
+    }, 0);
+    return totalPaid >= amountTotal;
+  };
+
+  const latestPayment = useMemo(() => {
+    if (!query.data?.payments?.length) return null;
+    return query.data.payments.reduce<Payment | null>((current, next) => {
+      if (!current) return next;
+      const currentTime = new Date(current.created_at).getTime();
+      const nextTime = new Date(next.created_at).getTime();
+      return nextTime > currentTime ? next : current;
+    }, null);
+  }, [query.data?.payments]);
+
+  const latestPaymentId = latestPayment?.id ? String(latestPayment.id) : null;
+  const paymentRef = useRef<Payment | null>(null);
+  const paymentRefetchInterval = useCallback(() => {
+    if (!latestPaymentId || !paymentPollingEnabled) return false;
+    if (!paymentPollingStartRef.current) {
+      paymentPollingStartRef.current = Date.now();
+    }
+    return makeRefetchInterval(
+      pollingProfiles.payoutStatus,
+      () => Date.now() - (paymentPollingStartRef.current ?? Date.now()),
+      () => paymentRef.current ?? latestPayment ?? query.data?.payments?.[0]
+    )();
+  }, [latestPayment, latestPaymentId, paymentPollingEnabled, query.data?.payments]);
+
+  const paymentQuery = useQuery<Payment>({
+    queryKey: queryKeys.payments.byId(latestPaymentId ?? ''),
+    queryFn: async () => {
+      if (isDemoMode()) {
+        const payment = query.data?.payments?.find(
+          (entry) => String(entry.id) === String(latestPaymentId)
+        );
+        if (!payment) {
+          throw new Error('Payment not found in demo data');
+        }
+        return new Promise((resolve) => {
+          setTimeout(() => resolve(payment), 200);
+        });
+      }
+      const response = await apiClient.get<Payment>(`/payments/${latestPaymentId}`);
+      return response.data;
+    },
+    enabled: Boolean(latestPaymentId && paymentPollingEnabled),
+    refetchInterval: paymentRefetchInterval
+  });
+
+  const paymentStatus = paymentQuery.data?.status
+    ? String(paymentQuery.data.status).toUpperCase()
+    : null;
+  const isPaymentTerminal =
+    paymentStatus === 'SETTLED' || paymentStatus === 'ERROR' || paymentStatus === 'REFUNDED';
+
+  useEffect(() => {
+    if (paymentQuery.data) {
+      paymentRef.current = paymentQuery.data;
+      return;
+    }
+    if (latestPayment) {
+      paymentRef.current = latestPayment;
+    }
+  }, [latestPayment, paymentQuery.data]);
+
+  useEffect(() => {
+    if (!fundingInProgress) {
+      setPaymentPollingEnabled(false);
+      paymentPollingStartRef.current = null;
+      return;
+    }
+    if (latestPaymentId) {
+      setPaymentPollingEnabled(true);
+    }
+  }, [fundingInProgress, latestPaymentId]);
+
+  useEffect(() => {
+    paymentPollingStartRef.current = null;
+  }, [latestPaymentId]);
+
+  useEffect(() => {
+    if (!fundingInProgress) return;
+    if (isPaymentTerminal) {
+      setFundingInProgress(false);
+    }
+  }, [fundingInProgress, isPaymentTerminal]);
+
   const refreshEscrowBundle = () =>
     invalidateEscrowBundle(queryClient, {
       escrowId,
@@ -341,17 +451,11 @@ export default function SenderEscrowDetailsPage() {
       refetchSummary: true
     });
 
-  const generateIdempotencyKey = () => {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-    throw new Error('Unable to generate idempotency key.');
-  };
-
   const handleFundingSession = async () => {
     setFundingError(null);
     setDepositError(null);
     setFundingNote(null);
+    setDepositConflict(null);
     setFundingInProgress(true);
     setFundingStartedAt(Date.now());
     try {
@@ -372,6 +476,7 @@ export default function SenderEscrowDetailsPage() {
     setDepositError(null);
     setFundingError(null);
     setFundingNote(null);
+    setDepositConflict(null);
     setFundingInProgress(true);
     setFundingStartedAt(Date.now());
     try {
@@ -383,12 +488,30 @@ export default function SenderEscrowDetailsPage() {
         setFundingInProgress(false);
         return;
       }
-      const idempotencyKey = generateIdempotencyKey();
+      const idempotencyKey =
+        depositIdempotencyRef.current ??
+        getOrCreateIdempotencyKey(depositIdempotencyIntent);
+      depositIdempotencyRef.current = idempotencyKey;
       await depositEscrow.mutateAsync({ idempotencyKey, amount });
       showToast('Dépôt envoyé. En attente de confirmation.', 'success');
+      setFundingNote('Dépôt envoyé. En attente de confirmation.');
+      setPaymentPollingEnabled(true);
       refreshEscrowBundle();
     } catch (error) {
+      const normalized = normalizeApiError(error);
       const message = resolveFundingErrorMessage(error);
+      if (normalized.status === 409 || normalized.status === 422) {
+        setDepositConflict(
+          'Conflit détecté. Nous mettons à jour le statut du financement.'
+        );
+        const refreshed = await query.refetch();
+        refreshEscrowBundle();
+        if (shouldBlockDeposit(refreshed.data)) {
+          setFundingInProgress(false);
+        }
+        showToast(message, 'info');
+        return;
+      }
       setDepositError(message);
       showToast(message, 'error');
       refreshEscrowBundle();
@@ -434,6 +557,7 @@ export default function SenderEscrowDetailsPage() {
     return null;
   }
 
+  const depositBlocked = shouldBlockDeposit(data);
   const loading =
     markDelivered.isPending || approve.isPending || reject.isPending || checkDeadline.isPending;
   const lastUpdatedAt = query.dataUpdatedAt ? new Date(query.dataUpdatedAt) : null;
@@ -490,6 +614,16 @@ export default function SenderEscrowDetailsPage() {
           {label}
         </div>
       ))}
+      {depositConflict && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          {depositConflict}
+        </div>
+      )}
+      {depositBlocked && !isFundingTerminalState && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
+          Le dépôt est indisponible pour cet escrow. Vérifiez le statut actuel.
+        </div>
+      )}
       {pspReturnTimedOut && !isFundingTerminalState && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
           Still processing — this can take a few minutes.
@@ -517,6 +651,7 @@ export default function SenderEscrowDetailsPage() {
         depositError={depositError}
         fundingNote={fundingNote}
         showDirectDeposit={directDepositEnabled}
+        fundingBlocked={depositBlocked}
         onStartFundingSession={handleFundingSession}
         onDirectDeposit={directDepositEnabled ? handleDeposit : undefined}
         lastUpdatedAt={lastUpdatedAt}

@@ -40,6 +40,7 @@ interface SenderEscrowDetailsProps {
   depositError?: string | null;
   fundingNote?: string | null;
   showDirectDeposit?: boolean;
+  fundingBlocked?: boolean;
   loading?: boolean;
   processing?: boolean;
   lastUpdatedAt?: string | Date | null;
@@ -74,6 +75,7 @@ export function SenderEscrowDetails({
   depositError,
   fundingNote,
   showDirectDeposit,
+  fundingBlocked,
   loading,
   processing,
   lastUpdatedAt,
@@ -90,7 +92,9 @@ export function SenderEscrowDetails({
   const fundingComplete = isFundingTerminal(summary);
   const canTriggerFunding = Boolean(onStartFundingSession && !fundingComplete);
   const fundingButtonsDisabled =
-    Boolean(loading || processing || fundingSessionPending || depositPending);
+    Boolean(
+      loading || processing || fundingSessionPending || depositPending || fundingBlocked
+    );
 
   return (
     <div className="space-y-6">
