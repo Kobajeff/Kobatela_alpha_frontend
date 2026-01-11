@@ -1,4 +1,5 @@
-import type { AdminProofReviewItem, PaginatedResponse, ProofStatus } from '@/types/api';
+import type { PaginatedResponse, ProofStatus } from '@/types/api';
+import type { AdminProofReviewItemUI } from '@/types/ui';
 
 export type AdminProofReviewQueueFilters = {
   limit?: number;
@@ -11,4 +12,4 @@ export type AdminProofReviewQueueFilters = {
   status?: ProofStatus | string;
 };
 
-export type AdminProofReviewQueueResponse = PaginatedResponse<AdminProofReviewItem>;
+export type AdminProofReviewQueueResponse = PaginatedResponse<AdminProofReviewItemUI>;

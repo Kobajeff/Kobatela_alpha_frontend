@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import type { SenderEscrowSummary } from '@/types/api';
+import type { SenderEscrowSummaryUI } from '@/types/ui';
 import { formatDateTime } from '@/lib/format';
 import {
   mapEscrowStatusToBadge,
@@ -13,7 +13,7 @@ import {
 } from '@/lib/uiMappings';
 
 type ProviderEscrowDetailsProps = {
-  summary: SenderEscrowSummary;
+  summary: SenderEscrowSummaryUI;
   proofForm?: ReactNode;
   proofReviewActive?: boolean;
   proofReviewError?: string | null;

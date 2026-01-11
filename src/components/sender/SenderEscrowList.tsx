@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { formatDateTime } from '@/lib/format';
-import type { EscrowListItem } from '@/types/api';
+import type { EscrowListItemUI } from '@/types/ui';
 
-export function SenderEscrowList({ escrows }: { escrows: EscrowListItem[] }) {
+export function SenderEscrowList({ escrows }: { escrows: EscrowListItemUI[] }) {
   if (!escrows.length) {
     return <p className="text-slate-600">No escrows found.</p>;
   }

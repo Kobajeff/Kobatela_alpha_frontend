@@ -7,7 +7,6 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { useSenderEscrows } from '@/lib/queries/sender';
 import { useProviderInboxEscrows } from '@/lib/queries/provider';
 import { formatDateTime } from '@/lib/format';
-import { getEscrowStatus } from '@/lib/normalize';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -16,6 +15,11 @@ import type { EscrowStatus } from '@/types/api';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { StatusBadge } from '@/components/common/StatusBadge';
+
+function getEscrowStatus(item: { status?: string; escrow_status?: string }): string | undefined {
+  if ('status' in item) return item.status;
+  return item.escrow_status;
+}
 
 const STATUS_OPTIONS: { label: string; value: '' | EscrowStatus }[] = [
   { label: 'Tous les statuts', value: '' },

@@ -12,6 +12,13 @@ import { sanitizeExternalEscrowSummary, sanitizeExternalProofStatus } from '../e
 import { queryKeys } from '../queryKeys';
 import { normalizeApiError } from '../apiError';
 import { isTerminalStatus } from '../external/externalProofStatuses';
+import type { UIId } from '@/types/id';
+import {
+  normalizeExternalProofStatus,
+  normalizeExternalProofSubmitResponse,
+  normalizeExternalProofUploadResponse
+} from '@/lib/normalize';
+import type { ExternalProofUploadResponseUI } from '@/types/ui';
 
 export function useExternalEscrowSummary(token?: string | null) {
   return useQuery({
@@ -28,7 +35,7 @@ export function useExternalEscrowSummary(token?: string | null) {
 }
 
 export function useExternalProofUpload(token?: string | null) {
-  return useMutation({
+  return useMutation<ExternalProofUploadResponseUI, Error, { file: File; onProgress?: (percent: number) => void }>({
     mutationFn: async ({
       file,
       onProgress
@@ -39,7 +46,8 @@ export function useExternalProofUpload(token?: string | null) {
       if (!token) {
         throw new Error('Token requis pour le téléversement.');
       }
-      return uploadExternalProofFile(token, file, onProgress);
+      const response = await uploadExternalProofFile(token, file, onProgress);
+      return normalizeExternalProofUploadResponse(response);
     }
   });
 }
@@ -50,12 +58,13 @@ export function useExternalProofSubmit(token?: string | null) {
       if (!token) {
         throw new Error('Token requis pour la soumission.');
       }
-      return submitExternalProof(token, payload);
+      const response = await submitExternalProof(token, payload);
+      return normalizeExternalProofSubmitResponse(response);
     }
   });
 }
 
-export function useExternalProofStatus(token?: string | null, proofId?: string | number | null) {
+export function useExternalProofStatus(token?: string | null, proofId?: UIId | null) {
   const intervalRef = useRef(3000);
   const consecutiveErrorRef = useRef(0);
   const [stoppedReason, setStoppedReason] = useState<string | null>(null);
@@ -77,7 +86,7 @@ export function useExternalProofStatus(token?: string | null, proofId?: string |
       const response = await getExternalProofStatus(token, proofId);
       consecutiveErrorRef.current = 0;
       setLastAuthErrorStatus(null);
-      return sanitizeExternalProofStatus(response);
+      return normalizeExternalProofStatus(sanitizeExternalProofStatus(response));
     },
     enabled: Boolean(token && proofId),
     refetchInterval: (query) => {

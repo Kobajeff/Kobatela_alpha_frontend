@@ -1,4 +1,4 @@
-import type { SenderEscrowSummary } from '@/types/api';
+import type { SenderEscrowSummaryUI } from '@/types/ui';
 
 const FUNDING_TERMINAL_STATUSES = new Set([
   'FUNDED',
@@ -8,13 +8,13 @@ const FUNDING_TERMINAL_STATUSES = new Set([
   'CANCELLED'
 ]);
 
-export function isFundingTerminal(summary?: SenderEscrowSummary | null): boolean {
+export function isFundingTerminal(summary?: SenderEscrowSummaryUI | null): boolean {
   const status = summary?.escrow?.status?.toUpperCase();
   if (!status) return false;
   return FUNDING_TERMINAL_STATUSES.has(status);
 }
 
-export function isFundingInProgress(summary?: SenderEscrowSummary | null): boolean {
+export function isFundingInProgress(summary?: SenderEscrowSummaryUI | null): boolean {
   const status = summary?.escrow?.status?.toUpperCase();
   if (!status) return false;
   return !FUNDING_TERMINAL_STATUSES.has(status);

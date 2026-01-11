@@ -18,13 +18,14 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { canAction } from '@/policy/allowedActions';
+import type { UIId } from '@/types/id';
 
 export default function SenderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
   const escrowId = params?.id ?? '';
   const query = useSenderEscrowSummary(escrowId);
   const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState<string>('');
-  const [latestProofId, setLatestProofId] = useState<string | null>(null);
+  const [latestProofId, setLatestProofId] = useState<UIId | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const { showToast } = useToast();
   const proofReview = useProofReviewPolling(latestProofId, escrowId, 'sender');

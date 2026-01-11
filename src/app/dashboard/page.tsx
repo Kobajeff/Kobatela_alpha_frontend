@@ -12,14 +12,18 @@ import { SummaryCards } from '@/components/dashboard/SummaryCards';
 import { useDashboardProviderInboxPreview, useDashboardSentEscrowsPreview } from '@/lib/queries/dashboard';
 import type { NormalizedAuthUser } from '@/lib/authIdentity';
 import { normalizeScopeValue } from '@/lib/scopes';
-import { getEscrowStatus } from '@/lib/normalize';
-import type { EscrowListItem } from '@/types/api';
+import type { EscrowListItemUI } from '@/types/ui';
 
 const SUMMARY_LIMIT = 5;
 const ACTIVE_ESCROW_STATUSES = new Set(['ACTIVE', 'FUNDED', 'RELEASABLE']);
 
 function isActiveEscrowStatus(status: string) {
   return ACTIVE_ESCROW_STATUSES.has(status.toUpperCase());
+}
+
+function getEscrowStatus(item: { status?: string; escrow_status?: string }): string | undefined {
+  if ('status' in item) return item.status;
+  return item.escrow_status;
 }
 
 function getActiveEscrowCount(items: Array<{ status?: string } | { escrow_status?: string }>): number {
@@ -32,7 +36,7 @@ function getActiveEscrowCount(items: Array<{ status?: string } | { escrow_status
   }, 0);
 }
 
-function computeFundsUnderEscrow(escrows: EscrowListItem[]) {
+function computeFundsUnderEscrow(escrows: EscrowListItemUI[]) {
   const activeEscrows = escrows.filter((escrow) => isActiveEscrowStatus(escrow.status));
   if (!activeEscrows.length) return null;
 

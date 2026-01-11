@@ -1,6 +1,7 @@
 import type { QueryClient, QueryKey } from '@tanstack/react-query';
 import { queryKeys } from './queryKeys';
 import type { EscrowSummaryViewer } from './queryKeys';
+import type { UIId } from '@/types/id';
 
 type EscrowBundleOptions = {
   escrowId: string;
@@ -10,9 +11,9 @@ type EscrowBundleOptions = {
 };
 
 type ProofBundleOptions = {
-  proofId: string;
-  escrowId: string;
-  milestoneId?: string | number | null;
+  proofId: UIId;
+  escrowId: UIId;
+  milestoneId?: UIId | null;
   viewer?: EscrowSummaryViewer;
 };
 

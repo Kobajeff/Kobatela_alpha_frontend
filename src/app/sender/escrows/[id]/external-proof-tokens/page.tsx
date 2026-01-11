@@ -20,10 +20,11 @@ import {
 } from '@/lib/queries/externalProofTokens';
 import { useSenderEscrowSummary } from '@/lib/queries/sender';
 import type {
-  ExternalProofToken,
   ExternalProofTokenIssuePayload,
   ExternalProofTokenStatus
 } from '@/types/api';
+import type { ExternalProofTokenUI } from '@/types/ui';
+import type { UIId } from '@/types/id';
 
 function mapTokenStatus(status: ExternalProofTokenStatus) {
   switch (status) {
@@ -45,9 +46,9 @@ function TokenRow({
   onSelect,
   onRevoke
 }: {
-  token: ExternalProofToken;
-  onSelect: (tokenId: string | number) => void;
-  onRevoke: (tokenId: string | number) => void;
+  token: ExternalProofTokenUI;
+  onSelect: (tokenId: UIId) => void;
+  onRevoke: (tokenId: UIId) => void;
 }) {
   const badge = mapTokenStatus(token.status);
   return (
@@ -77,14 +78,14 @@ function TokenRow({
 function TokenDetail({
   token
 }: {
-  token: ExternalProofToken;
+  token: ExternalProofTokenUI;
 }) {
   const badge = mapTokenStatus(token.status);
   const fields: Array<[string, string | null | undefined]> = [
-    ['Identifiant', String(token.token_id)],
+    ['Identifiant', token.token_id],
     ['Statut', badge.label],
     ['Jalon', token.target?.milestone_idx ? `#${token.target.milestone_idx}` : '—'],
-    ['Escrow', token.target?.escrow_id ? String(token.target.escrow_id) : '—'],
+    ['Escrow', token.target?.escrow_id ?? '—'],
     ['Expiration', token.expires_at ? formatDateTime(token.expires_at) : '—'],
     ['Créé le', token.created_at ? formatDateTime(token.created_at) : '—'],
     ['Dernière utilisation', token.last_used_at ? formatDateTime(token.last_used_at) : '—'],
@@ -118,10 +119,10 @@ export default function ExternalProofTokensPage() {
   const escrowQuery = useSenderEscrowSummary(escrowId);
   const listFilters = useMemo(() => ({ escrow_id: escrowId }), [escrowId]);
   const tokensQuery = useExternalProofTokensList(listFilters);
-  const [selectedTokenId, setSelectedTokenId] = useState<string | number | null>(null);
+  const [selectedTokenId, setSelectedTokenId] = useState<UIId | null>(null);
   const tokenDetailQuery = useExternalProofTokenDetail(selectedTokenId);
   const issueToken = useIssueExternalProofToken();
-  const [issuedToken, setIssuedToken] = useState<ExternalProofToken | null>(null);
+  const [issuedToken, setIssuedToken] = useState<ExternalProofTokenUI | null>(null);
   const revokeToken = useRevokeExternalProofToken();
   const [formState, setFormState] = useState<ExternalProofTokenIssuePayload>({
     escrow_id: escrowId,
@@ -154,7 +155,7 @@ export default function ExternalProofTokensPage() {
       setFormState((prev) => ({
         ...prev,
         escrow_id: escrowId,
-        milestone_idx: firstMilestone.sequence_index ?? firstMilestone.id ?? 1
+        milestone_idx: firstMilestone.sequence_index ?? 1
       }));
     }
   }, [escrowId, escrowQuery.data?.milestones]);
@@ -189,7 +190,7 @@ export default function ExternalProofTokensPage() {
     }
   };
 
-  const handleRevoke = async (tokenId: string | number) => {
+  const handleRevoke = async (tokenId: UIId) => {
     if (confirmText !== 'REVOKE') {
       showToast('Saisissez REVOKE pour confirmer la révocation.', 'error');
       return;

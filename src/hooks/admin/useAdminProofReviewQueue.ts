@@ -5,6 +5,8 @@ import { isDemoMode } from '@/lib/config';
 import { demoAdminProofQueue } from '@/lib/demoData';
 import { queryKeys } from '@/lib/queryKeys';
 import type { AdminProofReviewItem, PaginatedResponse } from '@/types/api';
+import type { AdminProofReviewItemUI } from '@/types/ui';
+import { normalizeAdminProofReviewItem } from '@/lib/normalize';
 import type {
   AdminProofReviewQueueFilters,
   AdminProofReviewQueueResponse
@@ -13,8 +15,8 @@ import { ADMIN_PROOF_REVIEW_QUEUE_ENDPOINT } from '@/backend-contract/endpoints'
 
 const DEFAULT_LIMIT = 20;
 
-function mapProofReviewQueueItem(item: AdminProofReviewItem): AdminProofReviewItem {
-  return {
+function mapProofReviewQueueItem(item: AdminProofReviewItem): AdminProofReviewItemUI {
+  return normalizeAdminProofReviewItem({
     proof_id: item.proof_id,
     escrow_id: item.escrow_id,
     milestone_id: item.milestone_id ?? null,
@@ -37,7 +39,7 @@ function mapProofReviewQueueItem(item: AdminProofReviewItem): AdminProofReviewIt
     advisor: item.advisor ?? null,
     payout_eligible: item.payout_eligible ?? null,
     payout_blocked_reasons: item.payout_blocked_reasons ?? null
-  };
+  });
 }
 
 function normalizeProofReviewQueueResponse(
