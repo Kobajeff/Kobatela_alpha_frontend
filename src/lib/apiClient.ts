@@ -20,7 +20,15 @@ apiClient.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) {
     config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers['X-API-Key'] = token;
+    const headers = config.headers;
+    const hasAuthorization =
+      typeof headers?.has === 'function'
+        ? headers.has('Authorization')
+        : Boolean(headers?.Authorization ?? headers?.authorization);
+    if (!hasAuthorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   if (process.env.NODE_ENV === 'development') {
     const method = config.method?.toUpperCase() ?? 'GET';

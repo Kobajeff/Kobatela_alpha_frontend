@@ -110,8 +110,8 @@ export function useCreateMerchantSuggestion() {
 
 export function useLogin() {
   const queryClient = useQueryClient();
-  return useMutation<AuthLoginResponse, Error, { email: string }>({
-    mutationFn: async ({ email }) => {
+  return useMutation<AuthLoginResponse, Error, { email: string; scope?: string }>({
+    mutationFn: async ({ email, scope }) => {
       if (isDemoMode()) {
         const role = getDemoRole();
         const user = getDemoUserByRole(role);
@@ -124,15 +124,26 @@ export function useLogin() {
         });
       }
 
-      const response = await apiClient.post<AuthLoginResponse>('/auth/login', { email });
-      return response.data;
+      const response = await apiClient.post<AuthLoginResponse>('/auth/login', {
+        email,
+        ...(scope ? { scope } : {})
+      });
+      const data = response.data;
+      const token = data.token ?? data.access_token;
+      if (token) {
+        setAuthToken(token);
+      }
+      const meResponse = await apiClient.get<AuthMeResponse>('/auth/me');
+      return { ...data, user: meResponse.data.user };
     },
     onSuccess: (data) => {
       const token = data.token ?? data.access_token;
       if (token) {
         setAuthToken(token);
       }
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
+      const normalizedUser = normalizeAuthUser(data.user);
+      setAuthUser(data.user);
+      queryClient.setQueryData(queryKeys.auth.me(), normalizedUser);
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
