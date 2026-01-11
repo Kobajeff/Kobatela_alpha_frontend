@@ -159,6 +159,12 @@ export type BeneficiaryProfilePublicRead = {
   updated_at?: string;
 } & Record<string, unknown>;
 
+export type UserPublicRead = {
+  id: number;
+  username: string;
+  display_name?: string | null;
+};
+
 export type BeneficiaryProfileAdminRead = {
   // Contract: docs/Backend_info/API_GUIDE (15).md — BeneficiaryProfileAdminRead — id
   id?: string | number;
@@ -375,6 +381,8 @@ export type EscrowRead = EscrowListItem & {
   release_conditions_json?: EscrowReleaseConditions | Record<string, unknown> | null;
   // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — deadline_at
   deadline_at?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — provider_user
+  provider_user?: UserPublicRead | null;
 };
 
 export type ProofMetadata = Record<string, unknown>;
