@@ -555,15 +555,41 @@ export type TransactionRead = {
 };
 
 export type Payment = {
-  id: string;
-  escrow_id: string;
-  amount: number;
-  currency: string;
-  status: PaymentStatus;
-  created_at: string;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — id
+  id: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — escrow_id
+  escrow_id: string | number;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — milestone_id
+  milestone_id?: string | number | null;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — amount
+  amount: string;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — psp_ref
   psp_ref?: string | null;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — status
+  status: PaymentStatus | string;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — idempotency_key
   idempotency_key?: string | null;
-  payout_blocked_reasons?: string[] | null;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — created_at
+  created_at: string;
+  // Contract: docs/Backend_info/API_GUIDE (21).md — PaymentRead — updated_at
+  updated_at: string;
+};
+
+export type PricingSummaryMilestone = {
+  milestone_idx: number;
+  amount: string;
+  currency: string;
+  proof_kind?: string | null;
+  status: string;
+  pricing_flags: string[];
+};
+
+export type PricingSummary = {
+  currency: string;
+  amount_total: string;
+  milestones: PricingSummaryMilestone[];
+  pricing_flags: string[];
+  last_computed_at?: string | null;
 };
 
 export type EscrowViewerContext = {
@@ -583,6 +609,7 @@ export type SenderEscrowSummary = {
   viewer_context: EscrowViewerContext;
   current_submittable_milestone_id?: number | null;
   current_submittable_milestone_idx?: number | null;
+  pricing_summary: PricingSummary;
 };
 
 export type AdminEscrowSummary = SenderEscrowSummary & {

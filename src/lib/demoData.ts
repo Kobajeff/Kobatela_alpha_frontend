@@ -131,10 +131,10 @@ export const demoPayments: Payment[] = [
   {
     id: 'payment-1',
     escrow_id: 'escrow-2',
-    amount: 800,
-    currency: 'EUR',
+    amount: '800',
     status: 'SETTLED',
-    created_at: '2025-01-05T18:00:00Z'
+    created_at: '2025-01-05T18:00:00Z',
+    updated_at: '2025-01-05T18:15:00Z'
   }
 ];
 
@@ -221,6 +221,30 @@ export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummary | nu
       viewer_user_id: 1
     },
     current_submittable_milestone_id: null,
-    current_submittable_milestone_idx: null
+    current_submittable_milestone_idx: null,
+    pricing_summary: {
+      currency: escrow.currency,
+      amount_total: escrow.amount_total,
+      milestones: [
+        {
+          milestone_idx: 1,
+          amount: '500.00',
+          currency: 'USD',
+          proof_kind: null,
+          status: 'PAID',
+          pricing_flags: []
+        },
+        {
+          milestone_idx: 2,
+          amount: '1000.00',
+          currency: 'USD',
+          proof_kind: null,
+          status: 'PENDING_REVIEW',
+          pricing_flags: []
+        }
+      ],
+      pricing_flags: [],
+      last_computed_at: '2025-01-10T00:00:00Z'
+    }
   };
 }

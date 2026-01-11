@@ -57,7 +57,7 @@ export function ProviderEscrowDetails({
             >
               <div>
                 <p className="font-medium">
-                  {milestone.label ?? milestone.name ?? `Jalon ${milestone.sequence_index}`}
+                  {milestone.label ?? `Jalon ${milestone.sequence_index}`}
                 </p>
                 <p className="text-sm text-slate-500">
                   Montant : {milestone.amount} {milestone.currency}
@@ -120,7 +120,7 @@ export function ProviderEscrowDetails({
             >
               <div>
                 <p className="font-medium">
-                  {payment.amount} {payment.currency}
+                  {payment.amount}
                 </p>
                 <p className="text-xs text-slate-500">{formatDateTime(payment.created_at)}</p>
               </div>
