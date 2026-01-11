@@ -353,6 +353,7 @@ export type EscrowCreatePayload = {
   amount_total: string;
   currency: 'USD' | 'EUR' | string;
   release_conditions: EscrowReleaseConditions;
+  requires_proof?: boolean;
   deadline_at: string;
   domain?: 'private' | 'public' | 'aid';
 };

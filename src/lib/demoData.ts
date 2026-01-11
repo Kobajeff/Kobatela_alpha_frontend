@@ -160,7 +160,10 @@ export const demoAdminProofQueue: AdminProofReviewItem[] = demoProofs
     storage_url: p.storage_url ?? null,
     sha256: p.sha256 ?? null,
     created_at: p.created_at,
-    invoice_total_amount: p.invoice_total_amount ?? null,
+    invoice_total_amount:
+      p.invoice_total_amount !== undefined && p.invoice_total_amount !== null
+        ? String(p.invoice_total_amount)
+        : null,
     invoice_currency: p.invoice_currency ?? null,
     ai_risk_level: p.ai_risk_level,
     ai_score: p.ai_score,

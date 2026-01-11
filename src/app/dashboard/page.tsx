@@ -12,6 +12,7 @@ import { SummaryCards } from '@/components/dashboard/SummaryCards';
 import { useDashboardProviderInboxPreview, useDashboardSentEscrowsPreview } from '@/lib/queries/dashboard';
 import type { NormalizedAuthUser } from '@/lib/authIdentity';
 import { normalizeScopeValue } from '@/lib/scopes';
+import { getEscrowStatus } from '@/lib/normalize';
 import type { EscrowListItem } from '@/types/api';
 
 const SUMMARY_LIMIT = 5;
@@ -23,7 +24,7 @@ function isActiveEscrowStatus(status: string) {
 
 function getActiveEscrowCount(items: Array<{ status?: string } | { escrow_status?: string }>): number {
   return items.reduce((count, item) => {
-    const status = 'escrow_status' in item ? item.escrow_status : item.status;
+    const status = getEscrowStatus(item);
     if (status && isActiveEscrowStatus(status)) {
       return count + 1;
     }

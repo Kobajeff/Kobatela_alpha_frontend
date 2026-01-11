@@ -7,6 +7,7 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { useSenderEscrows } from '@/lib/queries/sender';
 import { useProviderInboxEscrows } from '@/lib/queries/provider';
 import { formatDateTime } from '@/lib/format';
+import { getEscrowStatus } from '@/lib/normalize';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -113,7 +114,7 @@ export default function SenderEscrowsPage() {
                           {formatDateTime(escrow.created_at)}
                         </td>
                         <td className="px-3 py-2 text-slate-500">
-                          {formatDateTime(escrow.deadline_at)}
+                          {escrow.deadline_at ? formatDateTime(escrow.deadline_at) : '—'}
                         </td>
                         <td className="px-3 py-2">
                           <Link
@@ -181,43 +182,46 @@ export default function SenderEscrowsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {providerItems.map((item) => (
-                      <tr key={item.escrow_id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2">
-                          <span className="font-medium text-slate-700">{item.sender_display}</span>
-                        </td>
-                        <td className="px-3 py-2 font-medium text-indigo-600">
-                          <Link href={`/provider/escrows/${item.escrow_id}`}>{item.escrow_id}</Link>
-                        </td>
-                        <td className="px-3 py-2">
-                          <StatusBadge type="escrow" status={item.escrow_status} />
-                        </td>
-                        <td className="px-3 py-2">
-                          {item.amount_total} {item.currency}
-                        </td>
-                        <td className="px-3 py-2 text-slate-500">
-                          {item.deadline_at ? formatDateTime(item.deadline_at) : '—'}
-                        </td>
-                        <td className="px-3 py-2 text-slate-500">
-                          {formatDateTime(item.last_update_at)}
-                        </td>
-                        <td className="px-3 py-2">
-                          {item.current_submittable_milestone_idx !== null ? (
-                            <Badge variant="warning">Action requise</Badge>
-                          ) : (
-                            <span className="text-slate-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          <Link
-                            className="font-medium text-indigo-600 hover:text-indigo-500"
-                            href={`/provider/escrows/${item.escrow_id}`}
-                          >
-                            Ouvrir
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
+                    {providerItems.map((item) => {
+                      const status = getEscrowStatus(item);
+                      return (
+                        <tr key={item.escrow_id} className="hover:bg-slate-50">
+                          <td className="px-3 py-2">
+                            <span className="font-medium text-slate-700">{item.sender_display}</span>
+                          </td>
+                          <td className="px-3 py-2 font-medium text-indigo-600">
+                            <Link href={`/provider/escrows/${item.escrow_id}`}>{item.escrow_id}</Link>
+                          </td>
+                          <td className="px-3 py-2">
+                            {status ? <StatusBadge type="escrow" status={status} /> : <span>—</span>}
+                          </td>
+                          <td className="px-3 py-2">
+                            {item.amount_total} {item.currency}
+                          </td>
+                          <td className="px-3 py-2 text-slate-500">
+                            {item.deadline_at ? formatDateTime(item.deadline_at) : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-slate-500">
+                            {formatDateTime(item.last_update_at)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {item.current_submittable_milestone_idx !== null ? (
+                              <Badge variant="warning">Action requise</Badge>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            <Link
+                              className="font-medium text-indigo-600 hover:text-indigo-500"
+                              href={`/provider/escrows/${item.escrow_id}`}
+                            >
+                              Ouvrir
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
