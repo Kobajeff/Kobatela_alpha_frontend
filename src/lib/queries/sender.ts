@@ -37,6 +37,8 @@ import type {
   MilestoneStatus,
   Payment,
   Proof,
+  ProofDecisionRequest,
+  ProofDecisionResponse,
   AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
@@ -882,6 +884,28 @@ async function fetchProofById({ proofId }: ProofLookupParams) {
   return response.data;
 }
 
+export function useProofDetail(proofId?: string) {
+  return useQuery<Proof>({
+    queryKey: queryKeys.proofs.byId(proofId ?? null),
+    queryFn: async () => {
+      if (!proofId) {
+        throw new Error('Proof id is required');
+      }
+      if (isDemoMode()) {
+        const demoProof = demoProofs.find((proof) => String(proof.id) === String(proofId));
+        if (!demoProof) {
+          throw new Error('Proof not found in demo data');
+        }
+        return new Promise((resolve) => {
+          setTimeout(() => resolve(demoProof), 200);
+        });
+      }
+      return fetchProofById({ proofId });
+    },
+    enabled: Boolean(proofId)
+  });
+}
+
 export function useProofReviewPolling(
   proofId: string | null,
   escrowId: string,
@@ -1134,6 +1158,47 @@ export function useRequestAdvisorReview() {
         escrowId: variables.escrowId,
         viewer: variables.viewer ?? 'sender'
       });
+    }
+  });
+}
+
+export function useProofDecision() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    ProofDecisionResponse,
+    Error,
+    { proofId: string; payload: ProofDecisionRequest; escrowId: string; viewer?: EscrowSummaryViewer }
+  >({
+    mutationFn: async ({ proofId, payload }) => {
+      if (isDemoMode()) {
+        const demoProof = demoProofs.find((proof) => String(proof.id) === String(proofId));
+        const status = payload.decision === 'approve' ? 'APPROVED' : 'REJECTED';
+        return new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                ...(demoProof ?? { id: proofId, escrow_id: 'demo', created_at: new Date().toISOString() }),
+                status
+              } as ProofDecisionResponse),
+            200
+          );
+        });
+      }
+      const response = await apiClient.post<ProofDecisionResponse>(
+        `/proofs/${proofId}/decision`,
+        payload
+      );
+      return response.data;
+    },
+    onSuccess: (_data, variables) => {
+      invalidateProofBundle(queryClient, {
+        proofId: variables.proofId,
+        escrowId: variables.escrowId,
+        viewer: variables.viewer ?? 'sender'
+      });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
     }
   });
 }
