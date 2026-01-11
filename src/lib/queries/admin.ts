@@ -5,7 +5,7 @@ import type { Query } from '@tanstack/query-core';
 import { isAxiosError } from 'axios';
 import { apiClient, extractErrorMessage } from '../apiClient';
 import { isDemoMode } from '@/lib/config';
-import { demoAdminProofQueue, demoAdminStats, demoPayments, getDemoEscrowSummary } from '@/lib/demoData';
+import { demoAdminStats, demoPayments, getDemoEscrowSummary } from '@/lib/demoData';
 import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
 import { queryKeys } from '@/lib/queryKeys';
 import { buildQueryString, getPaginatedTotal, normalizePaginatedItems, type QueryParams } from './queryUtils';
@@ -26,7 +26,6 @@ import type {
   AdminDashboardStats,
   AdminAdvisorListItem,
   AdminAdvisorSummary,
-  AdminProofReviewItem,
   AdminSettingRead,
   AdvisorProfile,
   AdvisorProfileCreatePayload,
@@ -52,8 +51,7 @@ import type {
   BeneficiaryProfileAdminRead
 } from '@/types/api';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
-
-type ProofReviewQueueApiItem = AdminProofReviewItem;
+export { useAdminProofReviewQueue } from '@/hooks/admin/useAdminProofReviewQueue';
 
 export interface AdminAlertsParams {
   limit?: number;
@@ -144,42 +142,6 @@ export function useAdminFraudScoreComparison(
       return failureCount < 2;
     }
   });
-}
-
-function mapProofReviewQueueItem(item: ProofReviewQueueApiItem): AdminProofReviewItem {
-  return {
-    proof_id: item.proof_id,
-    escrow_id: item.escrow_id,
-    milestone_id: item.milestone_id ?? null,
-    status: item.status,
-    type: item.type,
-    storage_key: item.storage_key ?? null,
-    storage_url: item.storage_url ?? null,
-    sha256: item.sha256 ?? null,
-    created_at: item.created_at,
-    invoice_total_amount: item.invoice_total_amount ?? null,
-    invoice_currency: item.invoice_currency ?? null,
-    ai_risk_level: item.ai_risk_level ?? null,
-    ai_score: item.ai_score ?? null,
-    ai_flags: item.ai_flags ?? null,
-    ai_explanation: item.ai_explanation ?? null,
-    ai_checked_at: item.ai_checked_at ?? null,
-    ai_reviewed_by: item.ai_reviewed_by ?? null,
-    ai_reviewed_at: item.ai_reviewed_at ?? null,
-    metadata: item.metadata ?? null,
-    advisor: item.advisor ?? null,
-    payout_eligible: item.payout_eligible ?? null,
-    payout_blocked_reasons: item.payout_blocked_reasons ?? null
-  };
-}
-
-function normalizeProofReviewQueueResponse(data: unknown): AdminProofReviewItem[] {
-  const items = Array.isArray(data)
-    ? data
-    : Array.isArray((data as PaginatedResponse<ProofReviewQueueApiItem>)?.items)
-    ? (data as PaginatedResponse<ProofReviewQueueApiItem>).items
-    : [];
-  return items.map(mapProofReviewQueueItem);
 }
 
 function normalizeArrayResponse<T>(data: unknown): T[] {
@@ -792,39 +754,6 @@ export function useRevokeAdminUserApiKey(userId: string) {
     },
     onError: (error) => {
       throw new Error(extractErrorMessage(error));
-    }
-  });
-}
-
-export function useAdminProofReviewQueue(params: {
-  limit?: number;
-  offset?: number;
-  advisor_id?: string;
-  unassigned_only?: boolean;
-} = {}) {
-  const { limit = 20, offset = 0, advisor_id, unassigned_only } = params;
-  const filters = useMemo(
-    () => ({ limit, offset, advisor_id, unassigned_only }),
-    [advisor_id, limit, offset, unassigned_only]
-  );
-  return useQuery<AdminProofReviewItem[]>({
-    queryKey: queryKeys.admin.proofReviewQueue(filters),
-    queryFn: async () => {
-      if (isDemoMode()) {
-        return new Promise<AdminProofReviewItem[]>((resolve) => {
-          setTimeout(() => resolve(demoAdminProofQueue), 200);
-        });
-      }
-      // Contract: GET /admin/proofs/review-queue (API_GUIDE.md — Admin tools / support operations)
-      const response = await apiClient.get('/admin/proofs/review-queue', {
-        params: {
-          limit,
-          offset,
-          advisor_id,
-          unassigned_only
-        }
-      });
-      return normalizeProofReviewQueueResponse(response.data);
     }
   });
 }
