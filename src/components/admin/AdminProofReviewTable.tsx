@@ -1,7 +1,8 @@
 'use client';
 
 // Table listing proofs awaiting admin review with action buttons.
-import type { AdminProofReviewItem } from '@/types/api';
+import type { AdminProofReviewItemUI } from '@/types/ui';
+import type { UIId } from '@/types/id';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -9,10 +10,10 @@ import { formatDateTime } from '@/lib/format';
 import { ProofAiStatus } from '@/components/sender/ProofAiStatus';
 
 interface AdminProofReviewTableProps {
-  items: AdminProofReviewItem[];
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-  processingId?: string;
+  items: AdminProofReviewItemUI[];
+  onApprove: (id: UIId) => void;
+  onReject: (id: UIId) => void;
+  processingId?: UIId;
   actionsDisabled?: boolean;
 }
 
@@ -23,12 +24,12 @@ export function AdminProofReviewTable({
   processingId,
   actionsDisabled = false
 }: AdminProofReviewTableProps) {
-  const confirmAndApprove = (id: string) => {
+  const confirmAndApprove = (id: UIId) => {
     if (!window.confirm('Approuver cette preuve ?')) return;
     onApprove(id);
   };
 
-  const confirmAndReject = (id: string) => {
+  const confirmAndReject = (id: UIId) => {
     if (!window.confirm('Rejeter cette preuve ?')) return;
     onReject(id);
   };
@@ -74,8 +75,8 @@ export function AdminProofReviewTable({
                         type="button"
                         size="sm"
                         variant="secondary"
-                        disabled={processingId === String(item.proof_id) || actionsDisabled}
-                        onClick={() => confirmAndApprove(String(item.proof_id))}
+                        disabled={processingId === item.proof_id || actionsDisabled}
+                        onClick={() => confirmAndApprove(item.proof_id)}
                       >
                         Approuver
                       </Button>
@@ -83,8 +84,8 @@ export function AdminProofReviewTable({
                         type="button"
                         size="sm"
                         variant="danger"
-                        disabled={processingId === String(item.proof_id) || actionsDisabled}
-                        onClick={() => confirmAndReject(String(item.proof_id))}
+                        disabled={processingId === item.proof_id || actionsDisabled}
+                        onClick={() => confirmAndReject(item.proof_id)}
                       >
                         Rejeter
                       </Button>

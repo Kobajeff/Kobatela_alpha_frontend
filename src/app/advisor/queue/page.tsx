@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { useAdvisorAssignedProofs } from '@/lib/queries/advisor';
 import { queryKeys } from '@/lib/queryKeys';
-import type { AdvisorProofItem } from '@/types/api';
+import type { AdvisorProofItemUI } from '@/types/ui';
 
 type ViewFilter = 'all' | 'open' | 'terminal';
 
@@ -123,7 +123,7 @@ function formatDate(value?: string) {
   return date.toLocaleString();
 }
 
-function ProofRow({ proof }: { proof: AdvisorProofItem }) {
+function ProofRow({ proof }: { proof: AdvisorProofItemUI }) {
   return (
     <tr className="hover:bg-slate-50">
       <td className="px-4 py-3 font-mono text-xs text-slate-700">{proof.id}</td>

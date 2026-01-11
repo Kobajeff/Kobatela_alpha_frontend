@@ -4,7 +4,9 @@ import { invalidateProofBundle } from '@/lib/invalidation';
 import { queryKeys } from '@/lib/queryKeys';
 import type { EscrowSummaryViewer } from '@/lib/queryKeys';
 import type { CreateProofPayload, Proof } from '@/types/api';
+import type { ProofUI } from '@/types/ui';
 import { isDemoMode } from '@/lib/config';
+import { normalizeProof } from '@/lib/normalize';
 
 type UseSubmitProofOptions = {
   viewer?: EscrowSummaryViewer;
@@ -14,11 +16,11 @@ export function useSubmitProof(options?: UseSubmitProofOptions) {
   const queryClient = useQueryClient();
   const viewer = options?.viewer ?? 'sender';
 
-  return useMutation<Proof, Error, CreateProofPayload>({
+  return useMutation<ProofUI, Error, CreateProofPayload>({
     mutationFn: async (payload) => {
       if (isDemoMode()) {
         const now = new Date().toISOString();
-        return {
+        return normalizeProof({
           id: `demo-proof-${Date.now()}`,
           escrow_id: payload.escrow_id,
           milestone_idx: payload.milestone_idx,
@@ -34,10 +36,10 @@ export function useSubmitProof(options?: UseSubmitProofOptions) {
           ai_score: null,
           ai_explanation: null,
           ai_checked_at: null
-        };
+        });
       }
       const response = await apiClient.post<Proof>('/proofs', payload);
-      return response.data;
+      return normalizeProof(response.data);
     },
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.proofs.byId(data.id), data);

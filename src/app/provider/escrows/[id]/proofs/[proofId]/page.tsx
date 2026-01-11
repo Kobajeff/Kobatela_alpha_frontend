@@ -131,7 +131,10 @@ export default function ProviderProofDetailPage() {
                     {escrowSummaryQuery.data.escrow.currency}
                   </div>
                   <div>
-                    Date limite: {formatDateTime(escrowSummaryQuery.data.escrow.deadline_at)}
+                    Date limite:{' '}
+                    {escrowSummaryQuery.data.escrow.deadline_at
+                      ? formatDateTime(escrowSummaryQuery.data.escrow.deadline_at)
+                      : '—'}
                   </div>
                 </>
               )}

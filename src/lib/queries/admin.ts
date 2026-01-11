@@ -20,6 +20,8 @@ import {
   updateAiProofSetting
 } from '@/lib/adminApi';
 import { invalidateAdminDashboards, invalidateProofBundle } from '@/lib/invalidation';
+import { normalizeAdminEscrowSummary, normalizePayment, normalizeProof } from '@/lib/normalize';
+import type { AdminEscrowSummaryUI } from '@/types/ui';
 import { invalidateEscrowSummary } from '@/lib/queryInvalidation';
 import type {
   AlertRead,
@@ -50,6 +52,9 @@ import type {
   AllowedUsageRead,
   BeneficiaryProfileAdminRead
 } from '@/types/api';
+import type { UIId } from '@/types/id';
+import type { PaymentUI } from '@/types/ui';
+import type { ProofUI } from '@/types/ui';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 export { useAdminProofReviewQueue } from '@/hooks/admin/useAdminProofReviewQueue';
 
@@ -389,14 +394,14 @@ async function fetchAdminPaymentsTotal() {
 export interface AdminPaymentsParams extends QueryParams {
   limit?: number;
   offset?: number;
-  escrow_id?: string;
+  escrow_id?: UIId;
   status?: string;
-  payment_id?: string;
-  id?: string;
+  payment_id?: UIId;
+  id?: UIId;
 }
 
 export type AdminPaymentsResponse = {
-  items: Payment[];
+  items: PaymentUI[];
   total: number;
 };
 
@@ -414,11 +419,11 @@ export type AdminMerchantSuggestionList = {
   offset?: number;
 };
 
-async function fetchAdminPayments(params: AdminPaymentsParams) {
+async function fetchAdminPayments(params: AdminPaymentsParams): Promise<AdminPaymentsResponse> {
   const query = buildQueryString(params);
   const response = await apiClient.get(`/admin/payments?${query}`);
   return {
-    items: normalizePaginatedItems<Payment>(response.data),
+    items: normalizePaginatedItems<Payment>(response.data).map(normalizePayment),
     total: getPaginatedTotal<Payment>(response.data)
   };
 }
@@ -431,7 +436,7 @@ async function fetchAdminMerchantSuggestions(params: AdminMerchantSuggestionPara
   return normalizeMerchantSuggestionList(response.data);
 }
 
-async function postProofDecision(proofId: string, payload: ProofDecisionRequest) {
+async function postProofDecision(proofId: UIId, payload: ProofDecisionRequest) {
   const response = await apiClient.post<ProofDecisionResponse>(
     `/proofs/${proofId}/decision`,
     payload
@@ -567,10 +572,10 @@ export function useAdminMerchantSuggestions(
 
 export function useExecutePayment() {
   const queryClient = useQueryClient();
-  return useMutation<Payment, unknown, { paymentId: string }>({
+  return useMutation<PaymentUI, unknown, { paymentId: UIId }>({
     mutationFn: async ({ paymentId }) => {
       const response = await apiClient.post<Payment>(`/payments/execute/${paymentId}`);
-      return response.data;
+      return normalizePayment(response.data);
     },
     retry: false,
     onSuccess: (payment) => {
@@ -815,7 +820,7 @@ type AdminEscrowSummaryPollingState = {
 };
 
 export function useAdminEscrowSummary(
-  escrowId: string,
+  escrowId: UIId,
   options?: {
     fundingInProgress?: boolean;
     includeMilestones?: boolean;
@@ -860,10 +865,10 @@ export function useAdminEscrowSummary(
   );
 
   const refetchInterval = useCallback(
-    (query: Query<AdminEscrowSummary>) => {
+    (query: Query<AdminEscrowSummaryUI>) => {
       if (!escrowId || pollingBlockedRef.current) return false;
 
-      const summary = query.state.data as AdminEscrowSummary | undefined;
+      const summary = query.state.data as AdminEscrowSummaryUI | undefined;
       const flags = getEscrowSummaryPollingFlags(summary, { fundingInProgress });
       const activeProfiles = [
         flags.fundingActive ? pollingProfiles.fundingEscrow : null,
@@ -893,7 +898,7 @@ export function useAdminEscrowSummary(
     [escrowId, fundingInProgress]
   );
 
-  const query = useQuery<AdminEscrowSummary>({
+  const query = useQuery<AdminEscrowSummaryUI>({
     queryKey: queryKeys.escrows.summary(escrowId, 'admin', summaryParams),
     queryFn: async () => {
       if (isDemoMode()) {
@@ -902,7 +907,7 @@ export function useAdminEscrowSummary(
           throw new Error('Escrow not found in demo data');
         }
         return new Promise((resolve) => {
-          setTimeout(() => resolve(summary), 200);
+          setTimeout(() => resolve({ ...summary, advisor: null }), 200);
         });
       }
       // Contract: docs/Backend_info/API_GUIDE (11).md — GET /admin/escrows/{escrow_id}/summary — admin/support
@@ -912,7 +917,7 @@ export function useAdminEscrowSummary(
           params: summaryParams
         }
       );
-      return response.data;
+      return normalizeAdminEscrowSummary(response.data);
     },
     enabled: !!escrowId,
     refetchInterval,
@@ -990,7 +995,7 @@ export function useAdminEscrowSummary(
   return { ...query, polling };
 }
 
-async function createMilestone(escrowId: string, payload: MilestoneCreatePayload) {
+async function createMilestone(escrowId: UIId, payload: MilestoneCreatePayload) {
   if (isDemoMode()) {
     return new Promise<MilestoneCreatePayload>((resolve) => {
       setTimeout(() => resolve(payload), 200);
@@ -1000,7 +1005,7 @@ async function createMilestone(escrowId: string, payload: MilestoneCreatePayload
   return response.data;
 }
 
-export function useCreateMilestone(escrowId: string) {
+export function useCreateMilestone(escrowId: UIId) {
   const queryClient = useQueryClient();
   return useMutation<unknown, Error, MilestoneCreatePayload>({
     mutationFn: (payload) => createMilestone(escrowId, payload),
@@ -1016,13 +1021,14 @@ export function useCreateMilestone(escrowId: string) {
 
 export function useAdminProofDecision() {
   const queryClient = useQueryClient();
-  return useMutation<ProofDecisionResponse, Error, { proofId: string; payload: ProofDecisionRequest }>({
+  return useMutation<ProofUI, Error, { proofId: UIId; payload: ProofDecisionRequest }>({
     mutationFn: async ({ proofId, payload }) => {
       if (isDemoMode()) {
-        return new Promise<ProofDecisionResponse>((resolve) => {
+        return new Promise<ProofUI>((resolve) => {
           setTimeout(
             () =>
-              resolve({
+              resolve(
+                normalizeProof({
                 id: proofId,
                 escrow_id: '',
                 status: payload.decision === 'approve' ? 'APPROVED' : 'REJECTED',
@@ -1035,12 +1041,14 @@ export function useAdminProofDecision() {
                 ai_score: null,
                 ai_explanation: null,
                 ai_checked_at: null
-              }),
+                })
+              ),
             200
           );
         });
       }
-      return postProofDecision(proofId, payload);
+      const response = await postProofDecision(proofId, payload);
+      return normalizeProof(response);
     },
     onSuccess: (data) => {
       if (data.escrow_id) {

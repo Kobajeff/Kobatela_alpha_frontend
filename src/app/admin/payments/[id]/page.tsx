@@ -15,11 +15,11 @@ import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
 import type { AdminPaymentsResponse } from '@/lib/queries/admin';
 import { useAdminPayments, useExecutePayment } from '@/lib/queries/admin';
 import { mapPaymentStatusToBadge } from '@/lib/uiMappings';
-import type { Payment } from '@/types/api';
+import type { PaymentUI } from '@/types/ui';
 
 const TERMINAL_PAYMENT_STATUSES = new Set(['SETTLED', 'ERROR', 'REFUNDED']);
 
-type PaymentDetails = Payment;
+type PaymentDetails = PaymentUI;
 
 function formatOptionalDate(value?: string | Date | null) {
   return value ? formatDateTime(value) : '—';
@@ -41,7 +41,7 @@ export default function AdminPaymentDetailPage() {
     (query: Query<AdminPaymentsResponse>) => {
       if (!paymentId) return false;
       const items = query.state.data?.items ?? [];
-      const currentPayment = items.find((item) => String(item.id) === paymentId);
+      const currentPayment = items.find((item) => item.id === paymentId);
       if (!currentPayment) return false;
       const status = String(currentPayment.status ?? '').toUpperCase();
       const isTerminal = TERMINAL_PAYMENT_STATUSES.has(status);
@@ -74,7 +74,7 @@ export default function AdminPaymentDetailPage() {
 
   const payment = useMemo(() => {
     const items = paymentQuery.data?.items ?? [];
-    return (items.find((item) => String(item.id) === paymentId) ?? null) as
+    return (items.find((item) => item.id === paymentId) ?? null) as
       | PaymentDetails
       | null;
   }, [paymentId, paymentQuery.data?.items]);

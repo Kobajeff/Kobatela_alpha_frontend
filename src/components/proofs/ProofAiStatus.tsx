@@ -1,9 +1,14 @@
 import { Badge } from '@/components/ui/Badge';
 import { mapAiRiskToBadge } from '@/lib/uiMappings';
-import type { Proof } from '@/types/api';
+import type { ProofUI } from '@/types/ui';
+
+type ProofAiStatusData = Pick<
+  ProofUI,
+  'status' | 'ai_checked_at' | 'ai_risk_level' | 'ai_score' | 'ai_explanation'
+>;
 
 type Props = {
-  proof: Proof;
+  proof: ProofAiStatusData;
   compact?: boolean;
 };
 

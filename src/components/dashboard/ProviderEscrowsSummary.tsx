@@ -4,10 +4,10 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { formatDateTime } from '@/lib/format';
-import type { ProviderInboxItemRead } from '@/types/api';
+import type { ProviderInboxItemReadUI } from '@/types/ui';
 
 type ProviderEscrowsSummaryProps = {
-  items: ProviderInboxItemRead[];
+  items: ProviderInboxItemReadUI[];
 };
 
 export function ProviderEscrowsSummary({ items }: ProviderEscrowsSummaryProps) {

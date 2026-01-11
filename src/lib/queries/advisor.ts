@@ -5,6 +5,8 @@ import { normalizeApiError } from '../apiError';
 import { queryKeys } from '../queryKeys';
 import { buildQueryString, normalizePaginatedItems } from './queryUtils';
 import type { AdvisorProfile, AdvisorProofItem } from '@/types/api';
+import type { AdvisorProofItemUI } from '@/types/ui';
+import { normalizeAdvisorProofItem } from '@/lib/normalize';
 
 const terminalProofStatuses = new Set(['APPROVED', 'REJECTED', 'CANCELLED']);
 
@@ -12,7 +14,7 @@ export function useAdvisorAssignedProofs(params: { status?: string } = {}) {
   const { status } = params;
   const filters = useMemo(() => ({ status }), [status]);
 
-  return useQuery<AdvisorProofItem[]>({
+  return useQuery<AdvisorProofItemUI[]>({
     queryKey: queryKeys.advisor.assignedProofs(filters),
     queryFn: async () => {
       const query = buildQueryString(filters);
@@ -20,7 +22,7 @@ export function useAdvisorAssignedProofs(params: { status?: string } = {}) {
       try {
         // Contract: GET /advisor/me/proofs (API_GUIDE.md — Advisor review)
         const response = await apiClient.get(`/advisor/me/proofs${suffix}`);
-        return normalizePaginatedItems<AdvisorProofItem>(response.data);
+        return normalizePaginatedItems<AdvisorProofItem>(response.data).map(normalizeAdvisorProofItem);
       } catch (error) {
         throw new Error(extractErrorMessage(error));
       }

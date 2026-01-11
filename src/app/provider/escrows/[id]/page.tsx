@@ -10,13 +10,14 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
 import { useProofReviewPolling, useSenderEscrowSummary } from '@/lib/queries/sender';
 import { canAction } from '@/policy/allowedActions';
+import type { UIId } from '@/types/id';
 
 export default function ProviderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
   const escrowId = params?.id ?? '';
   const query = useSenderEscrowSummary(escrowId, { viewer: 'provider' });
   const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState<string>('');
-  const [latestProofId, setLatestProofId] = useState<string | null>(null);
+  const [latestProofId, setLatestProofId] = useState<UIId | null>(null);
   const proofReview = useProofReviewPolling(latestProofId, escrowId, 'provider');
 
   useEffect(() => {

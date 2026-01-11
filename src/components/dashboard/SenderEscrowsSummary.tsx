@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { formatDateTime } from '@/lib/format';
-import type { EscrowListItem } from '@/types/api';
+import type { EscrowListItemUI } from '@/types/ui';
 
 type SenderEscrowsSummaryProps = {
-  escrows: EscrowListItem[];
+  escrows: EscrowListItemUI[];
 };
 
 export function SenderEscrowsSummary({ escrows }: SenderEscrowsSummaryProps) {
@@ -15,7 +15,7 @@ export function SenderEscrowsSummary({ escrows }: SenderEscrowsSummaryProps) {
   }
 
   const renderDeadline = (value?: string) => (value ? formatDateTime(value) : '—');
-  const renderProvider = (escrow: EscrowListItem) =>
+  const renderProvider = (escrow: EscrowListItemUI) =>
     escrow.provider_user_id ?? escrow.provider_id ?? escrow.beneficiary_id ?? '—';
 
   return (

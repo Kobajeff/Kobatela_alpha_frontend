@@ -16,6 +16,7 @@ import { useExternalProofSubmit, useExternalProofUpload } from '@/lib/queries/ex
 import { mapExternalErrorMessage } from '@/lib/external/externalErrorMessages';
 import { normalizeApiError } from '@/lib/apiError';
 import { LoadingState } from '@/components/common/LoadingState';
+import type { UIId } from '@/types/id';
 
 function ExternalProofUploadPageContent() {
   const searchParams = useSearchParams();
@@ -29,7 +30,7 @@ function ExternalProofUploadPageContent() {
     storage_key: string;
     storage_url: string;
     sha256: string;
-    escrow_id: string | number;
+    escrow_id: UIId;
     milestone_idx: number;
     content_type?: string;
     size_bytes?: number;

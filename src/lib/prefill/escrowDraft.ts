@@ -1,4 +1,6 @@
 import type { EscrowCreatePayload } from '@/types/api';
+import type { IdInput, UIId } from '@/types/id';
+import { toUIId } from '@/lib/id';
 
 const STORAGE_KEY = 'kobatela:escrowDraft';
 const TTL_MINUTES = 30;
@@ -12,7 +14,7 @@ type EscrowDraftBase = {
 export type EscrowDraftPrefill =
   | (EscrowDraftBase & {
       source: 'mandate';
-      mandate_id: string | number;
+      mandate_id: UIId;
     })
   | (EscrowDraftBase & {
       source: 'local';
@@ -79,12 +81,13 @@ export const getEscrowDraft = (): EscrowDraftPrefill | null => {
   }
 };
 
-export const createEscrowDraftFromMandate = (mandate: { id?: string | number } & Record<string, unknown>) => {
+export const createEscrowDraftFromMandate = (mandate: { id?: IdInput } & Record<string, unknown>) => {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + TTL_MINUTES * 60 * 1000);
+  const mandateId = mandate.id ?? 'unknown';
   return {
     source: 'mandate' as const,
-    mandate_id: mandate.id ?? 'unknown',
+    mandate_id: toUIId(mandateId),
     created_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
     payload: buildEscrowDraftFromMandate(mandate)

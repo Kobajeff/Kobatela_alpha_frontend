@@ -16,7 +16,9 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import { getPaginatedLimitOffset } from '@/lib/queries/queryUtils';
 import { useAdminProofDecision } from '@/lib/queries/admin';
 import { useAdminProofReviewQueue } from '@/hooks/admin/useAdminProofReviewQueue';
-import type { AdminProofReviewItem, ProofStatus } from '@/types/api';
+import type { ProofStatus } from '@/types/api';
+import type { AdminProofReviewItemUI } from '@/types/ui';
+import type { UIId } from '@/types/id';
 
 const DEFAULT_LIMIT = 20;
 
@@ -38,7 +40,7 @@ export default function AdminProofReviewQueuePage() {
   const [reviewMode, setReviewMode] = useState('');
   const [status, setStatus] = useState<ProofStatus | ''>('');
   const [unassignedOnly, setUnassignedOnly] = useState(false);
-  const [processingId, setProcessingId] = useState<string | undefined>();
+  const [processingId, setProcessingId] = useState<UIId | undefined>();
   const [actionError, setActionError] = useState('');
   const { showToast } = useToast();
   const { forbidden, forbiddenMessage, forbiddenCode, forbidWith } = useForbiddenAction();
@@ -98,7 +100,7 @@ export default function AdminProofReviewQueuePage() {
     return extractErrorMessage(error);
   };
 
-  const handleApprove = async (proofId: string) => {
+  const handleApprove = async (proofId: UIId) => {
     setProcessingId(proofId);
     setActionError('');
     try {
@@ -114,7 +116,7 @@ export default function AdminProofReviewQueuePage() {
     }
   };
 
-  const handleReject = async (proofId: string) => {
+  const handleReject = async (proofId: UIId) => {
     setProcessingId(proofId);
     setActionError('');
     try {
@@ -157,7 +159,7 @@ export default function AdminProofReviewQueuePage() {
   const data = queueQuery.data;
   const items = data?.items ?? [];
   const total = data?.total ?? items.length;
-  const { limit: responseLimit, offset: responseOffset } = getPaginatedLimitOffset<AdminProofReviewItem>(
+  const { limit: responseLimit, offset: responseOffset } = getPaginatedLimitOffset<AdminProofReviewItemUI>(
     data
   );
   const pageSize = responseLimit && responseLimit > 0 ? responseLimit : DEFAULT_LIMIT;
@@ -365,7 +367,7 @@ export default function AdminProofReviewQueuePage() {
                               forbidden ||
                               decision.isPending
                             }
-                            onClick={() => handleApprove(String(item.proof_id))}
+                            onClick={() => handleApprove(item.proof_id)}
                           >
                             Approuver
                           </Button>
@@ -378,7 +380,7 @@ export default function AdminProofReviewQueuePage() {
                               forbidden ||
                               decision.isPending
                             }
-                            onClick={() => handleReject(String(item.proof_id))}
+                            onClick={() => handleReject(item.proof_id)}
                           >
                             Rejeter
                           </Button>

@@ -1,6 +1,8 @@
 'use client';
 
 import type { AuthMeResponse, AuthUser, EffectiveScope, GlobalRole } from '@/types/auth';
+import type { IdInput, UIId } from '@/types/id';
+import { toUIId } from '@/lib/id';
 import { normalizeScopeList, normalizeScopeValue, userHasAnyScope } from './scopes';
 import { getPortalMode } from './portalMode';
 
@@ -18,7 +20,7 @@ export type PortalDestination = {
 };
 
 export type NormalizedAuthUser = AuthUser & {
-  userId: string | number;
+  userId: UIId;
   globalRole: GlobalRole;
   effectiveScopes: EffectiveScope[];
   scopeList: string[];
@@ -26,15 +28,15 @@ export type NormalizedAuthUser = AuthUser & {
 };
 
 export type AuthIdentity = {
-  userId: string | number;
+  userId: UIId;
   scopes: string[];
   globalRole: GlobalRole;
   raw: AuthUser;
 };
 
-function getUserId(user: AuthUser): string | number {
-  const candidate = (user as { user_id?: string | number }).user_id;
-  return candidate ?? user.id;
+function getUserId(user: AuthUser): UIId {
+  const candidate = (user as { user_id?: IdInput }).user_id;
+  return toUIId(candidate ?? user.id);
 }
 
 export function normalizeAuthUser(user: AuthUser): NormalizedAuthUser {

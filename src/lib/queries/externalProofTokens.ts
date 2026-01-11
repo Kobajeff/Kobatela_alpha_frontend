@@ -4,21 +4,28 @@ import {
   type ExternalProofTokenIssuePayload,
   type ExternalProofTokenListResponse
 } from '@/types/api';
+import type {
+  ExternalProofTokenListResponseUI,
+  ExternalProofTokenUI
+} from '@/types/ui';
 import { apiClient, extractErrorMessage } from '../apiClient';
 import { queryKeys } from '../queryKeys';
+import { normalizeExternalProofToken, normalizeExternalProofTokenList } from '@/lib/normalize';
+import type { UIId } from '@/types/id';
 
-function normalizeListResponse(response: ExternalProofTokenListResponse): ExternalProofToken[] {
-  if (Array.isArray(response)) return response;
-  return response.items;
+function normalizeListResponse(
+  response: ExternalProofTokenListResponse
+): ExternalProofTokenListResponseUI {
+  return normalizeExternalProofTokenList(response);
 }
 
 export function useIssueExternalProofToken() {
   const queryClient = useQueryClient();
-  return useMutation<ExternalProofToken, unknown, ExternalProofTokenIssuePayload>({
+  return useMutation<ExternalProofTokenUI, unknown, ExternalProofTokenIssuePayload>({
     mutationFn: async (payload) => {
       // Contract: docs/Backend_info/API_GUIDE (11).md — External proofs — POST /sender/external-proof-tokens — sender/support/admin scopes
       const response = await apiClient.post<ExternalProofToken>('/sender/external-proof-tokens', payload);
-      return response.data;
+      return normalizeExternalProofToken(response.data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['externalProofTokens'] });
@@ -30,7 +37,7 @@ export function useIssueExternalProofToken() {
 }
 
 export function useExternalProofTokensList(filters: {
-  escrow_id?: string | number;
+  escrow_id?: UIId;
   milestone_idx?: number | string;
   limit?: number;
   offset?: number;
@@ -42,7 +49,7 @@ export function useExternalProofTokensList(filters: {
     offset: filters.offset
   };
 
-  return useQuery({
+  return useQuery<ExternalProofTokenUI[]>({
     queryKey: queryKeys.externalProofTokens.list(normalizedFilters),
     queryFn: async () => {
       // Contract: docs/Backend_info/API_GUIDE (11).md — External proofs — GET /sender/external-proof-tokens — sender/support/admin scopes
@@ -50,19 +57,20 @@ export function useExternalProofTokensList(filters: {
         '/sender/external-proof-tokens',
         { params: normalizedFilters }
       );
-      return normalizeListResponse(response.data);
+      const normalized = normalizeListResponse(response.data);
+      return normalized.items;
     },
     enabled: Boolean(filters.escrow_id)
   });
 }
 
-export function useExternalProofTokenDetail(tokenId?: string | number | null) {
-  return useQuery({
+export function useExternalProofTokenDetail(tokenId?: UIId | null) {
+  return useQuery<ExternalProofTokenUI>({
     queryKey: queryKeys.externalProofTokens.detail(tokenId),
     queryFn: async () => {
       // Contract: docs/Backend_info/API_GUIDE (11).md — External proofs — GET /sender/external-proof-tokens/{token_id} — sender/support/admin scopes
       const response = await apiClient.get<ExternalProofToken>(`/sender/external-proof-tokens/${tokenId}`);
-      return response.data;
+      return normalizeExternalProofToken(response.data);
     },
     enabled: Boolean(tokenId)
   });
@@ -71,12 +79,12 @@ export function useExternalProofTokenDetail(tokenId?: string | number | null) {
 export function useRevokeExternalProofToken() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (tokenId: string | number) => {
+    mutationFn: async (tokenId: UIId) => {
       // Contract: docs/Backend_info/API_GUIDE (11).md — External proofs — POST /sender/external-proof-tokens/{token_id}/revoke — sender/support/admin scopes
       const response = await apiClient.post<ExternalProofToken>(
         `/sender/external-proof-tokens/${tokenId}/revoke`
       );
-      return response.data;
+      return normalizeExternalProofToken(response.data);
     },
     onSuccess: (_, tokenId) => {
       queryClient.invalidateQueries({ queryKey: ['externalProofTokens'] });

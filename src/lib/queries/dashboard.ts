@@ -5,11 +5,14 @@ import { apiClient } from '@/lib/apiClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { buildQueryString } from '@/lib/queries/queryUtils';
 import type { EscrowListItem, PaginatedResponse, ProviderInboxResponse } from '@/types/api';
+import type { EscrowListItemUI, ProviderInboxResponseUI } from '@/types/ui';
+import type { UIId } from '@/types/id';
+import { normalizeEscrowListItem, normalizeProviderInboxResponse } from '@/lib/normalize';
 
 type EscrowListResponse = EscrowListItem[] | PaginatedResponse<EscrowListItem>;
 
 export type EscrowPreviewResponse = {
-  items: EscrowListItem[];
+  items: EscrowListItemUI[];
   total?: number;
   limit?: number;
   offset?: number;
@@ -17,14 +20,14 @@ export type EscrowPreviewResponse = {
 
 function parseEscrowListResponse(data: unknown): EscrowPreviewResponse {
   if (Array.isArray(data)) {
-    return { items: data, total: data.length };
+    return { items: data.map(normalizeEscrowListItem), total: data.length };
   }
 
   if (data && typeof data === 'object') {
     const response = data as PaginatedResponse<EscrowListItem>;
     if (Array.isArray(response.items)) {
       return {
-        items: response.items,
+        items: response.items.map(normalizeEscrowListItem),
         total: typeof response.total === 'number' ? response.total : response.items.length,
         limit: response.limit,
         offset: response.offset
@@ -36,7 +39,7 @@ function parseEscrowListResponse(data: unknown): EscrowPreviewResponse {
 }
 
 export function useDashboardSentEscrowsPreview(params: {
-  senderId?: string | number;
+  senderId?: UIId;
   limit?: number;
   offset?: number;
   enabled?: boolean;
@@ -66,12 +69,12 @@ export function useDashboardProviderInboxPreview(params: {
   const { limit = 5, offset = 0, enabled = true } = params;
   const queryParams = { limit, offset };
 
-  return useQuery<ProviderInboxResponse, Error>({
+  return useQuery<ProviderInboxResponseUI, Error>({
     queryKey: queryKeys.dashboard.providerInboxPreview(queryParams),
     queryFn: async () => {
       const query = buildQueryString(queryParams);
       const response = await apiClient.get<ProviderInboxResponse>(`/provider/inbox/escrows?${query}`);
-      return response.data;
+      return normalizeProviderInboxResponse(response.data);
     },
     enabled
   });

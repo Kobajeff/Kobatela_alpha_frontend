@@ -17,7 +17,7 @@ import {
 } from '@/lib/queries/pricingAdmin';
 import { useAuthMe } from '@/lib/queries/sender';
 import { userHasScope } from '@/lib/scopes';
-import type { InflationAdjustment } from '@/types/api';
+import type { InflationAdjustmentUI } from '@/types/ui';
 import type { AuthUser } from '@/types/auth';
 
 export default function AdminPricingInflationDetailPage({
@@ -37,9 +37,9 @@ export default function AdminPricingInflationDetailPage({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  const item = useMemo<InflationAdjustment | undefined>(() => {
+  const item = useMemo<InflationAdjustmentUI | undefined>(() => {
     if (!query.data?.items) return undefined;
-    return query.data.items.find((entry) => String(entry.id) === String(id));
+    return query.data.items.find((entry) => entry.id === id);
   }, [id, query.data?.items]);
 
   useEffect(() => {
@@ -163,7 +163,13 @@ export default function AdminPricingInflationDetailPage({
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
             <p className="text-xs uppercase text-slate-500">Nom</p>
-            <p className="text-sm text-slate-800">{item.name ?? item.label ?? '—'}</p>
+            <p className="text-sm text-slate-800">
+              {typeof item.name === 'string'
+                ? item.name
+                : typeof item.label === 'string'
+                  ? item.label
+                  : '—'}
+            </p>
           </div>
           <div>
             <p className="text-xs uppercase text-slate-500">Actif</p>
@@ -174,13 +180,13 @@ export default function AdminPricingInflationDetailPage({
           <div>
             <p className="text-xs uppercase text-slate-500">Créé le</p>
             <p className="text-sm text-slate-800">
-              {item.created_at ? formatDateTime(item.created_at) : '—'}
+              {typeof item.created_at === 'string' ? formatDateTime(item.created_at) : '—'}
             </p>
           </div>
           <div>
             <p className="text-xs uppercase text-slate-500">Mis à jour</p>
             <p className="text-sm text-slate-800">
-              {item.updated_at ? formatDateTime(item.updated_at) : '—'}
+              {typeof item.updated_at === 'string' ? formatDateTime(item.updated_at) : '—'}
             </p>
           </div>
         </div>

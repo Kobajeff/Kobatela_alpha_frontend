@@ -1,6 +1,7 @@
-import type { Proof } from '@/types/api';
+import type { ProofUI } from '@/types/ui';
+import type { UIId } from '@/types/id';
 
-type AdvisorReviewAwareProof = Proof & {
+type AdvisorReviewAwareProof = ProofUI & {
   advisor_review_requested_at?: string | null;
   advisor_requested_at?: string | null;
   advisor_review_status?: string | null;
@@ -16,8 +17,8 @@ function normalizeStatus(value: unknown): string | null {
 }
 
 export function hasAdvisorReviewBeenRequested(
-  proof: Proof,
-  locallyRequestedProofIds?: Set<string>
+  proof: ProofUI,
+  locallyRequestedProofIds?: Set<UIId>
 ): boolean {
   const typedProof = proof as AdvisorReviewAwareProof;
   const status = normalizeStatus(typedProof.advisor_review_status);
@@ -35,8 +36,8 @@ export function hasAdvisorReviewBeenRequested(
 }
 
 export function canRequestAdvisorReview(
-  proof: Proof,
-  locallyRequestedProofIds?: Set<string>
+  proof: ProofUI,
+  locallyRequestedProofIds?: Set<UIId>
 ): boolean {
   const status = normalizeStatus(proof.status);
   const isPending = !status || PENDING_PROOF_STATUSES.has(status);
@@ -44,8 +45,8 @@ export function canRequestAdvisorReview(
 }
 
 export function shouldStopAdvisorReviewPolling(
-  proof: Proof | undefined,
-  locallyRequestedProofIds?: Set<string>
+  proof: ProofUI | undefined,
+  locallyRequestedProofIds?: Set<UIId>
 ): boolean {
   if (!proof) return false;
   const status = normalizeStatus(proof.status);

@@ -7,9 +7,12 @@ import { isDemoMode } from '@/lib/config';
 import { demoProofs } from '@/lib/demoData';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Proof } from '@/types/api';
+import type { ProofUI } from '@/types/ui';
+import type { UIId } from '@/types/id';
+import { normalizeProof } from '@/lib/normalize';
 
-export function useProofDetail(proofId?: string | null) {
-  return useQuery<Proof, Error>({
+export function useProofDetail(proofId?: UIId | null) {
+  return useQuery<ProofUI, Error>({
     queryKey: queryKeys.proofs.byId(proofId ?? null),
     queryFn: async () => {
       if (!proofId) {
@@ -29,7 +32,7 @@ export function useProofDetail(proofId?: string | null) {
         });
       }
       const response = await apiClient.get<Proof>(`/proofs/${proofId}`);
-      return response.data;
+      return normalizeProof(response.data);
     },
     enabled: Boolean(proofId),
     retry: (failureCount, error) => {

@@ -6,6 +6,7 @@ import type {
   ExternalProofSubmitResponse,
   ExternalProofUploadResponse
 } from '@/types/api-external';
+import type { UIId } from '@/types/id';
 import { buildExternalAuthHeaders } from '../externalAuth';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
@@ -72,7 +73,7 @@ export async function getExternalEscrowSummary(
 
 export async function getExternalProofStatus(
   token: string,
-  proofId: string | number
+  proofId: UIId
 ): Promise<ExternalProofStatus> {
   const response = await externalApiClient.get<ExternalProofStatus>(
     `/external/proofs/${proofId}/status`,

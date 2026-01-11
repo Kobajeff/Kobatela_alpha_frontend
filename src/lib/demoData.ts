@@ -1,18 +1,33 @@
 import {
   AdminDashboardStats,
-  AdminProofReviewItem,
   AdvisorProfile,
   EscrowListItem,
+  EscrowRead,
   Payment,
   Proof,
-  SenderEscrowSummary,
   UserProfile
 } from '@/types/api';
+import type {
+  AdminProofReviewItemUI,
+  EscrowListItemUI,
+  PaymentUI,
+  ProofUI,
+  SenderDashboardUI,
+  SenderEscrowSummaryUI
+} from '@/types/ui';
 import type { AuthUser } from '@/types/auth';
+import { toUIId } from '@/lib/id';
+import {
+  normalizeAdminProofReviewItem,
+  normalizeEscrowListItem,
+  normalizePayment,
+  normalizeProof,
+  normalizeSenderEscrowSummary
+} from '@/lib/normalize';
 import { DemoRole } from './config';
 
 export const demoSenderUser: AuthUser = {
-  id: 1,
+  id: '1',
   email: 'demo.sender@kobatela.com',
   full_name: 'Demo Sender',
   username: 'demo.sender',
@@ -20,7 +35,7 @@ export const demoSenderUser: AuthUser = {
 };
 
 export const demoAdminUser: AuthUser = {
-  id: 2,
+  id: '2',
   email: 'demo.admin@kobatela.com',
   full_name: 'Demo Admin',
   username: 'demo.admin',
@@ -60,7 +75,7 @@ export const demoUserProfile: UserProfile = {
   habitual_send_region: 'West Africa'
 };
 
-export const demoEscrows: EscrowListItem[] = [
+const rawDemoEscrows: EscrowListItem[] = [
   {
     id: 'escrow-1',
     status: 'FUNDED',
@@ -90,7 +105,11 @@ export const demoEscrows: EscrowListItem[] = [
   }
 ];
 
-export const demoProofs: Proof[] = [
+export const demoEscrows: EscrowListItemUI[] = rawDemoEscrows.map((escrow) =>
+  normalizeEscrowListItem(escrow)
+);
+
+const rawDemoProofs: Proof[] = [
   {
     id: 'proof-1',
     escrow_id: 'escrow-1',
@@ -127,7 +146,9 @@ export const demoProofs: Proof[] = [
   }
 ];
 
-export const demoPayments: Payment[] = [
+export const demoProofs: ProofUI[] = rawDemoProofs.map((proof) => normalizeProof(proof));
+
+const rawDemoPayments: Payment[] = [
   {
     id: 'payment-1',
     escrow_id: 'escrow-2',
@@ -138,7 +159,11 @@ export const demoPayments: Payment[] = [
   }
 ];
 
-export const demoSenderDashboard: SenderEscrowSummary[] = [];
+export const demoPayments: PaymentUI[] = rawDemoPayments.map((payment) =>
+  normalizePayment(payment)
+);
+
+export const demoSenderDashboard: SenderDashboardUI[] = [];
 
 export const demoAdminStats: AdminDashboardStats = {
   total_escrows: demoEscrows.length,
@@ -148,49 +173,66 @@ export const demoAdminStats: AdminDashboardStats = {
   total_payments: demoPayments.length
 };
 
-export const demoAdminProofQueue: AdminProofReviewItem[] = demoProofs
+export const demoAdminProofQueue: AdminProofReviewItemUI[] = demoProofs
   .filter((p) => p.status === 'PENDING')
-  .map((p, index) => ({
-    proof_id: index + 1,
-    escrow_id: index + 1,
-    milestone_id: p.milestone_id ? index + 1 : null,
-    status: p.status,
-    type: p.type ?? 'PHOTO',
-    storage_key: p.storage_key ?? null,
-    storage_url: p.storage_url ?? null,
-    sha256: p.sha256 ?? null,
-    created_at: p.created_at,
-    invoice_total_amount:
-      p.invoice_total_amount !== undefined && p.invoice_total_amount !== null
-        ? String(p.invoice_total_amount)
-        : null,
-    invoice_currency: p.invoice_currency ?? null,
-    ai_risk_level: p.ai_risk_level,
-    ai_score: p.ai_score,
-    ai_flags: p.ai_flags ?? null,
-    ai_explanation: p.ai_explanation,
-    ai_checked_at: p.ai_checked_at,
-    ai_reviewed_by: p.ai_reviewed_by ?? null,
-    ai_reviewed_at: p.ai_reviewed_at ?? null,
-    metadata: p.metadata ?? null,
-    advisor: null,
-    payout_eligible: p.payout_eligible ?? null,
-    payout_blocked_reasons: p.payout_blocked_reasons ?? null
-  }));
+  .map((p, index) =>
+    normalizeAdminProofReviewItem({
+      proof_id: index + 1,
+      escrow_id: index + 1,
+      milestone_id: p.milestone_id ? index + 1 : null,
+      status: p.status,
+      type: p.type ?? 'PHOTO',
+      storage_key: p.storage_key ?? null,
+      storage_url: p.storage_url ?? null,
+      sha256: p.sha256 ?? null,
+      created_at: p.created_at,
+      invoice_total_amount:
+        p.invoice_total_amount !== undefined && p.invoice_total_amount !== null
+          ? String(p.invoice_total_amount)
+          : null,
+      invoice_currency: p.invoice_currency ?? null,
+      ai_risk_level: p.ai_risk_level,
+      ai_score: p.ai_score,
+      ai_flags: p.ai_flags ?? null,
+      ai_explanation: p.ai_explanation,
+      ai_checked_at: p.ai_checked_at,
+      ai_reviewed_by: p.ai_reviewed_by ?? null,
+      ai_reviewed_at: p.ai_reviewed_at ?? null,
+      metadata: p.metadata ?? null,
+      advisor: null,
+      payout_eligible: p.payout_eligible ?? null,
+      payout_blocked_reasons: p.payout_blocked_reasons ?? null
+    })
+  );
 
 export function getDemoUserByRole(role: DemoRole): AuthUser {
   return role === 'admin' ? demoAdminUser : demoSenderUser;
 }
 
-export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummary | null {
+export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummaryUI | null {
   const escrow = demoEscrows.find((e) => e.id === escrowId);
   if (!escrow) return null;
 
-  const proofs = demoProofs.filter((p) => p.escrow_id === escrowId);
-  const payments = demoPayments.filter((p) => p.escrow_id === escrowId);
+  const proofs = rawDemoProofs.filter((p) => p.escrow_id === escrowId);
+  const payments = rawDemoPayments.filter((p) => p.escrow_id === escrowId);
+  const escrowRead: EscrowRead = {
+    id: escrow.id,
+    client_id: '1',
+    provider_user_id: undefined,
+    provider_id: undefined,
+    beneficiary_id: undefined,
+    beneficiary_profile: null,
+    amount_total: escrow.amount_total,
+    currency: escrow.currency,
+    status: escrow.status,
+    domain: escrow.domain ?? 'private',
+    release_conditions_json: {},
+    deadline_at: escrow.deadline_at ?? escrow.created_at,
+    created_at: escrow.created_at
+  };
 
-  return {
-    escrow,
+  return normalizeSenderEscrowSummary({
+    escrow: escrowRead,
     milestones: [
       {
         id: 'm1',
@@ -221,7 +263,7 @@ export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummary | nu
       is_sender: true,
       is_provider: false,
       is_participant: false,
-      viewer_user_id: 1
+      viewer_user_id: '1'
     },
     current_submittable_milestone_id: null,
     current_submittable_milestone_idx: null,
@@ -249,5 +291,5 @@ export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummary | nu
       pricing_flags: [],
       last_computed_at: '2025-01-10T00:00:00Z'
     }
-  };
+  });
 }

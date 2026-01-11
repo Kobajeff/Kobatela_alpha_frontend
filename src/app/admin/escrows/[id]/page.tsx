@@ -32,6 +32,7 @@ import {
 } from '@/lib/proofAdvisorReview';
 import type { NormalizedAuthUser } from '@/lib/authIdentity';
 import type { MilestoneCreatePayload, MilestoneProofRequirements } from '@/types/api';
+import type { UIId } from '@/types/id';
 
 export default function AdminEscrowDetailPage() {
   const params = useParams<{ id: string }>();
@@ -52,15 +53,15 @@ export default function AdminEscrowDetailPage() {
     tone: 'success' | 'info' | 'error';
     text: string;
   } | null>(null);
-  const [proofRequestPendingId, setProofRequestPendingId] = useState<string | null>(null);
-  const [locallyRequestedProofIds, setLocallyRequestedProofIds] = useState<Set<string>>(
+  const [proofRequestPendingId, setProofRequestPendingId] = useState<UIId | null>(null);
+  const [locallyRequestedProofIds, setLocallyRequestedProofIds] = useState<Set<UIId>>(
     new Set()
   );
   const locallyRequestedProofIdsRef = useRef(locallyRequestedProofIds);
   const advisorPollingRef = useRef<{
     intervalId: ReturnType<typeof setInterval> | null;
     timeoutId: ReturnType<typeof setTimeout> | null;
-    targetProofId: string | null;
+    targetProofId: UIId | null;
   }>({
     intervalId: null,
     timeoutId: null,
@@ -171,10 +172,10 @@ export default function AdminEscrowDetailPage() {
   const listUpdatedAt = milestonesQuery.dataUpdatedAt ? new Date(milestonesQuery.dataUpdatedAt) : null;
   const refreshSummary = () => invalidateEscrowSummary(queryClient, escrowId);
   const refreshMilestones = () => milestonesQuery.refetch();
-  const paymentDetailPath = (paymentId: string) =>
+  const paymentDetailPath = (paymentId: UIId) =>
     ['', 'admin', 'payments', paymentId].join('/') as Route;
 
-  const handleRequestAdvisorReview = async (proofId: string) => {
+  const handleRequestAdvisorReview = async (proofId: UIId) => {
     if (!canRequestAdvisorAction) return;
     setProofRequestMessage(null);
     setProofRequestPendingId(proofId);

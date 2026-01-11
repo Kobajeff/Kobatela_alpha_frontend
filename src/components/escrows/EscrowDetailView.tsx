@@ -13,7 +13,7 @@ import {
   mapProofStatusToBadge
 } from '@/lib/uiMappings';
 import { canAction } from '@/policy/allowedActions';
-import type { SenderEscrowSummary } from '@/types/api';
+import type { SenderEscrowSummaryUI } from '@/types/ui';
 
 const ACTION_LABELS: Record<string, string> = {
   VIEW_SUMMARY: 'Voir le résumé',
@@ -35,7 +35,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 type EscrowDetailViewProps = {
-  summary: SenderEscrowSummary;
+  summary: SenderEscrowSummaryUI;
   portalMode: 'sender' | 'provider';
   onMarkDelivered?: () => void;
   onApprove?: () => void;

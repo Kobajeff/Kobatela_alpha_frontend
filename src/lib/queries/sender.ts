@@ -49,6 +49,23 @@ import type {
   UserProfileUpdatePayload
 } from '@/types/api';
 import type { AuthMeResponse } from '@/types/auth';
+import type {
+  EscrowListItemUI,
+  EscrowReadUI,
+  MilestoneUI,
+  ProofUI,
+  SenderDashboardUI,
+  SenderEscrowSummaryUI
+} from '@/types/ui';
+import {
+  normalizeEscrowListItem,
+  normalizeEscrowRead,
+  normalizeMilestone,
+  normalizeProof,
+  normalizeSenderDashboard,
+  normalizeSenderEscrowSummary
+} from '@/lib/normalize';
+import type { UIId } from '@/types/id';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
 const ACTIVE_MILESTONE_STATUSES = new Set<MilestoneStatus>(['PENDING_REVIEW', 'PAYING']);
@@ -273,7 +290,7 @@ export function useUpdateUserProfile() {
 
 export function useSenderDashboard(params: { limit?: number; includeActions?: boolean } = {}) {
   const { limit = 5, includeActions = false } = params;
-  return useQuery<SenderDashboard>({
+  return useQuery<SenderDashboardUI>({
     queryKey: queryKeys.sender.dashboard(),
     queryFn: async () => {
       if (isDemoMode()) {
@@ -281,7 +298,7 @@ export function useSenderDashboard(params: { limit?: number; includeActions?: bo
         const pendingProofs = demoProofs.filter((p) => p.status === 'PENDING').slice(0, limit);
         const recentPayments = demoPayments.slice(0, limit);
 
-        return new Promise<SenderDashboard>((resolve) => {
+        return new Promise<SenderDashboardUI>((resolve) => {
           setTimeout(
             () =>
               resolve({
@@ -303,7 +320,7 @@ export function useSenderDashboard(params: { limit?: number; includeActions?: bo
 
       // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — GET /sender/dashboard — sender
       const response = await apiClient.get<SenderDashboard>(`/sender/dashboard?${searchParams.toString()}`);
-      return response.data;
+      return normalizeSenderDashboard(response.data);
     }
   });
 }
@@ -314,7 +331,7 @@ export function useSenderEscrows(params: { status?: string; limit?: number; offs
     () => ({ status, limit, offset, mine: true }),
     [limit, offset, status]
   );
-  return useQuery<EscrowListItem[]>({
+  return useQuery<EscrowListItemUI[]>({
     queryKey: queryKeys.escrows.list(filters),
     queryFn: async () => {
       if (isDemoMode()) {
@@ -331,33 +348,38 @@ export function useSenderEscrows(params: { status?: string; limit?: number; offs
       const searchParams = new URLSearchParams({ mine: 'true', limit: String(limit), offset: String(offset) });
       if (status) searchParams.append('status', status);
       const response = await apiClient.get<EscrowListItem[]>(`/escrows?${searchParams.toString()}`);
-      return response.data;
+      return response.data.map(normalizeEscrowListItem);
     }
   });
 }
 
 export function useCreateEscrow() {
   const queryClient = useQueryClient();
-  return useMutation<EscrowRead, Error, EscrowCreatePayload>({
+  return useMutation<EscrowReadUI, Error, EscrowCreatePayload>({
     mutationFn: async (payload) => {
       if (isDemoMode()) {
         const now = new Date().toISOString();
-        return new Promise<EscrowRead>((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                id: `demo-escrow-${Date.now()}`,
-                status: 'DRAFT',
-                amount_total: payload.amount_total,
-                currency: payload.currency,
-                created_at: now
-              }),
-            200
-          );
+        return new Promise<EscrowReadUI>((resolve) => {
+          const draft: EscrowRead = {
+            id: `demo-escrow-${Date.now()}`,
+            client_id: '1',
+            provider_user_id: undefined,
+            provider_id: undefined,
+            beneficiary_id: undefined,
+            beneficiary_profile: null,
+            amount_total: payload.amount_total,
+            currency: payload.currency,
+            status: 'DRAFT',
+            domain: payload.domain ?? 'private',
+            release_conditions_json: payload.release_conditions ?? {},
+            deadline_at: payload.deadline_at ?? now,
+            created_at: now
+          };
+          setTimeout(() => resolve(normalizeEscrowRead(draft)), 200);
         });
       }
       const response = await apiClient.post<EscrowRead>('/escrows', payload);
-      return response.data;
+      return normalizeEscrowRead(response.data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.escrows.listBase() });
@@ -371,7 +393,7 @@ export function useCreateEscrow() {
 
 export function useCreateEscrowMilestones() {
   const queryClient = useQueryClient();
-  return useMutation<Milestone[], Error, { escrowId: string | number; milestones: MilestoneCreatePayload[] }>({
+  return useMutation<Milestone[], Error, { escrowId: UIId; milestones: MilestoneCreatePayload[] }>({
     mutationFn: async ({ escrowId, milestones }) => {
       if (milestones.length === 0) return [];
       const created: Milestone[] = [];
@@ -396,7 +418,7 @@ export function useCreateEscrowMilestones() {
     },
     onSuccess: (_data, variables) => {
       invalidateEscrowBundle(queryClient, {
-        escrowId: String(variables.escrowId),
+        escrowId: variables.escrowId,
         viewer: 'sender',
         refetchSummary: true
       });
@@ -428,7 +450,7 @@ type SenderEscrowSummaryPollingState = {
 };
 
 export function useSenderEscrowSummary(
-  escrowId: string,
+  escrowId: UIId,
   options?: { fundingInProgress?: boolean; viewer?: EscrowSummaryViewer }
 ) {
   const viewer = options?.viewer ?? 'sender';
@@ -460,10 +482,10 @@ export function useSenderEscrowSummary(
   }, []);
 
   const refetchInterval = useCallback(
-    (query: Query<SenderEscrowSummary>) => {
+    (query: Query<SenderEscrowSummaryUI>) => {
       if (!escrowId || pollingBlockedRef.current) return false;
 
-      const summary = query.state.data as SenderEscrowSummary | undefined;
+      const summary = query.state.data as SenderEscrowSummaryUI | undefined;
       const flags = getEscrowSummaryPollingFlags(summary, { fundingInProgress });
       const activeProfiles = [
         flags.fundingActive ? pollingProfiles.fundingEscrow : null,
@@ -493,7 +515,7 @@ export function useSenderEscrowSummary(
     [escrowId, fundingInProgress]
   );
 
-  const query = useQuery<SenderEscrowSummary>({
+  const query = useQuery<SenderEscrowSummaryUI>({
     queryKey: queryKeys.escrows.summary(escrowId, viewer),
     queryFn: async () => {
       if (isDemoMode()) {
@@ -506,7 +528,7 @@ export function useSenderEscrowSummary(
         });
       }
       const response = await apiClient.get<SenderEscrowSummary>(`/escrows/${escrowId}/summary`);
-      return response.data;
+      return normalizeSenderEscrowSummary(response.data);
     },
     enabled: Boolean(escrowId),
     refetchInterval,
@@ -584,10 +606,10 @@ export function useSenderEscrowSummary(
   return { ...query, polling };
 }
 
-async function listEscrowMilestones(escrowId: string) {
+async function listEscrowMilestones(escrowId: UIId): Promise<MilestoneUI[]> {
   if (isDemoMode()) {
     const summary = getDemoEscrowSummary(escrowId);
-    return new Promise<Milestone[]>((resolve, reject) => {
+    return new Promise<MilestoneUI[]>((resolve, reject) => {
       setTimeout(() => {
         if (!summary) {
           reject(new Error('Escrow not found in demo data'));
@@ -598,16 +620,16 @@ async function listEscrowMilestones(escrowId: string) {
     });
   }
   const response = await apiClient.get<Milestone[]>(`/escrows/${escrowId}/milestones`);
-  return response.data;
+  return response.data.map(normalizeMilestone);
 }
 
-async function getMilestone(milestoneId: string) {
+async function getMilestone(milestoneId: UIId): Promise<MilestoneUI> {
   if (isDemoMode()) {
     const milestone = demoEscrows
       .map((escrow) => getDemoEscrowSummary(String(escrow.id)))
       .flatMap((summary) => summary?.milestones ?? [])
       .find((entry) => entry.id === milestoneId);
-    return new Promise<Milestone>((resolve, reject) => {
+    return new Promise<MilestoneUI>((resolve, reject) => {
       setTimeout(() => {
         if (!milestone) {
           reject(new Error('Milestone not found in demo data'));
@@ -618,7 +640,7 @@ async function getMilestone(milestoneId: string) {
     });
   }
   const response = await apiClient.get<Milestone>(`/escrows/milestones/${milestoneId}`);
-  return response.data;
+  return normalizeMilestone(response.data);
 }
 
 function isMilestoneInProgress(status?: MilestoneStatus | null) {
@@ -626,10 +648,10 @@ function isMilestoneInProgress(status?: MilestoneStatus | null) {
   return ACTIVE_MILESTONE_STATUSES.has(String(status).toUpperCase() as MilestoneStatus);
 }
 
-export function useEscrowMilestones(escrowId: string) {
+export function useEscrowMilestones(escrowId: UIId) {
   const startTimeRef = useRef<number | null>(null);
   const refetchHandledRef = useRef(false);
-  const query = useQuery<Milestone[]>({
+  const query = useQuery<MilestoneUI[]>({
     queryKey: queryKeys.milestones.byEscrow(escrowId),
     queryFn: () => listEscrowMilestones(escrowId),
     enabled: Boolean(escrowId),
@@ -674,9 +696,9 @@ export function useEscrowMilestones(escrowId: string) {
   return query;
 }
 
-export function useMilestoneDetail(milestoneId: string) {
+export function useMilestoneDetail(milestoneId: UIId) {
   const refetchHandledRef = useRef(false);
-  const query = useQuery<Milestone>({
+  const query = useQuery<MilestoneUI>({
     queryKey: queryKeys.milestones.byId(milestoneId),
     queryFn: () => getMilestone(milestoneId),
     enabled: Boolean(milestoneId),
@@ -704,7 +726,7 @@ export function useMilestoneDetail(milestoneId: string) {
 }
 
 function useEscrowAction(
-  escrowId: string,
+  escrowId: UIId,
   path: string,
   payload?: Record<string, unknown>
 ) {
@@ -731,36 +753,37 @@ function useEscrowAction(
   });
 }
 
-export function useMarkDelivered(escrowId: string) {
+export function useMarkDelivered(escrowId: UIId) {
   return useEscrowAction(escrowId, 'mark-delivered', {});
 }
 
-export function useClientApprove(escrowId: string) {
+export function useClientApprove(escrowId: UIId) {
   return useEscrowAction(escrowId, 'client-approve', {});
 }
 
-export function useClientReject(escrowId: string) {
+export function useClientReject(escrowId: UIId) {
   return useEscrowAction(escrowId, 'client-reject', {});
 }
 
-export function useCheckDeadline(escrowId: string) {
+export function useCheckDeadline(escrowId: UIId) {
   return useEscrowAction(escrowId, 'check-deadline');
 }
 
-export function useActivateEscrow(escrowId: string) {
+export function useActivateEscrow(escrowId: UIId) {
   const queryClient = useQueryClient();
-  return useMutation<EscrowRead, Error, { note?: string | null } | void>({
+  return useMutation<EscrowReadUI, Error, { note?: string | null } | void>({
     mutationFn: async (payload) => {
       if (isDemoMode()) {
+        const demoSummary = getDemoEscrowSummary(escrowId);
         return new Promise((resolve) => {
-          setTimeout(() => resolve({} as EscrowRead), 200);
+          setTimeout(() => resolve(demoSummary?.escrow ?? ({} as EscrowReadUI)), 200);
         });
       }
       const response = await apiClient.post<EscrowRead>(
         `/escrows/${escrowId}/activate`,
         payload ?? {}
       );
-      return response.data;
+      return normalizeEscrowRead(response.data);
     },
     onSuccess: () => {
       invalidateEscrowBundle(queryClient, {
@@ -775,7 +798,7 @@ export function useActivateEscrow(escrowId: string) {
   });
 }
 
-export function useCreateFundingSession(escrowId: string) {
+export function useCreateFundingSession(escrowId: UIId) {
   const queryClient = useQueryClient();
   return useMutation<FundingSessionRead, Error, void>({
     mutationFn: async () => {
@@ -817,13 +840,14 @@ type DepositPayload = {
   amount: string;
 };
 
-export function useDepositEscrow(escrowId: string) {
+export function useDepositEscrow(escrowId: UIId) {
   const queryClient = useQueryClient();
-  return useMutation<EscrowRead, Error, DepositPayload>({
+  return useMutation<EscrowReadUI, Error, DepositPayload>({
     mutationFn: async ({ idempotencyKey, amount }) => {
       if (isDemoMode()) {
+        const demoSummary = getDemoEscrowSummary(escrowId);
         return new Promise((resolve) => {
-          setTimeout(() => resolve({} as EscrowRead), 200);
+          setTimeout(() => resolve(demoSummary?.escrow ?? ({} as EscrowReadUI)), 200);
         });
       }
       const response = await apiClient.post<EscrowRead>(
@@ -835,7 +859,7 @@ export function useDepositEscrow(escrowId: string) {
           }
         }
       );
-      return response.data;
+      return normalizeEscrowRead(response.data);
     },
     retry: (failureCount, error) => {
       if (!isAxiosError(error)) return false;
@@ -879,12 +903,12 @@ type ProofLookupParams = {
 
 async function fetchProofById({ proofId }: ProofLookupParams) {
   const response = await apiClient.get<Proof>(`/proofs/${proofId}`);
-  return response.data;
+  return normalizeProof(response.data);
 }
 
 export function useProofReviewPolling(
-  proofId: string | null,
-  escrowId: string,
+  proofId: UIId | null,
+  escrowId: UIId,
   viewer: EscrowSummaryViewer = 'sender'
 ) {
   const queryClient = useQueryClient();
@@ -935,7 +959,7 @@ export function useProofReviewPolling(
     return () => clearTimeout(timeoutId);
   }, [proofId, stopPolling]);
 
-  const query = useQuery<Proof, Error>({
+  const query = useQuery<ProofUI, Error>({
     queryKey: queryKeys.proofs.byId(proofId),
     queryFn: async () => {
       if (!proofId) {
@@ -1049,11 +1073,11 @@ export function useProofReviewPolling(
 export function useCreateProof(options?: { viewer?: EscrowSummaryViewer }) {
   const queryClient = useQueryClient();
   const viewer = options?.viewer ?? 'sender';
-  return useMutation<Proof, Error, CreateProofPayload>({
+  return useMutation<ProofUI, Error, CreateProofPayload>({
     mutationFn: async (payload) => {
       if (isDemoMode()) {
         const now = new Date().toISOString();
-        return {
+        return normalizeProof({
           id: `demo-proof-${Date.now()}`,
           escrow_id: payload.escrow_id,
           milestone_idx: payload.milestone_idx,
@@ -1069,10 +1093,10 @@ export function useCreateProof(options?: { viewer?: EscrowSummaryViewer }) {
           ai_score: null,
           ai_explanation: null,
           ai_checked_at: null
-        };
+        });
       }
       const response = await apiClient.post<Proof>('/proofs', payload);
-      return response.data;
+      return normalizeProof(response.data);
     },
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.proofs.byId(data.id), data);
@@ -1090,8 +1114,8 @@ export function useCreateProof(options?: { viewer?: EscrowSummaryViewer }) {
 }
 
 type RequestAdvisorReviewPayload = {
-  proofId: string;
-  escrowId: string;
+  proofId: UIId;
+  escrowId: UIId;
   viewer?: EscrowSummaryViewer;
 };
 

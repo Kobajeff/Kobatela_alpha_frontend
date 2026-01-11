@@ -1,4 +1,4 @@
-import type { SenderEscrowSummary } from '@/types/api';
+import type { SenderEscrowSummaryUI } from '@/types/ui';
 
 const TERMINAL_ESCROW_STATUSES = new Set([
   'FUNDED',
@@ -18,7 +18,7 @@ export type EscrowSummaryPollingFlags = {
 };
 
 export function getEscrowSummaryPollingFlags(
-  summary?: SenderEscrowSummary,
+  summary?: SenderEscrowSummaryUI,
   options?: { fundingInProgress?: boolean }
 ): EscrowSummaryPollingFlags {
   if (!summary) {

@@ -2,13 +2,16 @@ import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, extractErrorMessage } from '@/lib/apiClient';
 import { queryKeys } from '@/lib/queryKeys';
-import { buildQueryString, getPaginatedLimitOffset, getPaginatedTotal, normalizePaginatedItems } from '@/lib/queries/queryUtils';
+import { buildQueryString, getPaginatedLimitOffset, getPaginatedTotal } from '@/lib/queries/queryUtils';
 import type {
   InflationAdjustment,
   InflationAdjustmentCreatePayload,
   InflationAdjustmentListResponse,
   InflationAdjustmentUpdatePayload
 } from '@/types/api';
+import type { InflationAdjustmentListResponseUI, InflationAdjustmentUI } from '@/types/ui';
+import type { UIId } from '@/types/id';
+import { normalizeInflationAdjustment, normalizeInflationAdjustmentList } from '@/lib/normalize';
 
 const PRICING_SCOPE_ERRORS = [401, 403, 409, 422];
 
@@ -35,14 +38,17 @@ export async function uploadInflationCsv(file: File) {
   return response.data;
 }
 
-export async function fetchInflationAdjustments(params: { limit?: number; offset?: number } = {}) {
+export async function fetchInflationAdjustments(
+  params: { limit?: number; offset?: number } = {}
+): Promise<{ items: InflationAdjustmentUI[]; total: number; limit: number; offset: number }> {
   const { limit = 50, offset = 0 } = params;
   const query = buildQueryString({ limit, offset });
   const suffix = query ? `?${query}` : '';
   const response = await apiClient.get<InflationAdjustmentListResponse>(
     `/admin/pricing/inflation${suffix}`
   );
-  const items = normalizePaginatedItems<InflationAdjustment>(response.data);
+  const normalized = normalizeInflationAdjustmentList(response.data);
+  const items = Array.isArray(normalized) ? normalized : normalized.items;
   const total = getPaginatedTotal<InflationAdjustment>(response.data);
   const meta = getPaginatedLimitOffset<InflationAdjustment>(response.data);
   return {
@@ -55,28 +61,28 @@ export async function fetchInflationAdjustments(params: { limit?: number; offset
 
 export async function createInflationAdjustment(payload: InflationAdjustmentCreatePayload) {
   const response = await apiClient.post<InflationAdjustment>('/admin/pricing/inflation', payload);
-  return response.data;
+  return normalizeInflationAdjustment(response.data);
 }
 
 export async function updateInflationAdjustment(
-  id: string | number,
+  id: UIId,
   payload: InflationAdjustmentUpdatePayload
 ) {
   const response = await apiClient.put<InflationAdjustment>(
     `/admin/pricing/inflation/${id}`,
     payload
   );
-  return response.data;
+  return normalizeInflationAdjustment(response.data);
 }
 
-export async function deleteInflationAdjustment(id: string | number) {
+export async function deleteInflationAdjustment(id: UIId) {
   await apiClient.delete(`/admin/pricing/inflation/${id}`);
 }
 
 export function useInflationAdjustments(params: { limit?: number; offset?: number } = {}) {
   const { limit = 50, offset = 0 } = params;
   const filters = useMemo(() => ({ limit, offset }), [limit, offset]);
-  return useQuery({
+  return useQuery<InflationAdjustmentListResponseUI>({
     queryKey: queryKeys.admin.pricing.inflation.list(filters),
     queryFn: () => fetchInflationAdjustments(filters),
     retry: (failureCount, error: any) => {
@@ -132,7 +138,7 @@ export function useCreateInflationAdjustment() {
 export function useUpdateInflationAdjustment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: string | number; payload: InflationAdjustmentUpdatePayload }) =>
+    mutationFn: ({ id, payload }: { id: UIId; payload: InflationAdjustmentUpdatePayload }) =>
       updateInflationAdjustment(id, payload),
     retry: false,
     onSuccess: (_, variables) => {
@@ -148,7 +154,7 @@ export function useUpdateInflationAdjustment() {
 export function useDeleteInflationAdjustment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string | number) => deleteInflationAdjustment(id),
+    mutationFn: (id: UIId) => deleteInflationAdjustment(id),
     retry: false,
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.pricing.inflation.listBase() });

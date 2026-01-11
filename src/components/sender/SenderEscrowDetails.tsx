@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { FundingStatusBanner } from '@/components/sender/FundingStatusBanner';
 import { ForbiddenBanner } from '@/components/shared/ForbiddenBanner';
 import { formatDateTime } from '@/lib/format';
-import type { SenderEscrowSummary } from '@/types/api';
+import type { SenderEscrowSummaryUI } from '@/types/ui';
 import { isFundingTerminal } from '@/lib/escrowFunding';
 import { Badge } from '@/components/ui/Badge';
 import {
@@ -20,7 +20,7 @@ import {
 import { canRequestAdvisorReview } from '@/lib/proofAdvisorReview';
 
 interface SenderEscrowDetailsProps {
-  summary: SenderEscrowSummary;
+  summary: SenderEscrowSummaryUI;
   onMarkDelivered?: () => void;
   onApprove?: () => void;
   onReject?: () => void;

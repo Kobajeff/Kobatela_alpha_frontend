@@ -21,11 +21,12 @@ import type {
   BeneficiaryCreate,
   EscrowDestination,
   EscrowCreatePayload,
-  EscrowRead,
   EscrowReleaseConditionMilestone,
   EscrowReleaseConditions,
   MilestoneCreatePayload
 } from '@/types/api';
+import type { EscrowReadUI } from '@/types/ui';
+import type { UIId } from '@/types/id';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input, type InputProps } from '@/components/ui/Input';
@@ -57,10 +58,10 @@ export default function SenderCreateEscrowClient() {
   const [milestoneCreationError, setMilestoneCreationError] = useState<string | null>(null);
   const [draftInfo, setDraftInfo] = useState<EscrowDraftPrefill | null>(null);
   const [prefillApplied, setPrefillApplied] = useState(false);
-  const [createdEscrow, setCreatedEscrow] = useState<EscrowRead | null>(null);
-  const [createdEscrowId, setCreatedEscrowId] = useState<string | number | null>(null);
+  const [createdEscrow, setCreatedEscrow] = useState<EscrowReadUI | null>(null);
+  const [createdEscrowId, setCreatedEscrowId] = useState<UIId | null>(null);
 
-  const createdMilestonesQuery = useEscrowMilestones(createdEscrowId ? String(createdEscrowId) : '');
+  const createdMilestonesQuery = useEscrowMilestones(createdEscrowId ?? '');
 
   const applyDraft = (draft: EscrowDraftPrefill | null) => {
     if (!draft) return;

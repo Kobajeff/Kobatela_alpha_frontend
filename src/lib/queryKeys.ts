@@ -1,3 +1,5 @@
+import type { UIId } from '@/types/id';
+
 export type EscrowSummaryViewer = 'sender' | 'admin' | 'provider';
 
 type ListFilters = Record<string, unknown>;
@@ -9,18 +11,18 @@ export const queryKeys = {
   escrows: {
     listBase: () => ['escrows', 'list'] as const,
     list: <T extends ListFilters>(filters: T) => ['escrows', 'list', filters] as const,
-    byId: (id: string) => ['escrows', id] as const,
-    summary: (id: string, viewer: EscrowSummaryViewer, params?: Record<string, unknown>) =>
+    byId: (id: UIId) => ['escrows', id] as const,
+    summary: (id: UIId, viewer: EscrowSummaryViewer, params?: Record<string, unknown>) =>
       ['escrows', id, 'summary', viewer, params] as const
   },
   milestones: {
-    byEscrow: (escrowId: string) => ['milestones', 'byEscrow', escrowId] as const,
-    byId: (milestoneId: string) => ['milestones', milestoneId] as const
+    byEscrow: (escrowId: UIId) => ['milestones', 'byEscrow', escrowId] as const,
+    byId: (milestoneId: UIId) => ['milestones', milestoneId] as const
   },
   proofs: {
     listBase: () => ['proofs', 'list'] as const,
     list: <T extends ListFilters>(filters: T) => ['proofs', 'list', filters] as const,
-    byId: (proofId: string | null) => ['proofs', proofId] as const
+    byId: (proofId: UIId | null) => ['proofs', proofId] as const
   },
   payments: {
     adminListBase: () => ['payments', 'admin'] as const,
@@ -61,12 +63,12 @@ export const queryKeys = {
   },
   external: {
     escrowSummary: (token?: string | null) => ['external', 'escrow', token] as const,
-    proofStatus: (proofId?: string | number | null, token?: string | null) =>
+    proofStatus: (proofId?: UIId | null, token?: string | null) =>
       ['external', 'proofStatus', proofId, token] as const
   },
   externalProofTokens: {
     list: (filters: Record<string, unknown>) => ['externalProofTokens', 'list', filters] as const,
-    detail: (tokenId?: string | number | null) => ['externalProofTokens', tokenId] as const
+    detail: (tokenId?: UIId | null) => ['externalProofTokens', tokenId] as const
   },
   admin: {
     beneficiaryProfile: (beneficiaryProfileId: string) =>
@@ -132,7 +134,7 @@ export const queryKeys = {
         listBase: () => ['admin', 'pricing', 'inflation'] as const,
         list: <T extends ListFilters>(filters: T) =>
           ['admin', 'pricing', 'inflation', filters] as const,
-        byId: (id?: string | number | null) => ['admin', 'pricing', 'inflation', id] as const
+        byId: (id?: UIId | null) => ['admin', 'pricing', 'inflation', id] as const
       }
     }
   }

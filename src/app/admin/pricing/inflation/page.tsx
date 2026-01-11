@@ -16,8 +16,9 @@ import {
 } from '@/lib/queries/pricingAdmin';
 import { useAuthMe } from '@/lib/queries/sender';
 import { userHasScope } from '@/lib/scopes';
-import type { InflationAdjustment } from '@/types/api';
+import type { InflationAdjustmentUI } from '@/types/ui';
 import type { AuthUser } from '@/types/auth';
+import type { UIId } from '@/types/id';
 
 export default function AdminPricingInflationPage() {
   const router = useRouter();
@@ -30,9 +31,9 @@ export default function AdminPricingInflationPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
-  const items = useMemo<InflationAdjustment[]>(() => query.data?.items ?? [], [query.data?.items]);
+  const items = useMemo<InflationAdjustmentUI[]>(() => query.data?.items ?? [], [query.data?.items]);
 
-  const handleRowClick = (id: string | number) => {
+  const handleRowClick = (id: UIId) => {
     router.push(`/admin/pricing/inflation/${id}` as Route);
   };
 
@@ -92,9 +93,15 @@ export default function AdminPricingInflationPage() {
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {items.map((item) => {
-              const name = item.name ?? item.label ?? '—';
+              const name =
+                typeof item.name === 'string'
+                  ? item.name
+                  : typeof item.label === 'string'
+                    ? item.label
+                    : '—';
               const active = item.active === undefined ? '—' : item.active ? 'Oui' : 'Non';
-              const created = item.created_at ? formatDateTime(item.created_at) : '—';
+              const created =
+                typeof item.created_at === 'string' ? formatDateTime(item.created_at) : '—';
               return (
                 <tr
                   key={item.id}
