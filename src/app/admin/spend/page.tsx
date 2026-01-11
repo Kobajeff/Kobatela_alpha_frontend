@@ -146,7 +146,6 @@ export default function AdminSpendPage() {
   return (
     <RequireScope
       anyScopes={['ADMIN', 'SUPPORT']}
-      allowRoles={['admin', 'both', 'support']}
       unauthorizedMessage="Accès refusé : cette page est réservée aux scopes admin/support."
       loadingLabel="Vérification de l'accès administrateur..."
     >

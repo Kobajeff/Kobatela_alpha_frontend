@@ -32,7 +32,6 @@ import type {
   EscrowListItem,
   EscrowRead,
   AuthLoginResponse,
-  AuthUser,
   MilestoneCreatePayload,
   Milestone,
   MilestoneStatus,
@@ -42,14 +41,15 @@ import type {
   SenderDashboard,
   SenderEscrowSummary,
   FundingSessionRead,
-  AuthMeResponse,
   MerchantSuggestion,
   MerchantSuggestionCreatePayload,
+  ProviderInboxResponse,
   UsageMandateCreate,
   UsageMandateRead,
   UserProfile,
   UserProfileUpdatePayload
 } from '@/types/api';
+import type { AuthMeResponse } from '@/types/auth';
 import { getEscrowSummaryPollingFlags } from './escrowSummaryPolling';
 
 const ACTIVE_MILESTONE_STATUSES = new Set<MilestoneStatus>(['PENDING_REVIEW', 'PAYING']);
@@ -332,6 +332,37 @@ export function useSenderEscrows(params: { status?: string; limit?: number; offs
       const searchParams = new URLSearchParams({ mine: 'true', limit: String(limit), offset: String(offset) });
       if (status) searchParams.append('status', status);
       const response = await apiClient.get<EscrowListItem[]>(`/escrows?${searchParams.toString()}`);
+      return response.data;
+    }
+  });
+}
+
+export function useProviderInboxEscrows(params: { limit?: number; offset?: number } = {}) {
+  const { limit = 20, offset = 0 } = params;
+  return useQuery<ProviderInboxResponse, Error>({
+    queryKey: queryKeys.provider.inbox({ limit, offset }),
+    queryFn: async () => {
+      if (isDemoMode()) {
+        return new Promise<ProviderInboxResponse>((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                items: [],
+                total: 0,
+                limit,
+                offset
+              }),
+            200
+          );
+        });
+      }
+      const searchParams = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset)
+      });
+      const response = await apiClient.get<ProviderInboxResponse>(
+        `/provider/inbox/escrows?${searchParams.toString()}`
+      );
       return response.data;
     }
   });
@@ -746,6 +777,34 @@ export function useClientReject(escrowId: string) {
 
 export function useCheckDeadline(escrowId: string) {
   return useEscrowAction(escrowId, 'check-deadline');
+}
+
+export function useActivateEscrow(escrowId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<EscrowRead, Error, { note?: string | null } | void>({
+    mutationFn: async (payload) => {
+      if (isDemoMode()) {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve({} as EscrowRead), 200);
+        });
+      }
+      const response = await apiClient.post<EscrowRead>(
+        `/escrows/${escrowId}/activate`,
+        payload ?? {}
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      invalidateEscrowBundle(queryClient, {
+        escrowId,
+        viewer: 'sender',
+        refetchSummary: true
+      });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
 }
 
 export function useCreateFundingSession(escrowId: string) {

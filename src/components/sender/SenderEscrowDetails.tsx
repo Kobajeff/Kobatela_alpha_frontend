@@ -21,10 +21,11 @@ import { canRequestAdvisorReview } from '@/lib/proofAdvisorReview';
 
 interface SenderEscrowDetailsProps {
   summary: SenderEscrowSummary;
-  onMarkDelivered: () => void;
-  onApprove: () => void;
-  onReject: () => void;
-  onCheckDeadline: () => void;
+  onMarkDelivered?: () => void;
+  onApprove?: () => void;
+  onReject?: () => void;
+  onCheckDeadline?: () => void;
+  onActivate?: () => void;
   onRequestAdvisorReview?: (proofId: string) => void;
   proofRequestPendingId?: string | null;
   proofRequestMessage?: { tone: 'success' | 'info' | 'error'; text: string } | null;
@@ -86,7 +87,8 @@ export function SenderEscrowDetails({
   forbiddenSubtitle,
   forbiddenCode,
   locallyRequestedProofIds,
-  proofForm
+  proofForm,
+  onActivate
 }: SenderEscrowDetailsProps) {
   const router = useRouter();
   const fundingComplete = isFundingTerminal(summary);
@@ -111,18 +113,39 @@ export function SenderEscrowDetails({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={onMarkDelivered} disabled={loading || forbidden || processing}>
-              Marquer livré
-            </Button>
-            <Button variant="secondary" onClick={onApprove} disabled={loading || processing}>
-              Approuver
-            </Button>
-            <Button variant="danger" onClick={onReject} disabled={loading || forbidden || processing}>
-              Rejeter
-            </Button>
-            <Button variant="outline" onClick={onCheckDeadline} disabled={loading || forbidden || processing}>
-              Vérifier l'échéance
-            </Button>
+            {onActivate && (
+              <Button onClick={onActivate} disabled={loading || forbidden || processing}>
+                Activer
+              </Button>
+            )}
+            {onMarkDelivered && (
+              <Button onClick={onMarkDelivered} disabled={loading || forbidden || processing}>
+                Marquer livré
+              </Button>
+            )}
+            {onApprove && (
+              <Button variant="secondary" onClick={onApprove} disabled={loading || processing}>
+                Approuver
+              </Button>
+            )}
+            {onReject && (
+              <Button
+                variant="danger"
+                onClick={onReject}
+                disabled={loading || forbidden || processing}
+              >
+                Rejeter
+              </Button>
+            )}
+            {onCheckDeadline && (
+              <Button
+                variant="outline"
+                onClick={onCheckDeadline}
+                disabled={loading || forbidden || processing}
+              >
+                Vérifier l'échéance
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => router.push(`/sender/escrows/${summary.escrow.id}/external-proof-tokens`)}

@@ -17,7 +17,8 @@ import {
 } from '@/lib/queries/pricingAdmin';
 import { useAuthMe } from '@/lib/queries/sender';
 import { userHasScope } from '@/lib/scopes';
-import type { AuthUser, InflationAdjustment } from '@/types/api';
+import type { InflationAdjustment } from '@/types/api';
+import type { AuthUser } from '@/types/auth';
 
 export default function AdminPricingInflationDetailPage({
   params

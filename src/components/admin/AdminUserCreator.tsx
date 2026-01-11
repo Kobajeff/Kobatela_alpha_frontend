@@ -9,7 +9,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import type { AdminUserCreateResponse, PayoutChannel, User } from '@/types/api';
 
 type AdminAccountRole = 'admin' | 'advisor';
-type StandardUserRole = 'sender' | 'provider' | 'both' | 'support';
+type StandardUserRole = 'user' | 'support';
 
 const payoutChannelOptions: Array<{ value: PayoutChannel; label: string }> = [
   { value: 'off_platform', label: 'Off-platform' },
@@ -21,7 +21,7 @@ export function AdminUserCreator() {
 
   const [userEmail, setUserEmail] = useState('');
   const [username, setUsername] = useState('');
-  const [userRole, setUserRole] = useState<StandardUserRole>('sender');
+  const [userRole, setUserRole] = useState<StandardUserRole>('user');
   const [payoutChannel, setPayoutChannel] = useState<PayoutChannel>('off_platform');
   const [isActive, setIsActive] = useState(true);
   const [userError, setUserError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export function AdminUserCreator() {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === 'admin-users'
       });
-      if (data?.role === 'sender' || data?.role === 'both') {
+      if (data?.role === 'user') {
         queryClient.invalidateQueries({ queryKey: queryKeys.admin.senders() });
       }
     }
@@ -90,7 +90,7 @@ export function AdminUserCreator() {
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-slate-800">Create platform user</h2>
             <p className="text-sm text-slate-600">
-              Create sender/provider/support users via /users (username + email required by the
+              Create user/support accounts via /users (username + email required by the
               backend contract).
             </p>
           </div>
@@ -133,9 +133,7 @@ export function AdminUserCreator() {
                 onChange={(e) => setUserRole(e.target.value as StandardUserRole)}
                 className="w-full rounded-md border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:outline-none"
               >
-                <option value="sender">Sender</option>
-                <option value="provider">Provider</option>
-                <option value="both">Both</option>
+                <option value="user">User</option>
                 <option value="support">Support</option>
               </select>
             </div>

@@ -240,7 +240,6 @@ export default function AdminKctPublicPage() {
   return (
     <RequireScope
       anyScopes={['ADMIN']}
-      allowRoles={['admin', 'both']}
       unauthorizedMessage="Accès refusé : cette page est réservée aux administrateurs disposant de la portée admin."
       loadingLabel="Vérification de l'accès administrateur..."
     >

@@ -9,6 +9,7 @@ import { ProofForm } from '@/components/sender/ProofForm';
 import { extractErrorMessage } from '@/lib/apiClient';
 import { normalizeApiError } from '@/lib/apiError';
 import { useProofReviewPolling, useSenderEscrowSummary } from '@/lib/queries/sender';
+import { canAction } from '@/policy/allowedActions';
 
 export default function ProviderEscrowDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -48,7 +49,10 @@ export default function ProviderEscrowDetailsPage() {
     return null;
   }
 
-  const proofForm = (
+  const viewerContext = data.viewer_context;
+  const canSubmitProof =
+    canAction(viewerContext, 'SUBMIT_PROOF') || canAction(viewerContext, 'UPLOAD_PROOF_FILE');
+  const proofForm = canSubmitProof ? (
     <div className="space-y-3 rounded-md border border-slate-100 bg-slate-50 p-4">
       {data.milestones.length === 0 && (
         <p className="text-sm text-amber-700">
@@ -80,7 +84,7 @@ export default function ProviderEscrowDetailsPage() {
         onProofCreated={setLatestProofId}
       />
     </div>
-  );
+  ) : null;
 
   return (
     <ProviderEscrowDetails

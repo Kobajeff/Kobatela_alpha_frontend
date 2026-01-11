@@ -9,6 +9,7 @@ import { SenderEscrowDetails } from '@/components/sender/SenderEscrowDetails';
 import { ProofForm } from '@/components/sender/ProofForm';
 import { extractErrorMessage } from '@/lib/apiClient';
 import {
+  useActivateEscrow,
   useCheckDeadline,
   useClientApprove,
   useClientReject,
@@ -35,6 +36,7 @@ import { shouldStopAdvisorReviewPolling } from '@/lib/proofAdvisorReview';
 import { makeRefetchInterval, pollingProfiles } from '@/lib/pollingDoctrine';
 import { apiClient } from '@/lib/apiClient';
 import { queryKeys } from '@/lib/queryKeys';
+import { canAction } from '@/policy/allowedActions';
 import type { Payment, SenderEscrowSummary } from '@/types/api';
 
 export default function SenderEscrowDetailsPage() {
@@ -100,6 +102,7 @@ export default function SenderEscrowDetailsPage() {
   const approve = useClientApprove(escrowId);
   const reject = useClientReject(escrowId);
   const checkDeadline = useCheckDeadline(escrowId);
+  const activateEscrow = useActivateEscrow(escrowId);
   const createFundingSession = useCreateFundingSession(escrowId);
   const depositEscrow = useDepositEscrow(escrowId);
   const requestAdvisorReview = useRequestAdvisorReview();
@@ -281,6 +284,11 @@ export default function SenderEscrowDetailsPage() {
   const handleReject = () => {
     if (!window.confirm('Are you sure you want to reject this escrow?')) return;
     return handleAction(() => reject.mutateAsync(), 'Escrow updated successfully');
+  };
+
+  const handleActivate = () => {
+    if (!window.confirm('Are you sure you want to activate this escrow?')) return;
+    return handleAction(() => activateEscrow.mutateAsync(), 'Escrow activated successfully');
   };
 
   const handleRequestAdvisorReview = async (proofId: string) => {
@@ -557,16 +565,30 @@ export default function SenderEscrowDetailsPage() {
     return null;
   }
 
+  const viewerContext = data.viewer_context;
+  const canActivate = canAction(viewerContext, 'ACTIVATE_ESCROW');
+  const canFund = canAction(viewerContext, 'FUND_ESCROW');
+  const canMarkDelivered = canAction(viewerContext, 'MARK_DELIVERED');
+  const canApprove = canAction(viewerContext, 'CLIENT_APPROVE');
+  const canReject = canAction(viewerContext, 'CLIENT_REJECT');
+  const canCheckDeadline = canAction(viewerContext, 'CHECK_DEADLINE');
+  const canRequestAdvisor = canAction(viewerContext, 'REQUEST_ADVISOR_REVIEW');
+  const canSubmitProof =
+    canAction(viewerContext, 'SUBMIT_PROOF') || canAction(viewerContext, 'UPLOAD_PROOF_FILE');
   const depositBlocked = shouldBlockDeposit(data);
   const loading =
-    markDelivered.isPending || approve.isPending || reject.isPending || checkDeadline.isPending;
+    markDelivered.isPending ||
+    approve.isPending ||
+    reject.isPending ||
+    checkDeadline.isPending ||
+    activateEscrow.isPending;
   const lastUpdatedAt = query.dataUpdatedAt ? new Date(query.dataUpdatedAt) : null;
   const hasProcessing = Boolean(
     polling?.fundingActive || polling?.milestoneActive || polling?.payoutActive
   );
   const refreshSummary = () => invalidateEscrowSummary(queryClient, escrowId);
 
-  const proofForm = (
+  const proofForm = canSubmitProof ? (
     <div className="space-y-3 rounded-md border border-slate-100 bg-slate-50 p-4">
       {data.milestones.length === 0 && (
         <p className="text-sm text-amber-700">
@@ -598,7 +620,7 @@ export default function SenderEscrowDetailsPage() {
         onProofCreated={setLatestProofId}
       />
     </div>
-  );
+  ) : null;
 
   return (
     <div className="space-y-4">
@@ -650,20 +672,25 @@ export default function SenderEscrowDetailsPage() {
         fundingError={fundingError}
         depositError={depositError}
         fundingNote={fundingNote}
-        showDirectDeposit={directDepositEnabled}
+        showDirectDeposit={directDepositEnabled && canFund}
         fundingBlocked={depositBlocked}
-        onStartFundingSession={handleFundingSession}
-        onDirectDeposit={directDepositEnabled ? handleDeposit : undefined}
+        onStartFundingSession={canFund ? handleFundingSession : undefined}
+        onDirectDeposit={directDepositEnabled && canFund ? handleDeposit : undefined}
         lastUpdatedAt={lastUpdatedAt}
         proofReviewActive={proofReview.polling.active}
         proofReviewError={proofReview.polling.errorMessage ?? null}
-        onRequestAdvisorReview={handleRequestAdvisorReview}
+        onRequestAdvisorReview={canRequestAdvisor ? handleRequestAdvisorReview : undefined}
         proofRequestMessage={proofRequestMessage}
         proofRequestPendingId={proofRequestPendingId}
-        onMarkDelivered={handleMarkDelivered}
-        onApprove={handleApprove}
-        onReject={handleReject}
-        onCheckDeadline={() => handleAction(() => checkDeadline.mutateAsync(), 'Escrow updated successfully')}
+        onActivate={canActivate ? handleActivate : undefined}
+        onMarkDelivered={canMarkDelivered ? handleMarkDelivered : undefined}
+        onApprove={canApprove ? handleApprove : undefined}
+        onReject={canReject ? handleReject : undefined}
+        onCheckDeadline={
+          canCheckDeadline
+            ? () => handleAction(() => checkDeadline.mutateAsync(), 'Escrow updated successfully')
+            : undefined
+        }
         forbidden={forbidden}
         forbiddenTitle={forbiddenMessage}
         forbiddenCode={forbiddenCode}

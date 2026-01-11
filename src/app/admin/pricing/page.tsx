@@ -6,7 +6,7 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { Card } from '@/components/ui/Card';
 import { useAuthMe } from '@/lib/queries/sender';
 import { userHasScope } from '@/lib/scopes';
-import type { AuthUser } from '@/types/api';
+import type { AuthUser } from '@/types/auth';
 
 const tabs = [
   { href: '/admin/pricing/reference-import', label: 'Reference Import' },

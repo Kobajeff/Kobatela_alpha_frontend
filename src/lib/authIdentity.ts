@@ -1,7 +1,8 @@
 'use client';
 
-import type { AuthMeResponse, AuthUser, UserRole } from '@/types/api';
+import type { AuthMeResponse, AuthUser, EffectiveScope, GlobalRole } from '@/types/auth';
 import { normalizeScopeList, normalizeScopeValue, userHasAnyScope } from './scopes';
+import { getPortalMode } from './portalMode';
 
 export const PORTAL_PATHS = {
   admin: ['', 'admin', 'dashboard'].join('/'),
@@ -17,6 +18,8 @@ export type PortalDestination = {
 
 export type NormalizedAuthUser = AuthUser & {
   userId: string | number;
+  globalRole: GlobalRole;
+  effectiveScopes: EffectiveScope[];
   scopeList: string[];
   normalizedScopes: string[];
 };
@@ -24,7 +27,7 @@ export type NormalizedAuthUser = AuthUser & {
 export type AuthIdentity = {
   userId: string | number;
   scopes: string[];
-  role?: UserRole;
+  globalRole: GlobalRole;
   raw: AuthUser;
 };
 
@@ -35,22 +38,26 @@ function getUserId(user: AuthUser): string | number {
 
 export function normalizeAuthUser(user: AuthUser): NormalizedAuthUser {
   const normalizedRole =
-    typeof user.role === 'string' ? (user.role.toLowerCase() as UserRole) : user.role;
+    typeof user.role === 'string' ? (user.role.toLowerCase() as GlobalRole) : user.role;
+  const effectiveScopes = normalizeScopeList(user.scopes);
   const scopeList = [
-    ...normalizeScopeList(user.scopes),
+    ...effectiveScopes,
     ...normalizeScopeList(user.api_scopes),
     ...normalizeScopeList(user.scope),
     ...normalizeScopeList(Array.isArray(user.permissions) ? user.permissions : [])
   ];
-  const normalizedScopes = Array.from(
-    new Set(scopeList.map((scope) => normalizeScopeValue(scope)))
+  const normalizedScopes = Array.from(new Set(scopeList.map((scope) => normalizeScopeValue(scope))));
+  const normalizedEffectiveScopes = Array.from(
+    new Set(effectiveScopes.map((scope) => normalizeScopeValue(scope)))
   );
 
   return {
     ...user,
     role: normalizedRole,
+    globalRole: normalizedRole,
+    effectiveScopes: normalizedEffectiveScopes,
     userId: getUserId(user),
-    scopeList: normalizedScopes,
+    scopeList: normalizedEffectiveScopes,
     normalizedScopes
   };
 }
@@ -59,8 +66,8 @@ export function normalizeAuthMe(response: AuthMeResponse): AuthIdentity {
   const normalized = normalizeAuthUser(response.user);
   return {
     userId: normalized.userId,
-    scopes: normalized.normalizedScopes,
-    role: normalized.role,
+    scopes: normalized.effectiveScopes,
+    globalRole: normalized.globalRole,
     raw: normalized
   };
 }
@@ -69,19 +76,14 @@ export function hasScope(user: AuthUser | undefined, scope: string): boolean {
   return userHasAnyScope(user, [scope]);
 }
 
-function getNormalizedScopes(user: AuthUser | NormalizedAuthUser): string[] {
-  if ('normalizedScopes' in user && Array.isArray(user.normalizedScopes)) {
-    return user.normalizedScopes;
+function getEffectiveScopes(user: AuthUser | NormalizedAuthUser): string[] {
+  if ('effectiveScopes' in user && Array.isArray(user.effectiveScopes)) {
+    return user.effectiveScopes.map((scope) => normalizeScopeValue(scope));
   }
-  return [
-    ...normalizeScopeList(user.scopes),
-    ...normalizeScopeList(user.api_scopes),
-    ...normalizeScopeList(user.scope),
-    ...normalizeScopeList(Array.isArray(user.permissions) ? user.permissions : [])
-  ];
+  return normalizeScopeList(user.scopes).map((scope) => normalizeScopeValue(scope));
 }
 
-function getRoleLabel(role?: UserRole | string): string | null {
+function getRoleLabel(role?: GlobalRole | string): string | null {
   switch (role) {
     case 'admin':
       return 'administrateur';
@@ -89,23 +91,20 @@ function getRoleLabel(role?: UserRole | string): string | null {
       return 'support';
     case 'advisor':
       return 'conseiller';
-    case 'sender':
-      return 'expéditeur';
-    case 'both':
-      return 'expéditeur';
-    case 'provider':
-      return 'prestataire';
+    case 'user':
+      return 'utilisateur';
     default:
       return null;
   }
 }
 
 export function getPortalDestination(
-  user?: AuthUser | NormalizedAuthUser | null
+  user?: AuthUser | NormalizedAuthUser | null,
+  portalModeOverride?: 'sender' | 'provider'
 ): PortalDestination | null {
   if (!user) return null;
 
-  const scopes = getNormalizedScopes(user);
+  const scopes = getEffectiveScopes(user);
   const roleLabel = getRoleLabel(user.role);
   const hasScope = (scope: string) => scopes.includes(normalizeScopeValue(scope));
 
@@ -124,25 +123,23 @@ export function getPortalDestination(
     return { path: PORTAL_PATHS.advisor, label: roleLabel ?? 'conseiller' };
   }
 
-  if (user.role === 'sender' || user.role === 'both' || hasScope('SENDER')) {
-    return { path: PORTAL_PATHS.sender, label: roleLabel ?? 'expéditeur' };
-  }
-
-  if (user.role === 'provider' || hasScope('PROVIDER')) {
+  const portalMode = portalModeOverride ?? getPortalMode();
+  if (portalMode === 'provider') {
     return { path: PORTAL_PATHS.provider, label: 'prestataire' };
   }
 
-  return null;
+  return { path: PORTAL_PATHS.sender, label: roleLabel ?? 'expéditeur' };
+
 }
 
-function isAdminOrSupportRole(role?: UserRole | string | null): boolean {
+function isAdminOrSupportRole(role?: GlobalRole | string | null): boolean {
   if (!role) return false;
   const normalizedRole = typeof role === 'string' ? role.toLowerCase() : role;
   return normalizedRole === 'admin' || normalizedRole === 'support';
 }
 
 function hasAdminOrSupportScope(user?: AuthUser | NormalizedAuthUser | null): boolean {
-  const scopes = user ? getNormalizedScopes(user) : [];
+  const scopes = user ? getEffectiveScopes(user) : [];
   return scopes.includes(normalizeScopeValue('ADMIN')) || scopes.includes(normalizeScopeValue('SUPPORT'));
 }
 

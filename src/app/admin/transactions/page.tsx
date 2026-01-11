@@ -162,7 +162,6 @@ export default function AdminTransactionsPage() {
   return (
     <RequireScope
       anyScopes={['ADMIN']}
-      allowRoles={['admin', 'both']}
       unauthorizedMessage="Accès refusé : cette page est réservée aux administrateurs."
       loadingLabel="Vérification de l'accès administrateur..."
     >

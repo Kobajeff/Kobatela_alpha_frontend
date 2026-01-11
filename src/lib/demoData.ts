@@ -2,13 +2,13 @@ import {
   AdminDashboardStats,
   AdminProofReviewItem,
   AdvisorProfile,
-  AuthUser,
   EscrowListItem,
   Payment,
   Proof,
   SenderEscrowSummary,
   UserProfile
 } from '@/types/api';
+import type { AuthUser } from '@/types/auth';
 import { DemoRole } from './config';
 
 export const demoSenderUser: AuthUser = {
@@ -16,7 +16,7 @@ export const demoSenderUser: AuthUser = {
   email: 'demo.sender@kobatela.com',
   full_name: 'Demo Sender',
   username: 'demo.sender',
-  role: 'sender'
+  role: 'user'
 };
 
 export const demoAdminUser: AuthUser = {
@@ -211,6 +211,16 @@ export function getDemoEscrowSummary(escrowId: string): SenderEscrowSummary | nu
       }
     ],
     proofs,
-    payments
+    payments,
+    viewer_context: {
+      relation: 'SENDER',
+      allowed_actions: ['VIEW_SUMMARY', 'VIEW_MILESTONES', 'VIEW_PROOFS'],
+      is_sender: true,
+      is_provider: false,
+      is_participant: false,
+      viewer_user_id: 1
+    },
+    current_submittable_milestone_id: null,
+    current_submittable_milestone_idx: null
   };
 }

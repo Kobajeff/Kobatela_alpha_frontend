@@ -8,7 +8,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <RequireScope
       anyScopes={['ADMIN', 'SUPPORT']}
-      allowRoles={['admin', 'both', 'support']}
       loadingLabel="Vérification de l'accès administrateur..."
     >
       {(user) => <AdminShell user={user}>{children}</AdminShell>}

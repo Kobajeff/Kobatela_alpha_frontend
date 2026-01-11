@@ -1,5 +1,5 @@
 // TypeScript interfaces describing API payloads exchanged with the Kobatela backend.
-export type UserRole = 'sender' | 'provider' | 'admin' | 'both' | 'advisor' | 'support';
+export type UserRole = 'user' | 'admin' | 'support' | 'advisor';
 
 export type PayoutChannel = 'off_platform' | 'stripe_connect';
 
@@ -283,17 +283,10 @@ export type UserProfileUpdatePayload = Partial<
   Omit<UserProfile, 'masked'>
 >;
 
-export interface AuthUser extends Omit<User, 'id'> {
-  id: number | string;
-  full_name?: string;
-  scopes?: string[];
-  api_scopes?: string[];
-  scope?: string | string[];
-  permissions?: string[];
-}
 
 export type EscrowStatus =
   | 'DRAFT'
+  | 'ACTIVE'
   | 'FUNDED'
   | 'RELEASABLE'
   | 'RELEASED'
@@ -573,11 +566,23 @@ export type Payment = {
   payout_blocked_reasons?: string[] | null;
 };
 
+export type EscrowViewerContext = {
+  relation: 'SENDER' | 'PROVIDER' | 'PARTICIPANT' | 'OPS' | 'UNKNOWN';
+  allowed_actions: string[];
+  is_sender: boolean;
+  is_provider: boolean;
+  is_participant: boolean;
+  viewer_user_id: number | string | null;
+};
+
 export type SenderEscrowSummary = {
   escrow: EscrowRead;
   milestones: Milestone[];
   proofs: Proof[];
   payments: Payment[];
+  viewer_context: EscrowViewerContext;
+  current_submittable_milestone_id?: number | null;
+  current_submittable_milestone_idx?: number | null;
 };
 
 export type AdminEscrowSummary = SenderEscrowSummary & {
@@ -600,6 +605,25 @@ export type SenderDashboard = {
   recent_payments?: Payment[];
   // Contract: docs/Backend_info/API_GUIDE (11).md — Sender dashboard payload — stats (legacy compatibility)
   stats?: Record<string, unknown>;
+};
+
+export type ProviderInboxItemRead = {
+  escrow_id: number;
+  escrow_status: EscrowStatus;
+  sender_display: string;
+  amount_total: string;
+  currency: string;
+  deadline_at: string | null;
+  current_submittable_milestone_idx: number | null;
+  required_proof_kinds: string[];
+  last_update_at: string;
+};
+
+export type ProviderInboxResponse = {
+  items: ProviderInboxItemRead[];
+  total: number;
+  limit: number;
+  offset: number;
 };
 
 export type InflationAdjustment = {
@@ -627,12 +651,10 @@ export type InflationAdjustmentUpdatePayload = Record<string, unknown>;
 export interface AuthLoginResponse {
   access_token?: string;
   token?: string;
-  user: AuthUser;
+  user: import('./auth').AuthUser;
 }
 
-export interface AuthMeResponse {
-  user: AuthUser;
-}
+export type AuthMeResponse = import('./auth').AuthMeResponse;
 
 export interface ApiKey {
   id: string;
@@ -684,7 +706,7 @@ export interface UserCreatePayload {
 }
 
 export interface AdminUserCreateResponse {
-  user: AuthUser;
+  user: import('./auth').AuthUser;
   token: string | null;
   token_type: 'api_key';
 }

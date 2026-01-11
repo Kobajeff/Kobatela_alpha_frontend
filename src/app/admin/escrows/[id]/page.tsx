@@ -76,8 +76,14 @@ export default function AdminEscrowDetailPage() {
       ].filter((label): label is string => Boolean(label)),
     [polling?.fundingActive, polling?.milestoneActive, polling?.payoutActive]
   );
+  const effectiveScopes = Array.isArray(authUser?.effectiveScopes)
+    ? authUser.effectiveScopes
+    : [];
   const canRequestAdvisorAction =
-    authUser?.role === 'support' || authUser?.role === 'both';
+    authUser?.globalRole === 'support' ||
+    authUser?.globalRole === 'admin' ||
+    effectiveScopes.includes('SUPPORT') ||
+    effectiveScopes.includes('ADMIN');
 
   const stopAdvisorReviewPolling = useCallback(() => {
     const { intervalId, timeoutId } = advisorPollingRef.current;

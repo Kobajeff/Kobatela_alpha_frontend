@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import type { AuthUser } from '@/types/api';
+import type { AuthUser } from '@/types/auth';
 import { normalizeAuthUser } from './authIdentity';
 import { queryKeys } from './queryKeys';
 
