@@ -73,8 +73,8 @@ export const queryKeys = {
         ['admin', 'users', userId, 'api-keys', params] as const
     },
     proofReviewQueue: <T extends ListFilters>(filters: T) =>
-      ['adminProofReviewQueue', 'review_queue', filters] as const,
-    proofReviewQueueBase: () => ['adminProofReviewQueue'] as const,
+      ['admin', 'proofs', 'review-queue', filters] as const,
+    proofReviewQueueBase: () => ['admin', 'proofs', 'review-queue'] as const,
     advisors: {
       overview: () => ['admin-advisors-overview'] as const,
       listBase: () => ['admin-advisors'] as const,

@@ -21,6 +21,8 @@
     ],
     "paths": {
       "@/components/*": ["./src/components/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/backend-contract/*": ["./src/backend-contract/*"],
       "@/lib/*": ["./src/lib/*"],
       "@/types/*": ["./src/types/*"]
     }
