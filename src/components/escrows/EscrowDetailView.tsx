@@ -68,6 +68,11 @@ export function EscrowDetailView({
   const [activeTab, setActiveTab] = useState<TabKey>('milestones');
   const viewerContext = summary.viewer_context;
   const escrow = summary.escrow;
+  const providerDisplayName =
+    escrow.provider_user?.display_name ??
+    escrow.provider_user?.username ??
+    escrow.beneficiary_profile?.full_name ??
+    '—';
   const currentMilestone = useMemo(() => {
     if (
       summary.current_submittable_milestone_idx !== null &&
@@ -123,10 +128,22 @@ export function EscrowDetailView({
           </div>
         </div>
         <Card className="w-full max-w-sm">
-          <CardContent className="space-y-2">
-            <div className="text-sm text-slate-500">Montant total</div>
-            <div className="text-lg font-semibold text-slate-900">
-              {escrow.amount_total} {escrow.currency}
+          <CardContent className="space-y-3">
+            <div>
+              <div className="text-sm text-slate-500">Montant total</div>
+              <div className="text-lg font-semibold text-slate-900">
+                {escrow.amount_total} {escrow.currency}
+              </div>
+            </div>
+            <div className="text-sm text-slate-700">
+              <span className="text-slate-500">Prestataire</span>{' '}
+              <span className="font-semibold text-slate-900">{providerDisplayName}</span>
+            </div>
+            <div className="text-sm text-slate-700">
+              <span className="text-slate-500">Date de création</span>{' '}
+              <span className="font-semibold text-slate-900">
+                {formatDateTime(escrow.created_at)}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -219,9 +236,8 @@ export function EscrowDetailView({
                     <tr>
                       <th className="py-2 pr-4">Milestone</th>
                       <th className="py-2 pr-4">Montant</th>
-                      <th className="py-2 pr-4">Séquence</th>
-                      <th className="py-2 pr-4">Statut</th>
-                      <th className="py-2">Preuve</th>
+                      <th className="py-2 pr-4">Échéance</th>
+                      <th className="py-2">Statut</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -233,14 +249,15 @@ export function EscrowDetailView({
                         <td className="py-3 pr-4">
                           {milestone.amount} {milestone.currency}
                         </td>
-                        <td className="py-3 pr-4">{milestone.sequence_index}</td>
-                        <td className="py-3 pr-4">
+                        <td className="py-3 pr-4 text-slate-500">
+                          {milestone.due_date ? formatDateTime(milestone.due_date) : '—'}
+                        </td>
+                        <td className="py-3">
                           {(() => {
                             const badge = mapMilestoneStatusToBadge(milestone.status);
                             return <Badge variant={badge.variant}>{badge.label}</Badge>;
                           })()}
                         </td>
-                        <td className="py-3">{milestone.proof_kind ?? '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -266,9 +283,11 @@ export function EscrowDetailView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {summary.payments.map((payment) => (
+                    {summary.payments.map((payment, index) => (
                       <tr key={payment.id}>
-                        <td className="py-3 pr-4 font-medium text-slate-900">#{payment.id}</td>
+                        <td className="py-3 pr-4 font-medium text-slate-900">
+                          Paiement {index + 1}
+                        </td>
                         <td className="py-3 pr-4">{payment.amount}</td>
                         <td className="py-3 pr-4">
                           {(() => {
@@ -277,8 +296,7 @@ export function EscrowDetailView({
                           })()}
                         </td>
                         <td className="py-3 text-xs text-slate-500">
-                          <div>{formatDateTime(payment.created_at)}</div>
-                          <div>{formatDateTime(payment.updated_at)}</div>
+                          {formatDateTime(payment.created_at ?? payment.updated_at)}
                         </td>
                       </tr>
                     ))}
@@ -380,9 +398,11 @@ export function EscrowDetailView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {summary.payments.map((payment) => (
+                  {summary.payments.map((payment, index) => (
                     <tr key={payment.id}>
-                      <td className="py-3 pr-4 font-medium text-slate-900">#{payment.id}</td>
+                      <td className="py-3 pr-4 font-medium text-slate-900">
+                        Paiement {index + 1}
+                      </td>
                       <td className="py-3 pr-4">{payment.amount}</td>
                       <td className="py-3 pr-4">
                         {(() => {
@@ -391,8 +411,7 @@ export function EscrowDetailView({
                         })()}
                       </td>
                       <td className="py-3 text-xs text-slate-500">
-                        <div>{formatDateTime(payment.created_at)}</div>
-                        <div>{formatDateTime(payment.updated_at)}</div>
+                        {formatDateTime(payment.created_at ?? payment.updated_at)}
                       </td>
                     </tr>
                   ))}
