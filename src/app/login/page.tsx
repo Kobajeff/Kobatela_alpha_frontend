@@ -3,41 +3,27 @@
 // Login page allowing the sender to request a token via email.
 import { useEffect, useState } from 'react';
 import type { Route } from 'next';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { getPortalDestination, PORTAL_PATHS } from '@/lib/authIdentity';
-import { clearAuthToken, clearAuthUser, getAuthToken, getAuthTokenEventName } from '@/lib/auth';
+import { getPortalDestination } from '@/lib/authIdentity';
+import { getAuthToken, getAuthTokenEventName } from '@/lib/auth';
+import { queryKeys } from '@/lib/queryKeys';
 import { useAuthMe, useLogin } from '@/lib/queries/sender';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
-import { resetSession } from '@/lib/sessionReset';
-import { useQueryClient } from '@tanstack/react-query';
 
 export default function LoginPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const login = useLogin();
   const { data: user, isLoading: isAuthLoading, isError, error: authError } = useAuthMe();
   const [email, setEmail] = useState('');
-  const [scope, setScope] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [hasToken, setHasToken] = useState(false);
-  const isDev = process.env.NODE_ENV === 'development';
-  const availableScopes = (process.env.NEXT_PUBLIC_LOGIN_SCOPES ?? '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const showScopeSelector = availableScopes.length > 0;
 
   const destination = getPortalDestination(user);
-  const destinationPath = destination?.path;
   const isAuthenticated = hasToken && Boolean(user);
-  const isAtDestination =
-    typeof destinationPath === 'string' &&
-    typeof pathname === 'string' &&
-    pathname.startsWith(destinationPath);
-  const canContinue = Boolean(destinationPath) && !isAtDestination;
 
   useEffect(() => {
     const updateTokenState = () => {
@@ -55,13 +41,20 @@ export default function LoginPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated || !destination?.path) return;
+    router.replace(destination.path as Route);
+  }, [destination?.path, isAuthenticated, router]);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
     try {
-      const response = await login.mutateAsync({ email, ...(scope ? { scope } : {}) });
+      const response = await login.mutateAsync({ email });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
+      await queryClient.refetchQueries({ queryKey: queryKeys.auth.me() });
       const loginDestination = getPortalDestination(response.user ?? null);
-      const fallbackDestination = loginDestination?.path ?? PORTAL_PATHS.sender;
+      const fallbackDestination = loginDestination?.path ?? '/dashboard';
       router.replace(fallbackDestination as Route);
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -71,105 +64,72 @@ export default function LoginPage() {
   const authErrorMessage = isError ? extractErrorMessage(authError) : null;
 
   return (
-    <main>
-      <div className="container max-w-md space-y-6 rounded-lg bg-white p-8 shadow">
-        <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold">Connexion</h1>
-          <p className="text-slate-600">Accédez à votre espace expéditeur Kobatela.</p>
-        </div>
-        {isAuthenticated && (
-          <div className="space-y-3 rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
-            <p>
-              Vous êtes déjà connecté en tant que{' '}
-              <span className="font-semibold">
-                {user?.email || user?.username} ({user?.role})
-              </span>
-              .
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={!canContinue}
-                onClick={() => {
-                  if (destination?.path) {
-                    router.replace(destination.path as Route);
-                  }
-                }}
-                className="rounded-md bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500 disabled:opacity-50"
-              >
-                Continuer vers mon espace
-              </button>
-              <button
-                type="button"
-                onClick={() => resetSession(queryClient, { redirectTo: '/login' })}
-                className="rounded-md border border-indigo-200 px-3 py-2 text-indigo-900 hover:bg-indigo-100"
-              >
-                Se déconnecter / Changer de compte
-              </button>
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 px-4 py-12">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+        <div className="space-y-6 text-center">
+          <div className="flex items-center justify-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-semibold text-white">
+              KCT
             </div>
+            <span className="text-2xl font-semibold text-slate-700">Kobatela</span>
+          </div>
+          <h1 className="text-xl font-semibold text-slate-700">Connexion à votre compte</h1>
+        </div>
+        {(login.isPending || (hasToken && isAuthLoading)) && (
+          <div className="mt-6">
+            <LoadingState label="Chargement…" fullHeight={false} />
           </div>
         )}
-        {(login.isPending || (hasToken && isAuthLoading)) && (
-          <LoadingState label="Loading…" fullHeight={false} />
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <label className="block text-sm font-medium text-slate-700">
-            Adresse email
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={login.isPending}
-              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:outline-none"
-              placeholder="vous@example.com"
-            />
-          </label>
-          {showScopeSelector && (
-            <label className="block text-sm font-medium text-slate-700">
-              Scope (optionnel)
-              <select
-                value={scope}
-                onChange={(event) => setScope(event.target.value)}
+            Adresse e-mail
+            <div className="relative mt-2">
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" />
+                  <path d="m22 8-8.97 5.7a2 2 0 0 1-2.06 0L2 8" />
+                </svg>
+              </span>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={login.isPending}
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="">Scope automatique</option>
-                {availableScopes.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+                className="w-full rounded-lg border border-slate-200 py-2 pl-11 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                placeholder="Entrez votre adresse e-mail"
+                autoComplete="email"
+              />
+            </div>
+          </label>
           {authErrorMessage && <ErrorAlert message={authErrorMessage} />}
           {error && <ErrorAlert message={error} />}
           <button
             type="submit"
             disabled={login.isPending}
-            className="w-full rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {login.isPending ? 'Connexion...' : 'Se connecter'}
+            {login.isPending ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>
-        {isDev && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-            <p className="font-semibold">Debug</p>
-            <button
-              type="button"
-              onClick={() => {
-                clearAuthToken();
-                clearAuthUser();
-                queryClient.clear();
-                setError(null);
-              }}
-              className="mt-2 rounded-md border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-100"
-            >
-              Clear session
-            </button>
-          </div>
-        )}
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Besoin d&apos;aide ?{' '}
+          <a
+            href="mailto:support@kobatela.com"
+            className="font-semibold text-indigo-600 underline-offset-2 hover:underline"
+          >
+            Contactez le support
+          </a>
+        </p>
       </div>
     </main>
   );
