@@ -1,12 +1,21 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useMerchantSuggestion } from '@/lib/queries/sender';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { Badge } from '@/components/ui/Badge';
 import { extractErrorMessage, isForbiddenError, isNotFoundError } from '@/lib/apiClient';
+import type { MerchantSuggestionStatus } from '@/types/api';
+
+const statusBadgeMap: Record<MerchantSuggestionStatus, { label: string; variant: 'warning' | 'success' | 'danger' }> = {
+  PENDING: { label: 'PENDING', variant: 'warning' },
+  APPROVED: { label: 'APPROVED', variant: 'success' },
+  REJECTED: { label: 'REJECTED', variant: 'danger' }
+};
 
 export default function MerchantSuggestionDetailPage({
   params
@@ -38,7 +47,7 @@ export default function MerchantSuggestionDetailPage({
   if (isError) {
     return (
       <div className="space-y-4">
-        <ErrorAlert message={isForbidden ? 'Access denied.' : extractErrorMessage(error)} />
+        <ErrorAlert message={isForbidden ? 'Accès restreint.' : extractErrorMessage(error)} />
         {!isForbidden && (
           <Button variant="outline" onClick={() => refetch()}>
             Réessayer
@@ -50,14 +59,14 @@ export default function MerchantSuggestionDetailPage({
 
   if (!data) return null;
 
-  const formattedPayload = JSON.stringify(data, null, 2);
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Suggestion {data.id}</h1>
-          <p className="text-sm text-slate-600">Détails et statut de votre suggestion de commerçant.</p>
+          <h1 className="text-2xl font-semibold">Détail de la suggestion</h1>
+          <p className="text-sm text-slate-600">
+            Retrouvez les informations principales de votre suggestion de marchand.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => router.push('/sender/merchant-suggestions')}>
@@ -71,34 +80,52 @@ export default function MerchantSuggestionDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Statut</CardTitle>
+          <CardTitle>Informations</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-slate-700">
+        <CardContent className="space-y-3 text-sm text-slate-700">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-slate-800">État</span>
-            <span>{data.status ?? '—'}</span>
+            <span className="font-medium text-slate-800">ID</span>
+            <span>{data.id ?? '—'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-slate-800">Prestataire / Marchand</span>
+            <span>{data.name ?? '—'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-slate-800">Code pays</span>
+            <span>{data.country_code ?? '—'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-slate-800">Statut</span>
+            {data.status ? (
+              <Badge variant={statusBadgeMap[data.status].variant}>
+                {statusBadgeMap[data.status].label}
+              </Badge>
+            ) : (
+              <Badge variant="muted">—</Badge>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <span className="font-medium text-slate-800">Créé le</span>
-            <span>{data.created_at ? new Date(data.created_at).toLocaleString() : '—'}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-slate-800">Mis à jour</span>
-            <span>{data.updated_at ? new Date(data.updated_at).toLocaleString() : '—'}</span>
+            <span>
+              {data.created_at
+                ? new Date(data.created_at).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })
+                : '—'}
+            </span>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Données de la suggestion</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-slate-900 p-4 text-xs text-slate-100">
-            {formattedPayload}
-          </pre>
-        </CardContent>
-      </Card>
+      <div className="text-center text-sm text-slate-500">
+        Besoin d&apos;aide ?{' '}
+        <Link className="font-medium text-indigo-600 hover:text-indigo-500" href="mailto:support@kobatela.com">
+          Contactez notre support
+        </Link>
+      </div>
     </div>
   );
 }
