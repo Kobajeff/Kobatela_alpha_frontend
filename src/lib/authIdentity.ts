@@ -107,6 +107,8 @@ export function getPortalDestination(
   const scopes = getEffectiveScopes(user);
   const roleLabel = getRoleLabel(user.role);
   const hasScope = (scope: string) => scopes.includes(normalizeScopeValue(scope));
+  const normalizedRole =
+    typeof user.role === 'string' ? (user.role.toLowerCase() as GlobalRole) : user.role;
 
   if (
     user.role === 'admin' ||
@@ -121,6 +123,10 @@ export function getPortalDestination(
 
   if (user.role === 'advisor' || hasScope('ADVISOR')) {
     return { path: PORTAL_PATHS.advisor, label: roleLabel ?? 'conseiller' };
+  }
+
+  if (normalizedRole === 'user') {
+    return { path: PORTAL_PATHS.sender, label: roleLabel ?? 'utilisateur' };
   }
 
   const portalMode = portalModeOverride ?? getPortalMode();
