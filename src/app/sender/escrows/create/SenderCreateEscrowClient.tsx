@@ -240,6 +240,11 @@ export default function SenderCreateEscrowClient() {
       setCreatedEscrowId(response.id);
       clearEscrowDraft();
 
+      if (paymentMode === 'DIRECT_PAY') {
+        router.push(`/sender/escrows/${response.id}/direct-pay/merchant`);
+        return;
+      }
+
       if (!shouldCreateMilestones) return;
       const milestonesPayload = milestoneDrafts.map((milestone) => ({
         ...milestone,
