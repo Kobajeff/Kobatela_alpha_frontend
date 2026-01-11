@@ -36,11 +36,19 @@ export default function ProviderDashboardPage() {
 
   return (
     <div className="space-y-6 rounded-lg bg-white p-6 shadow">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Boîte de réception prestataire</h1>
-        <p className="text-slate-600">
-          Liste des escrows qui requièrent votre intervention pour déposer des preuves.
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold">Boîte de réception prestataire</h1>
+          <p className="text-slate-600">
+            Liste des escrows qui requièrent votre intervention pour déposer des preuves.
+          </p>
+        </div>
+        <Link
+          className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+          href="/provider/inbox"
+        >
+          Voir tout
+        </Link>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200">
