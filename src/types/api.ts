@@ -399,9 +399,10 @@ export type CreateProofPayload = {
 };
 
 export type AiAnalysis = {
-  ai_risk_level: 'warning' | 'suspect' | null;
+  ai_risk_level: string | null;
   ai_score: number | string | null;
   ai_explanation: string | null;
+  ai_summary_text?: string | null;
   ai_checked_at: string | null;
   ai_score_ml?: number | string | null;
   ai_risk_level_ml?: string | null;
