@@ -50,7 +50,8 @@ export const queryKeys = {
   },
   provider: {
     inboxBase: () => ['provider', 'inbox'] as const,
-    inbox: <T extends ListFilters>(filters: T) => ['provider', 'inbox', filters] as const
+    inbox: <T extends ListFilters>(filters: T) =>
+      ['provider', 'inbox', 'escrows', filters] as const
   },
   external: {
     escrowSummary: (token?: string | null) => ['external', 'escrow', token] as const,

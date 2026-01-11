@@ -2,30 +2,19 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { useMemo, useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { isForbiddenError } from '@/lib/apiClient';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoadingState } from '@/components/common/LoadingState';
 import { formatDateTime } from '@/lib/format';
 import { useProviderInboxEscrows } from '@/lib/queries/provider';
 
-const DEFAULT_LIMIT = 20;
+const SUMMARY_LIMIT = 5;
 
 export default function ProviderDashboardPage() {
-  const [limit] = useState(DEFAULT_LIMIT);
-  const [offset, setOffset] = useState(0);
-  const { data, isLoading, isError, error } = useProviderInboxEscrows({ limit, offset });
-
-  const total = data?.total ?? 0;
-  const maxOffset = Math.max(total - limit, 0);
-  const canPrevious = offset > 0;
-  const canNext = offset + limit < total;
-  const pageLabel = useMemo(() => {
-    if (!total) return '0';
-    const start = offset + 1;
-    const end = Math.min(offset + limit, total);
-    return `${start}-${end} / ${total}`;
-  }, [limit, offset, total]);
+  const { data, isLoading, isError, error } = useProviderInboxEscrows({
+    limit: SUMMARY_LIMIT,
+    offset: 0
+  });
 
   if (isLoading) {
     return <LoadingState label="Chargement de la boîte de réception..." />;
@@ -34,7 +23,13 @@ export default function ProviderDashboardPage() {
   if (isError) {
     return (
       <div className="rounded-lg bg-white p-6 shadow">
-        <ErrorAlert message={error?.message ?? 'Erreur lors du chargement de la boîte de réception.'} />
+        <ErrorAlert
+          message={
+            isForbiddenError(error)
+              ? 'Access restricted.'
+              : error?.message ?? 'Erreur lors du chargement de la boîte de réception.'
+          }
+        />
       </div>
     );
   }
@@ -54,12 +49,9 @@ export default function ProviderDashboardPage() {
             <tr>
               <th className="px-3 py-2">Escrow ID</th>
               <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Sender</th>
               <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">Deadline</th>
               <th className="px-3 py-2">Milestone</th>
-              <th className="px-3 py-2">Required proof</th>
-              <th className="px-3 py-2">Last update</th>
+              <th className="px-3 py-2">Dernière mise à jour</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -72,53 +64,24 @@ export default function ProviderDashboardPage() {
                     </Link>
                   </td>
                   <td className="px-3 py-2">{item.escrow_status}</td>
-                  <td className="px-3 py-2">{item.sender_display}</td>
                   <td className="px-3 py-2">
                     {item.amount_total} {item.currency}
                   </td>
                   <td className="px-3 py-2">
-                    {item.deadline_at ? formatDateTime(item.deadline_at) : '—'}
-                  </td>
-                  <td className="px-3 py-2">
                     {item.current_submittable_milestone_idx ?? '—'}
-                  </td>
-                  <td className="px-3 py-2">
-                    {item.required_proof_kinds.length > 0
-                      ? item.required_proof_kinds.join(', ')
-                      : '—'}
                   </td>
                   <td className="px-3 py-2">{formatDateTime(item.last_update_at)}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td className="px-3 py-6 text-center text-slate-500" colSpan={8}>
+                <td className="px-3 py-6 text-center text-slate-500" colSpan={5}>
                   Aucun escrow en attente.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
-        <span>{pageLabel}</span>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            disabled={!canPrevious}
-            onClick={() => setOffset((prev) => Math.max(prev - limit, 0))}
-          >
-            Précédent
-          </Button>
-          <Button
-            variant="outline"
-            disabled={!canNext}
-            onClick={() => setOffset((prev) => Math.min(prev + limit, maxOffset))}
-          >
-            Suivant
-          </Button>
-        </div>
       </div>
     </div>
   );
