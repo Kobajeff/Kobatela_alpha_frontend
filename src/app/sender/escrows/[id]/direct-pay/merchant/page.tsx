@@ -5,11 +5,14 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { extractErrorMessage } from '@/lib/apiClient';
-import { useMerchantSuggestionsList, useSenderEscrowSummary } from '@/lib/queries/sender';
+import {
+  useMerchantRegistryList,
+  useMerchantSuggestionsList,
+  useSenderEscrowSummary
+} from '@/lib/queries/sender';
 
 const FINALIZE_TOOLTIP =
   'La sélection du marchand pour Direct Pay sera disponible prochainement.';
@@ -21,6 +24,7 @@ export default function DirectPayMerchantChoicePage() {
 
   const summaryQuery = useSenderEscrowSummary(escrowId);
   const suggestionsQuery = useMerchantSuggestionsList();
+  const merchantRegistryQuery = useMerchantRegistryList({ limit: 50 });
 
   const [selectedOption, setSelectedOption] = useState<'certified' | 'my_merchants'>('certified');
   const [selectedMerchantId, setSelectedMerchantId] = useState<string | null>(null);
@@ -51,7 +55,9 @@ export default function DirectPayMerchantChoicePage() {
   const amountLabel = escrow.amount_total
     ? `${escrow.amount_total} ${escrow.currency ?? ''}`.trim()
     : null;
-  const certifiedMerchantsDisabled = true;
+  const registryItems = merchantRegistryQuery.data?.items ?? [];
+  const certifiedMerchantsDisabled =
+    merchantRegistryQuery.isLoading || merchantRegistryQuery.isError || registryItems.length === 0;
   const myMerchantsDisabled = suggestionsQuery.isLoading || approvedSuggestions.length === 0;
 
   return (
@@ -94,7 +100,6 @@ export default function DirectPayMerchantChoicePage() {
                 onChange={() => setSelectedOption('certified')}
               />
               Nos marchands certifiés
-              <Badge variant="muted">Disponible bientôt</Badge>
             </label>
             <select
               className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-600 shadow-sm disabled:bg-slate-50"
@@ -105,8 +110,28 @@ export default function DirectPayMerchantChoicePage() {
                 setSelectedMerchantId(event.target.value || null);
               }}
             >
-              <option value="">Sélectionnez un marchand</option>
+              <option value="">
+                {merchantRegistryQuery.isLoading
+                  ? 'Chargement...'
+                  : registryItems.length === 0
+                    ? 'Aucun marchand disponible'
+                    : 'Sélectionnez un marchand'}
+              </option>
+              {registryItems.map((merchant) => {
+                const labelParts = [merchant.name, merchant.country_code].filter(Boolean);
+                const label = labelParts.length > 0 ? labelParts.join(' ') : `Marchand ${merchant.id}`;
+                return (
+                  <option key={merchant.id} value={String(merchant.id)}>
+                    {label}
+                  </option>
+                );
+              })}
             </select>
+            {merchantRegistryQuery.isError ? (
+              <p className="text-xs text-rose-600">
+                {extractErrorMessage(merchantRegistryQuery.error)}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-3">
