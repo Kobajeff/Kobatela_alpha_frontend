@@ -176,7 +176,7 @@ export default function DirectPayMerchantChoicePage() {
           <div className="space-y-2 text-sm text-slate-700">
             <Link
               className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800"
-              href="/sender/merchant-suggestions/new"
+              href={`/sender/merchant-suggestions/new?escrowId=${escrowId}`}
             >
               + Proposer un marchand
             </Link>
