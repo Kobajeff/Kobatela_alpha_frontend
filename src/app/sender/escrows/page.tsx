@@ -1,28 +1,21 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { extractErrorMessage } from '@/lib/apiClient';
+import { extractErrorMessage, isForbiddenError } from '@/lib/apiClient';
 import { useSenderEscrows } from '@/lib/queries/sender';
-import { useProviderInboxEscrows } from '@/lib/queries/provider';
-import { formatDateTime } from '@/lib/format';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
 import type { EscrowStatus } from '@/types/api';
 import { LoadingState } from '@/components/common/LoadingState';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { StatusBadge } from '@/components/common/StatusBadge';
 
-function getEscrowStatus(item: { status?: string; escrow_status?: string }): string | undefined {
-  if ('status' in item) return item.status;
-  return item.escrow_status;
-}
-
 const STATUS_OPTIONS: { label: string; value: '' | EscrowStatus }[] = [
-  { label: 'Tous les statuts', value: '' },
+  { label: 'Tous', value: '' },
   { label: 'Brouillon', value: 'DRAFT' },
   { label: 'Actif', value: 'ACTIVE' },
   { label: 'Financé', value: 'FUNDED' },
@@ -32,13 +25,16 @@ const STATUS_OPTIONS: { label: string; value: '' | EscrowStatus }[] = [
   { label: 'Annulé', value: 'CANCELLED' }
 ];
 
+const PAYMENT_MODE_LABELS: Record<string, string> = {
+  MILESTONE: 'Escrow',
+  DIRECT_PAY: 'Direct Pay'
+};
+
 export default function SenderEscrowsPage() {
   const router = useRouter();
   const [status, setStatus] = useState<'' | EscrowStatus>('');
   const [page, setPage] = useState(1);
-  const [providerOffset, setProviderOffset] = useState(0);
-  const limit = 10;
-  const providerLimit = 10;
+  const limit = 20;
 
   useEffect(() => {
     setPage(1);
@@ -46,222 +42,148 @@ export default function SenderEscrowsPage() {
 
   const offset = useMemo(() => (page - 1) * limit, [page, limit]);
   const senderQuery = useSenderEscrows({ status: status || undefined, limit, offset });
-  const providerQuery = useProviderInboxEscrows({ limit: providerLimit, offset: providerOffset });
-  const providerItems = useMemo(() => providerQuery.data?.items ?? [], [providerQuery.data?.items]);
-  const providerTotal = providerQuery.data?.total ?? 0;
+  const escrows = senderQuery.data ?? [];
+  const isForbidden = senderQuery.isError && isForbiddenError(senderQuery.error);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Mes escrows</h1>
+          <h1 className="text-2xl font-semibold">Envois sécurisés</h1>
           <p className="text-sm text-slate-600">
-            Vue unifiée de vos escrows, en tant qu&apos;expéditeur ou prestataire.
+            Voici la liste des escrows que vous avez initiés en tant qu&apos;expéditeur.
+            Sélectionnez-en un pour voir les détails complets et gérer l&apos;escrow.
           </p>
         </div>
-        <Button onClick={() => router.push('/sender/escrows/create')}>Créer un escrow</Button>
+        <Button onClick={() => router.push('/sender/escrows/create')}>+ Créer un escrow</Button>
       </div>
 
       <Card>
-        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-lg">En tant qu&apos;expéditeur</CardTitle>
-            <p className="text-sm text-slate-500">
-              Source: <span className="font-medium">GET /escrows?mine=true</span>
-            </p>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <Select disabled value="">
+                  <option value="">Année</option>
+                </Select>
+                <span className="text-[11px] text-slate-400">Disponible bientôt</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Select
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value as EscrowStatus | '')}
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option.value || 'all'} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Select disabled value="">
+                  <option value="">Mode</option>
+                </Select>
+                <span className="text-[11px] text-slate-400">Disponible bientôt</span>
+              </div>
+            </div>
+            <div className="flex w-full flex-col gap-1 lg:max-w-sm">
+              <Input disabled placeholder="Rechercher un escrow..." />
+              <span className="text-[11px] text-slate-400">Disponible bientôt</span>
+            </div>
           </div>
-          <div className="w-full max-w-xs">
-            <Select
-              value={status}
-              onChange={(event) => setStatus(event.target.value as EscrowStatus | '')}
-            >
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value || 'all'} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
+          <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+            <span>Filtres basés sur l&apos;API :</span>
+            <Badge variant="muted">Statut</Badge>
           </div>
         </CardHeader>
         <CardContent>
           {senderQuery.isLoading ? (
-            <LoadingState label="Chargement des escrows expéditeur..." fullHeight={false} />
+            <LoadingState label="Chargement des envois sécurisés..." fullHeight={false} />
           ) : senderQuery.isError ? (
-            <ErrorAlert message={extractErrorMessage(senderQuery.error)} />
-          ) : senderQuery.data?.length ? (
+            <ErrorAlert message={isForbidden ? 'Accès restreint.' : extractErrorMessage(senderQuery.error)} />
+          ) : escrows.length ? (
             <>
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                     <tr>
-                      <th className="px-3 py-2">Escrow ID</th>
-                      <th className="px-3 py-2">Statut</th>
+                      <th className="px-3 py-2">#</th>
+                      <th className="px-3 py-2">Titre / description</th>
                       <th className="px-3 py-2">Montant</th>
-                      <th className="px-3 py-2">Créé le</th>
-                      <th className="px-3 py-2">Échéance</th>
-                      <th className="px-3 py-2">Accès</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {senderQuery.data.map((escrow) => (
-                      <tr key={escrow.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2 font-medium text-indigo-600">
-                          <Link href={`/sender/escrows/${escrow.id}`}>{escrow.id}</Link>
-                        </td>
-                        <td className="px-3 py-2">
-                          <StatusBadge type="escrow" status={escrow.status} />
-                        </td>
-                        <td className="px-3 py-2">
-                          {escrow.amount_total} {escrow.currency}
-                        </td>
-                        <td className="px-3 py-2 text-slate-500">
-                          {formatDateTime(escrow.created_at)}
-                        </td>
-                        <td className="px-3 py-2 text-slate-500">
-                          {escrow.deadline_at ? formatDateTime(escrow.deadline_at) : '—'}
-                        </td>
-                        <td className="px-3 py-2">
-                          <Link
-                            className="font-medium text-indigo-600 hover:text-indigo-500"
-                            href={`/sender/escrows/${escrow.id}`}
-                          >
-                            Ouvrir
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  disabled={page === 1}
-                >
-                  Précédent
-                </Button>
-                <p className="text-sm text-slate-600">Page {page}</p>
-                <Button
-                  variant="outline"
-                  onClick={() => setPage((current) => current + 1)}
-                  disabled={(senderQuery.data?.length ?? 0) < limit}
-                >
-                  Suivant
-                </Button>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-slate-600">Aucun escrow expéditeur trouvé.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-lg">En tant que prestataire</CardTitle>
-          <p className="text-sm text-slate-500">
-            Source: <span className="font-medium">GET /provider/inbox/escrows</span>
-          </p>
-        </CardHeader>
-        <CardContent>
-          {providerQuery.isLoading ? (
-            <LoadingState label="Chargement de la boîte de réception prestataire..." fullHeight={false} />
-          ) : providerQuery.isError ? (
-            <ErrorAlert message={extractErrorMessage(providerQuery.error)} />
-          ) : providerItems.length ? (
-            <>
-              <div className="overflow-x-auto rounded-lg border border-slate-200">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-                    <tr>
-                      <th className="px-3 py-2">Expéditeur</th>
-                      <th className="px-3 py-2">Escrow ID</th>
                       <th className="px-3 py-2">Statut</th>
-                      <th className="px-3 py-2">Montant</th>
-                      <th className="px-3 py-2">Échéance</th>
+                      <th className="px-3 py-2">Mode</th>
                       <th className="px-3 py-2">Dernière mise à jour</th>
-                      <th className="px-3 py-2">Alerte</th>
-                      <th className="px-3 py-2">Accès</th>
+                      <th className="px-3 py-2" aria-label="Détails" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {providerItems.map((item) => {
-                      const status = getEscrowStatus(item);
+                    {escrows.map((escrow) => {
+                      const paymentLabel = escrow.payment_mode
+                        ? PAYMENT_MODE_LABELS[escrow.payment_mode] ?? escrow.payment_mode
+                        : null;
                       return (
-                        <tr key={item.escrow_id} className="hover:bg-slate-50">
+                        <tr
+                          key={escrow.id}
+                          className="cursor-pointer hover:bg-slate-50"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => router.push(`/sender/escrows/${escrow.id}`)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              router.push(`/sender/escrows/${escrow.id}`);
+                            }
+                          }}
+                        >
+                          <td className="px-3 py-2 font-medium text-indigo-600">#{escrow.id}</td>
+                          <td className="px-3 py-2 text-slate-500">—</td>
                           <td className="px-3 py-2">
-                            <span className="font-medium text-slate-700">{item.sender_display}</span>
-                          </td>
-                          <td className="px-3 py-2 font-medium text-indigo-600">
-                            <Link href={`/provider/escrows/${item.escrow_id}`}>{item.escrow_id}</Link>
-                          </td>
-                          <td className="px-3 py-2">
-                            {status ? <StatusBadge type="escrow" status={status} /> : <span>—</span>}
-                          </td>
-                          <td className="px-3 py-2">
-                            {item.amount_total} {item.currency}
-                          </td>
-                          <td className="px-3 py-2 text-slate-500">
-                            {item.deadline_at ? formatDateTime(item.deadline_at) : '—'}
-                          </td>
-                          <td className="px-3 py-2 text-slate-500">
-                            {formatDateTime(item.last_update_at)}
+                            {escrow.amount_total} {escrow.currency}
                           </td>
                           <td className="px-3 py-2">
-                            {item.current_submittable_milestone_idx !== null ? (
-                              <Badge variant="warning">Action requise</Badge>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
+                            <StatusBadge type="escrow" status={escrow.status} />
                           </td>
                           <td className="px-3 py-2">
-                            <Link
-                              className="font-medium text-indigo-600 hover:text-indigo-500"
-                              href={`/provider/escrows/${item.escrow_id}`}
-                            >
-                              Ouvrir
-                            </Link>
+                            {paymentLabel ? <Badge variant="neutral">{paymentLabel}</Badge> : '—'}
                           </td>
+                          <td className="px-3 py-2 text-slate-500">—</td>
+                          <td className="px-3 py-2 text-right text-slate-400">›</td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-              <div className="mt-4 flex items-center justify-between">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <Button
                   variant="outline"
-                  onClick={() => setProviderOffset((current) => Math.max(0, current - providerLimit))}
-                  disabled={providerOffset === 0}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page === 1}
                 >
-                  Précédent
+                  ← Précédent
                 </Button>
-                <p className="text-sm text-slate-600">
-                  {providerTotal
-                    ? `${providerOffset + 1}–${Math.min(
-                        providerOffset + providerItems.length,
-                        providerTotal
-                      )} sur ${providerTotal}`
-                    : `Page ${Math.floor(providerOffset / providerLimit) + 1}`}
-                </p>
+                <p className="text-sm text-slate-600">Page {page}</p>
                 <Button
                   variant="outline"
-                  onClick={() => setProviderOffset((current) => current + providerLimit)}
-                  disabled={
-                    providerItems.length < providerLimit ||
-                    (providerTotal > 0 && providerOffset + providerLimit >= providerTotal)
-                  }
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={escrows.length < limit}
                 >
-                  Suivant
+                  Suivant →
                 </Button>
               </div>
             </>
           ) : (
-            <p className="text-sm text-slate-600">Aucun escrow prestataire trouvé.</p>
+            <div className="space-y-4 text-sm text-slate-600">
+              <p>Aucun envoi sécurisé pour le moment.</p>
+              <Button onClick={() => router.push('/sender/escrows/create')}>Créer un escrow</Button>
+            </div>
           )}
         </CardContent>
       </Card>
+
+      <div className="text-center text-xs text-slate-500">
+        Besoin d&apos;aide ? Contactez notre support · FAQ
+      </div>
     </div>
   );
 }
