@@ -45,6 +45,8 @@ import type {
   FundingSessionRead,
   MerchantSuggestion,
   MerchantSuggestionCreatePayload,
+  MerchantRegistryListItem,
+  PaginatedResponse,
   UsageMandateCreate,
   UsageMandateRead,
   UserProfile,
@@ -80,6 +82,35 @@ export function useMerchantSuggestionsList() {
         return [];
       }
       const response = await apiClient.get<MerchantSuggestion[]>(`/merchant-suggestions`);
+      return response.data;
+    }
+  });
+}
+
+type MerchantRegistryFilters = {
+  limit?: number;
+  offset?: number;
+  country_code?: string;
+  q?: string;
+};
+
+export function useMerchantRegistryList(filters: MerchantRegistryFilters = {}) {
+  return useQuery<PaginatedResponse<MerchantRegistryListItem>>({
+    queryKey: queryKeys.sender.merchantRegistry.list(filters),
+    queryFn: async () => {
+      if (isDemoMode()) {
+        return { items: [], total: 0, limit: 0, offset: 0 };
+      }
+      const searchParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.set(key, String(value));
+        }
+      });
+      const queryString = searchParams.toString();
+      const response = await apiClient.get<PaginatedResponse<MerchantRegistryListItem>>(
+        queryString ? `/merchants/registry?${queryString}` : '/merchants/registry'
+      );
       return response.data;
     }
   });

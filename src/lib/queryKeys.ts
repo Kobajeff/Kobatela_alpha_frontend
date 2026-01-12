@@ -48,6 +48,10 @@ export const queryKeys = {
       listBase: () => ['merchantSuggestions', 'list'] as const,
       list: (params: Record<string, unknown>) => ['merchantSuggestions', 'list', params] as const,
       byId: (id?: string | null) => ['merchantSuggestions', id] as const
+    },
+    merchantRegistry: {
+      listBase: () => ['merchantRegistry', 'list'] as const,
+      list: (params: Record<string, unknown>) => ['merchantRegistry', 'list', params] as const
     }
   },
   provider: {

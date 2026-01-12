@@ -77,6 +77,12 @@ export type AlertRead = {
 
 export type MerchantSuggestionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
+export type MerchantRegistryListItem = {
+  id: string | number;
+  name?: string | null;
+  country_code?: string | null;
+};
+
 export type MerchantSuggestion = {
   id: string;
   name: string;
