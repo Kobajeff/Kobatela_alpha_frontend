@@ -46,7 +46,7 @@ function isActionable(status?: string) {
 function bestEffortDisplayName(suggestion?: MerchantSuggestion | null) {
   if (!suggestion) return '';
   if (suggestion.name) return suggestion.name;
-  const metadata = suggestion.metadata;
+  const metadata = suggestion.metadata_json;
   if (metadata && typeof metadata['name'] === 'string') {
     const value = String(metadata['name']).trim();
     if (value) return value;
@@ -57,7 +57,7 @@ function bestEffortDisplayName(suggestion?: MerchantSuggestion | null) {
 function bestEffortCountry(suggestion?: MerchantSuggestion | null) {
   if (!suggestion) return '';
   if (suggestion.country_code) return suggestion.country_code;
-  const metadata = suggestion.metadata;
+  const metadata = suggestion.metadata_json;
   if (metadata && typeof metadata['country'] === 'string') {
     const value = String(metadata['country']).trim();
     if (value) return value;

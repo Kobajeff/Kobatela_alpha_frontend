@@ -80,12 +80,25 @@ export type MerchantSuggestionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type MerchantSuggestion = {
   id: string;
   name: string;
-  country_code: string;
+  country_code?: string | null;
   status: MerchantSuggestionStatus;
   promotion_registry_id?: string | null;
-  metadata?: Record<string, unknown> | null;
-  tax_id?: string | null;
-  account_number?: string | null;
+  mandate_id?: number | null;
+  escrow_id?: number | null;
+  description?: string | null;
+  website_url?: string | null;
+  category?: string | null;
+  vat_number?: string | null;
+  contact?: {
+    phone?: string | null;
+    email?: string | null;
+  } | null;
+  address?: {
+    line1?: string | null;
+    line2?: string | null;
+    city?: string | null;
+  } | null;
+  metadata_json?: Record<string, unknown> | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -102,12 +115,23 @@ export type MerchantSuggestionListResponse =
 export type MerchantSuggestionCreatePayload = {
   name: string;
   country_code: string;
-  contact?: Record<string, unknown> | null;
-  tax_id?: string | null;
-  account_number?: string | null;
+  description: string;
+  iban: string;
+  contact: {
+    phone: string;
+    email?: string | null;
+  };
+  address: {
+    line1: string;
+    line2?: string | null;
+    city: string;
+  };
+  website_url?: string | null;
+  category?: string | null;
+  vat_number?: string | null;
+  metadata_json?: Record<string, unknown> | null;
   mandate_id?: number | null;
   escrow_id?: number | null;
-  metadata?: Record<string, unknown> | null;
 };
 
 export type PayoutDestinationType = 'BENEFICIARY_PROVIDER' | 'MERCHANT';
