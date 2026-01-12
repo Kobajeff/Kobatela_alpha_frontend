@@ -392,6 +392,15 @@ export type EscrowCreatePayload = {
   payment_mode?: 'MILESTONE' | 'DIRECT_PAY';
 };
 
+export type EscrowMerchantSelectionUpdate = {
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowMerchantSelectionUpdate — source
+  source: 'registry' | 'suggestion';
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowMerchantSelectionUpdate — merchant_id
+  merchant_id: string;
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowMerchantSelectionUpdate — confirm
+  confirm: boolean;
+};
+
 export type EscrowDestination =
   | { type: 'provider'; provider_user_id: string }
   | { type: 'beneficiary'; beneficiary: BeneficiaryCreate };
@@ -405,6 +414,18 @@ export type EscrowRead = EscrowListItem & {
   beneficiary_id?: number | null;
   // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — beneficiary_profile
   beneficiary_profile?: BeneficiaryProfilePublicRead | null;
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowSummaryRead — merchant_registry_id
+  merchant_registry_id?: string | null;
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowSummaryRead — merchant_suggestion_id
+  merchant_suggestion_id?: string | null;
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowSummaryRead — selected_merchant_source
+  selected_merchant_source?: string | null;
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowSummaryRead — selected_merchant_id
+  selected_merchant_id?: string | null;
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowSummaryRead — selected_merchant_display_name
+  selected_merchant_display_name?: string | null;
+  // Contract: docs/Backend_info/CONTRACT_SCHEMAS.generated (8).json — EscrowSummaryRead — selected_merchant_country_code
+  selected_merchant_country_code?: string | null;
   // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — release_conditions_json
   release_conditions_json?: EscrowReleaseConditions | Record<string, unknown> | null;
   // Contract: docs/Backend_info/API_GUIDE (7).md — EscrowRead — deadline_at
