@@ -42,6 +42,7 @@ import type {
   AdvisorProfile,
   SenderDashboard,
   SenderEscrowSummary,
+  EscrowMerchantSelectionUpdate,
   FundingSessionRead,
   MerchantSuggestion,
   MerchantSuggestionCreatePayload,
@@ -455,6 +456,33 @@ export function useCreateEscrowMilestones() {
         escrowId: variables.escrowId,
         viewer: 'sender',
         refetchSummary: true
+      });
+    },
+    onError: (error) => {
+      throw new Error(extractErrorMessage(error));
+    }
+  });
+}
+
+export function useUpdateEscrowMerchantSelection(escrowId: UIId) {
+  const queryClient = useQueryClient();
+  return useMutation<EscrowRead, Error, EscrowMerchantSelectionUpdate>({
+    mutationFn: async (payload) => {
+      if (!escrowId) {
+        throw new Error('Escrow id is required');
+      }
+      const response = await apiClient.patch<EscrowRead>(
+        `/escrows/${escrowId}/merchant-selection`,
+        payload
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      invalidateEscrowBundle(queryClient, {
+        escrowId: String(escrowId),
+        viewer: 'sender',
+        refetchSummary: true,
+        refetchById: true
       });
     },
     onError: (error) => {

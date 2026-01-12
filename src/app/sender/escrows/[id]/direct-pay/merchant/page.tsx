@@ -11,11 +11,11 @@ import { extractErrorMessage } from '@/lib/apiClient';
 import {
   useMerchantRegistryList,
   useMerchantSuggestionsList,
-  useSenderEscrowSummary
+  useSenderEscrowSummary,
+  useUpdateEscrowMerchantSelection
 } from '@/lib/queries/sender';
 
-const FINALIZE_TOOLTIP =
-  'La sélection du marchand pour Direct Pay sera disponible prochainement.';
+const FINALIZE_TOOLTIP = 'Sélectionnez un marchand pour finaliser.';
 
 export default function DirectPayMerchantChoicePage() {
   const params = useParams<{ id: string }>();
@@ -25,13 +25,18 @@ export default function DirectPayMerchantChoicePage() {
   const summaryQuery = useSenderEscrowSummary(escrowId);
   const suggestionsQuery = useMerchantSuggestionsList();
   const merchantRegistryQuery = useMerchantRegistryList({ limit: 50 });
+  const updateMerchantSelection = useUpdateEscrowMerchantSelection(escrowId);
 
   const [selectedOption, setSelectedOption] = useState<'certified' | 'my_merchants'>('certified');
   const [selectedMerchantId, setSelectedMerchantId] = useState<string | null>(null);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const approvedSuggestions = useMemo(() => {
-    return (suggestionsQuery.data ?? []).filter((suggestion) => suggestion.status === 'APPROVED');
+    const allowedStatuses = new Set(['APPROVED']);
+    return (suggestionsQuery.data ?? []).filter((suggestion) =>
+      allowedStatuses.has(suggestion.status ?? '')
+    );
   }, [suggestionsQuery.data]);
 
   if (summaryQuery.isLoading) {
@@ -58,7 +63,27 @@ export default function DirectPayMerchantChoicePage() {
   const registryItems = merchantRegistryQuery.data?.items ?? [];
   const certifiedMerchantsDisabled =
     merchantRegistryQuery.isLoading || merchantRegistryQuery.isError || registryItems.length === 0;
-  const myMerchantsDisabled = suggestionsQuery.isLoading || approvedSuggestions.length === 0;
+  const myMerchantsDisabled =
+    suggestionsQuery.isLoading || suggestionsQuery.isError || approvedSuggestions.length === 0;
+  const canFinalize =
+    selectedOption === 'certified'
+      ? Boolean(selectedMerchantId)
+      : Boolean(selectedSuggestionId);
+
+  const handleFinalize = async () => {
+    if (!canFinalize) return;
+    setSubmitError(null);
+    const payload =
+      selectedOption === 'certified'
+        ? { source: 'registry' as const, merchant_id: selectedMerchantId ?? '', confirm: true }
+        : { source: 'suggestion' as const, merchant_id: selectedSuggestionId ?? '', confirm: true };
+    try {
+      await updateMerchantSelection.mutateAsync(payload);
+      router.push(`/sender/escrows/${escrowId}`);
+    } catch (error) {
+      setSubmitError(extractErrorMessage(error));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -176,7 +201,7 @@ export default function DirectPayMerchantChoicePage() {
           <div className="space-y-2 text-sm text-slate-700">
             <Link
               className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800"
-              href={`/sender/merchant-suggestions/new?escrowId=${escrowId}`}
+              href="/sender/merchant-suggestions/new"
             >
               + Proposer un marchand
             </Link>
@@ -188,12 +213,22 @@ export default function DirectPayMerchantChoicePage() {
         </CardContent>
       </Card>
 
+      {submitError ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+          <ErrorAlert message={submitError} />
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button variant="outline" onClick={() => router.push(`/sender/escrows/${escrowId}`)}>
           Retour
         </Button>
-        <Button disabled title={FINALIZE_TOOLTIP}>
-          Disponible bientôt
+        <Button
+          disabled={!canFinalize || updateMerchantSelection.isPending}
+          title={FINALIZE_TOOLTIP}
+          onClick={handleFinalize}
+        >
+          {updateMerchantSelection.isPending ? 'Finalisation...' : 'Finaliser'}
         </Button>
       </div>
     </div>
