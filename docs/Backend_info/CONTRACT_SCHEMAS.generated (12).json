@@ -1,0 +1,2067 @@
+{
+  "models": {
+    "AdminProofReviewItem": {
+      "fields": {
+        "advisor": {
+          "nullable": true,
+          "schema": "AdvisorSummary",
+          "type": "object"
+        },
+        "ai_checked_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_explanation": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_flags": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": true,
+          "type": "array"
+        },
+        "ai_reviewed_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_reviewed_by": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_risk_level": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_score": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "invoice_currency": {
+          "nullable": true,
+          "type": "string"
+        },
+        "invoice_total_amount": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "metadata": {
+          "nullable": true,
+          "type": "object"
+        },
+        "milestone_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "payout_blocked_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": true,
+          "type": "array"
+        },
+        "payout_eligible": {
+          "nullable": true,
+          "type": "boolean"
+        },
+        "proof_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "sha256": {
+          "nullable": true,
+          "type": "string"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        },
+        "storage_key": {
+          "nullable": true,
+          "type": "string"
+        },
+        "storage_url": {
+          "nullable": true,
+          "type": "string"
+        },
+        "type": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "AdminSettingRead": {
+      "fields": {
+        "effective": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "key": {
+          "nullable": false,
+          "type": "string"
+        },
+        "value": {
+          "nullable": true,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "AdminSettingWrite": {
+      "fields": {
+        "enabled": {
+          "nullable": false,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "AdvisorProfileRead": {
+      "fields": {
+        "advisor_grade": {
+          "nullable": true,
+          "type": "string"
+        },
+        "advisor_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "advisor_review": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "blocked": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "country": {
+          "nullable": true,
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "email": {
+          "nullable": false,
+          "type": "string"
+        },
+        "first_name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "is_active": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "language": {
+          "nullable": true,
+          "type": "string"
+        },
+        "last_name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "managed_country_codes": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "phone": {
+          "nullable": true,
+          "type": "string"
+        },
+        "profile_photo": {
+          "nullable": true,
+          "type": "string"
+        },
+        "sender_managed": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "short_description": {
+          "nullable": true,
+          "type": "string"
+        },
+        "subscribe_date": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "total_number_of_case_managed": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "user_id": {
+          "nullable": false,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "AdvisorSummary": {
+      "fields": {
+        "advisor_grade": {
+          "nullable": true,
+          "type": "string"
+        },
+        "advisor_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "advisor_review": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "country": {
+          "nullable": true,
+          "type": "string"
+        },
+        "email": {
+          "nullable": false,
+          "type": "string"
+        },
+        "first_name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "language": {
+          "nullable": true,
+          "type": "string"
+        },
+        "last_name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "phone": {
+          "nullable": true,
+          "type": "string"
+        },
+        "sender_managed": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "total_number_of_case_managed": {
+          "nullable": true,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "BeneficiaryCreate": {
+      "fields": {
+        "address_line1": {
+          "description": "Alias 'address' accepted.",
+          "nullable": false,
+          "type": "string"
+        },
+        "address_line2": {
+          "nullable": true,
+          "type": "string"
+        },
+        "bank_account": {
+          "nullable": true,
+          "type": "string"
+        },
+        "bank_account_number": {
+          "nullable": true,
+          "type": "string"
+        },
+        "bank_routing_number": {
+          "nullable": true,
+          "type": "string"
+        },
+        "city": {
+          "nullable": false,
+          "type": "string"
+        },
+        "country_code": {
+          "nullable": false,
+          "type": "string"
+        },
+        "email": {
+          "format": "email",
+          "nullable": false,
+          "type": "string"
+        },
+        "first_name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "full_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "iban": {
+          "nullable": true,
+          "type": "string"
+        },
+        "last_name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "metadata": {
+          "nullable": true,
+          "type": "object"
+        },
+        "mobile_money_number": {
+          "nullable": true,
+          "type": "string"
+        },
+        "mobile_money_provider": {
+          "nullable": true,
+          "type": "string"
+        },
+        "national_id_number": {
+          "description": "Alias 'national_id' accepted.",
+          "nullable": false,
+          "type": "string"
+        },
+        "national_id_type": {
+          "nullable": false,
+          "type": "string"
+        },
+        "notes": {
+          "nullable": true,
+          "type": "string"
+        },
+        "payout_channel": {
+          "nullable": true,
+          "type": "string"
+        },
+        "phone": {
+          "nullable": false,
+          "type": "string"
+        },
+        "postal_code": {
+          "nullable": true,
+          "type": "string"
+        },
+        "user_id": {
+          "description": "UUID or int identifier.",
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "BeneficiaryProfileAdminRead": {
+      "fields": {
+        "address_line1": {
+          "nullable": true,
+          "type": "string"
+        },
+        "address_line2": {
+          "nullable": true,
+          "type": "string"
+        },
+        "bank_account": {
+          "nullable": true,
+          "type": "string"
+        },
+        "bank_account_number": {
+          "nullable": true,
+          "type": "string"
+        },
+        "bank_routing_number": {
+          "nullable": true,
+          "type": "string"
+        },
+        "city": {
+          "nullable": true,
+          "type": "string"
+        },
+        "country_code": {
+          "nullable": true,
+          "type": "string"
+        },
+        "email": {
+          "nullable": true,
+          "type": "string"
+        },
+        "first_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "full_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "iban": {
+          "nullable": true,
+          "type": "string"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "is_active": {
+          "nullable": true,
+          "type": "boolean"
+        },
+        "last_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "masked": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "metadata": {
+          "nullable": true,
+          "type": "object"
+        },
+        "mobile_money_number": {
+          "nullable": true,
+          "type": "string"
+        },
+        "mobile_money_provider": {
+          "nullable": true,
+          "type": "string"
+        },
+        "national_id_number": {
+          "nullable": true,
+          "type": "string"
+        },
+        "national_id_type": {
+          "nullable": true,
+          "type": "string"
+        },
+        "notes": {
+          "nullable": true,
+          "type": "string"
+        },
+        "owner_user_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "payout_channel": {
+          "nullable": true,
+          "type": "string"
+        },
+        "phone": {
+          "nullable": true,
+          "type": "string"
+        },
+        "postal_code": {
+          "nullable": true,
+          "type": "string"
+        },
+        "user_id": {
+          "nullable": true,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "BeneficiaryProfilePublicRead": {
+      "fields": {
+        "first_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "full_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "last_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "masked": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "owner_user_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "user_id": {
+          "nullable": true,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "EscrowActionPayload": {
+      "fields": {
+        "note": {
+          "nullable": true,
+          "type": "string"
+        },
+        "proof_url": {
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "EscrowCreate": {
+      "fields": {
+        "amount_total": {
+          "description": "Total escrow amount (> 0).",
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "beneficiary": {
+          "description": "External beneficiary profile payload.",
+          "nullable": true,
+          "schema": "BeneficiaryCreate",
+          "type": "object"
+        },
+        "client_id": {
+          "aliases": [
+            "sender_user_id"
+          ],
+          "description": "Sender user id (alias for sender_user_id).",
+          "nullable": true,
+          "type": "integer"
+        },
+        "currency": {
+          "allowed_values": [
+            "USD",
+            "EUR"
+          ],
+          "description": "Currency code.",
+          "nullable": false,
+          "type": "string"
+        },
+        "deadline_at": {
+          "description": "Escrow deadline timestamp.",
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "domain": {
+          "allowed_values": [
+            "private",
+            "public",
+            "aid"
+          ],
+          "description": "Escrow domain (optional).",
+          "nullable": true,
+          "type": "string"
+        },
+        "payment_mode": {
+          "allowed_values": [
+            "MILESTONE",
+            "DIRECT_PAY",
+            "NO_MILESTONE_CONDITIONAL"
+          ],
+          "description": "Escrow payment mode (deprecated; derived from milestones + PartyRef; read-only for canonical v1). NOTE: Code reference: app/utils/escrow_routing.py:derive_payment_mode, app/services/escrow.py:create_escrow.",
+          "nullable": false,
+          "type": "string"
+        },
+        "payout_destination": {
+          "description": "PartyRef describing who receives payouts. NOTE: Code reference: app/schemas/party_ref.py:PartyRef._validate_party_ref, app/services/escrow.py:create_escrow.",
+          "nullable": true,
+          "schema": "PartyRef",
+          "type": "object"
+        },
+        "payout_destination_type": {
+          "allowed_values": [
+            "BENEFICIARY_PROVIDER",
+            "MERCHANT"
+          ],
+          "description": "Payout destination type (deprecated for canonical v1; derived from payout_destination PartyRef). NOTE: Code reference: app/utils/escrow_routing.py:payout_destination_type_for_escrow, app/services/escrow.py:create_escrow.",
+          "nullable": true,
+          "type": "string"
+        },
+        "proof_expectations": {
+          "description": "Legacy fraud_config expectations are not used; proof expectations are stored on proof requests.",
+          "nullable": true,
+          "schema": "ProofExpectationsUpdate",
+          "type": "object"
+        },
+        "proof_submitter": {
+          "description": "PartyRef describing who must submit proofs. NOTE: Code reference: app/schemas/party_ref.py:PartyRef._validate_party_ref, app/services/escrow.py:create_escrow.",
+          "nullable": true,
+          "schema": "PartyRef",
+          "type": "object"
+        },
+        "canonical_version": {
+          "allowed_values": [
+            "v1"
+          ],
+          "description": "Opt-in canonical v1 behavior when enabled; requires PartyRef fields on create. NOTE: Code reference: app/services/feature_flags.py:is_canonical_escrow_v1_enabled, app/services/escrow.py:create_escrow.",
+          "nullable": true,
+          "type": "string"
+        },
+        "provider_user_id": {
+          "aliases": [
+            "provider_id"
+          ],
+          "description": "Provider user id.",
+          "nullable": true,
+          "type": "integer"
+        },
+        "release_conditions": {
+          "description": "Free-form release conditions JSON.",
+          "nullable": false,
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "EscrowDepositCreate": {
+      "fields": {
+        "amount": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "EscrowListItem": {
+      "fields": {
+        "amount_total": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "beneficiary_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "deadline_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "payment_mode": {
+          "allowed_values": [
+            "MILESTONE",
+            "DIRECT_PAY",
+            "NO_MILESTONE_CONDITIONAL"
+          ],
+          "description": "Derived compatibility field; use milestones + PartyRef routing.",
+          "nullable": false,
+          "type": "string"
+        },
+        "payout_destination_type": {
+          "allowed_values": [
+            "BENEFICIARY_PROVIDER",
+            "MERCHANT"
+          ],
+          "description": "Payout destination type for this escrow.",
+          "nullable": false,
+          "type": "string"
+        },
+        "provider_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "provider_user_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "EscrowMerchantSelectionUpdate": {
+      "fields": {
+        "confirm": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "merchant_id": {
+          "nullable": false,
+          "type": "string"
+        },
+        "source": {
+          "allowed_values": [
+            "registry",
+            "suggestion"
+          ],
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "EscrowRead": {
+      "fields": {
+        "amount_total": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "beneficiary_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "beneficiary_profile": {
+          "nullable": true,
+          "one_of": [
+            "BeneficiaryProfilePublicRead",
+            "BeneficiaryProfileAdminRead"
+          ],
+          "type": "object"
+        },
+        "client_id": {
+          "description": "Serialized alias of sender_user_id.",
+          "nullable": false,
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "deadline_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "domain": {
+          "nullable": false,
+          "type": "string"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "merchant_registry_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "merchant_suggestion_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "payment_mode": {
+          "allowed_values": [
+            "MILESTONE",
+            "DIRECT_PAY",
+            "NO_MILESTONE_CONDITIONAL"
+          ],
+          "description": "Derived compatibility field; use milestones + PartyRef routing.",
+          "nullable": false,
+          "type": "string"
+        },
+        "payout_destination": {
+          "description": "PartyRef describing who receives payouts.",
+          "nullable": true,
+          "schema": "PartyRef",
+          "type": "object"
+        },
+        "payout_destination_type": {
+          "allowed_values": [
+            "BENEFICIARY_PROVIDER",
+            "MERCHANT"
+          ],
+          "description": "Payout destination type for this escrow.",
+          "nullable": false,
+          "type": "string"
+        },
+        "proof_submitter": {
+          "description": "PartyRef describing who must submit proofs.",
+          "nullable": true,
+          "schema": "PartyRef",
+          "type": "object"
+        },
+        "provider_id": {
+          "description": "Alias of provider_user_id.",
+          "nullable": true,
+          "type": "integer"
+        },
+        "provider_user": {
+          "nullable": true,
+          "schema": "UserPublicRead",
+          "type": "object"
+        },
+        "provider_user_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "release_conditions_json": {
+          "description": "Release conditions JSON; legacy fraud_config is stripped and proof expectations are proof-request-bound.",
+          "nullable": false,
+          "type": "object"
+        },
+        "selected_merchant_country_code": {
+          "nullable": true,
+          "type": "string"
+        },
+        "selected_merchant_display_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "selected_merchant_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "selected_merchant_source": {
+          "nullable": true,
+          "type": "string"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "EscrowSummaryRead": {
+      "fields": {
+        "amount_total": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "beneficiary_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "beneficiary_profile": {
+          "nullable": true,
+          "one_of": [
+            "BeneficiaryProfilePublicRead",
+            "BeneficiaryProfileAdminRead"
+          ],
+          "type": "object"
+        },
+        "client_id": {
+          "description": "Serialized alias of sender_user_id.",
+          "nullable": false,
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "deadline_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "domain": {
+          "nullable": false,
+          "type": "string"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "merchant_registry_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "merchant_suggestion_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "payment_mode": {
+          "allowed_values": [
+            "MILESTONE",
+            "DIRECT_PAY"
+          ],
+          "description": "Escrow payment mode (defaults to MILESTONE).",
+          "nullable": false,
+          "type": "string"
+        },
+        "payment_provider_code": {
+          "nullable": false,
+          "type": "string"
+        },
+        "payment_provider_display_name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "payout_destination_type": {
+          "allowed_values": [
+            "BENEFICIARY_PROVIDER",
+            "MERCHANT"
+          ],
+          "description": "Payout destination type for this escrow.",
+          "nullable": false,
+          "type": "string"
+        },
+        "provider_id": {
+          "description": "Alias of provider_user_id.",
+          "nullable": true,
+          "type": "integer"
+        },
+        "provider_user": {
+          "nullable": true,
+          "schema": "UserPublicRead",
+          "type": "object"
+        },
+        "provider_user_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "release_conditions_json": {
+          "description": "Release conditions JSON; legacy fraud_config is stripped and proof expectations are proof-request-bound.",
+          "nullable": false,
+          "type": "object"
+        },
+        "selected_merchant_country_code": {
+          "nullable": true,
+          "type": "string"
+        },
+        "selected_merchant_display_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "selected_merchant_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "selected_merchant_source": {
+          "nullable": true,
+          "type": "string"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "EscrowViewerContextRead": {
+      "fields": {
+        "allowed_actions": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "is_participant": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "is_provider": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "is_sender": {
+          "nullable": false,
+          "type": "boolean"
+        },
+        "relation": {
+          "nullable": false,
+          "type": "string"
+        },
+        "viewer_user_id": {
+          "nullable": false,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ExternalEscrowMilestoneSummary": {
+      "fields": {
+        "amount": {
+          "nullable": false,
+          "type": "string"
+        },
+        "label": {
+          "nullable": false,
+          "type": "string"
+        },
+        "milestone_idx": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "proof_kind": {
+          "nullable": true,
+          "type": "string"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ExternalEscrowSummary": {
+      "fields": {
+        "amount_total": {
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "milestones": {
+          "items": {
+            "schema": "ExternalEscrowMilestoneSummary",
+            "type": "object"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "FundingSessionRead": {
+      "fields": {
+        "client_secret": {
+          "nullable": false,
+          "type": "string"
+        },
+        "funding_id": {
+          "nullable": false,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantRegistryAddress": {
+      "fields": {
+        "city": {
+          "nullable": false,
+          "type": "string"
+        },
+        "line1": {
+          "nullable": false,
+          "type": "string"
+        },
+        "line2": {
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantRegistryContact": {
+      "fields": {
+        "email": {
+          "format": "email",
+          "nullable": true,
+          "type": "string"
+        },
+        "phone": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantRegistryCreate": {
+      "fields": {
+        "address": {
+          "nullable": false,
+          "schema": "MerchantRegistryAddress",
+          "type": "object"
+        },
+        "category": {
+          "nullable": false,
+          "type": "string"
+        },
+        "contact": {
+          "nullable": false,
+          "schema": "MerchantRegistryContact",
+          "type": "object"
+        },
+        "country_code": {
+          "description": "ISO-3166-1 alpha-2 uppercase.",
+          "nullable": false,
+          "type": "string"
+        },
+        "description": {
+          "nullable": false,
+          "type": "string"
+        },
+        "iban": {
+          "nullable": false,
+          "type": "string"
+        },
+        "metadata_json": {
+          "nullable": true,
+          "type": "object"
+        },
+        "name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "vat_number": {
+          "nullable": false,
+          "type": "string"
+        },
+        "website_url": {
+          "format": "uri",
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantSuggestionAddress": {
+      "fields": {
+        "city": {
+          "nullable": false,
+          "type": "string"
+        },
+        "line1": {
+          "nullable": false,
+          "type": "string"
+        },
+        "line2": {
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantSuggestionAddressRead": {
+      "fields": {
+        "city": {
+          "nullable": true,
+          "type": "string"
+        },
+        "line1": {
+          "nullable": true,
+          "type": "string"
+        },
+        "line2": {
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantSuggestionContact": {
+      "fields": {
+        "email": {
+          "format": "email",
+          "nullable": true,
+          "type": "string"
+        },
+        "phone": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantSuggestionContactRead": {
+      "fields": {
+        "email": {
+          "format": "email",
+          "nullable": true,
+          "type": "string"
+        },
+        "phone": {
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantSuggestionCreate": {
+      "fields": {
+        "address": {
+          "nullable": false,
+          "schema": "MerchantSuggestionAddress",
+          "type": "object"
+        },
+        "category": {
+          "nullable": true,
+          "type": "string"
+        },
+        "contact": {
+          "nullable": false,
+          "schema": "MerchantSuggestionContact",
+          "type": "object"
+        },
+        "country_code": {
+          "description": "ISO-3166-1 alpha-2 uppercase.",
+          "nullable": false,
+          "type": "string"
+        },
+        "description": {
+          "nullable": false,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "iban": {
+          "description": "Alias 'account_number' accepted.",
+          "nullable": false,
+          "type": "string"
+        },
+        "mandate_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "metadata_json": {
+          "nullable": true,
+          "type": "object"
+        },
+        "name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "vat_number": {
+          "description": "Alias 'tax_id' accepted.",
+          "nullable": true,
+          "type": "string"
+        },
+        "website_url": {
+          "format": "uri",
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MerchantSuggestionRead": {
+      "fields": {
+        "address": {
+          "nullable": true,
+          "schema": "MerchantSuggestionAddressRead",
+          "type": "object"
+        },
+        "category": {
+          "nullable": true,
+          "type": "string"
+        },
+        "contact": {
+          "nullable": true,
+          "schema": "MerchantSuggestionContactRead",
+          "type": "object"
+        },
+        "country_code": {
+          "nullable": true,
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "created_by_user_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "description": {
+          "nullable": true,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "id": {
+          "format": "uuid",
+          "nullable": false,
+          "type": "string"
+        },
+        "mandate_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "metadata_json": {
+          "nullable": true,
+          "type": "object"
+        },
+        "name": {
+          "nullable": false,
+          "type": "string"
+        },
+        "promotion_registry_id": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "vat_number": {
+          "nullable": true,
+          "type": "string"
+        },
+        "website_url": {
+          "format": "uri",
+          "nullable": true,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MilestoneProviderRead": {
+      "fields": {
+        "amount": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "due_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "label": {
+          "nullable": false,
+          "type": "string"
+        },
+        "proof_kind": {
+          "nullable": true,
+          "type": "string"
+        },
+        "sequence_index": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "MilestoneRead": {
+      "fields": {
+        "amount": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "due_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "label": {
+          "nullable": false,
+          "type": "string"
+        },
+        "proof_kind": {
+          "nullable": true,
+          "type": "string"
+        },
+        "proof_requirements": {
+          "description": "Sender-only field; redacted (null) for provider/target viewers.",
+          "nullable": true,
+          "type": "object"
+        },
+        "sequence_index": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "PaginatedResponse": {
+      "fields": {
+        "items": {
+          "items": {
+            "type": "object"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "limit": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "offset": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "total": {
+          "nullable": false,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "PartyRef": {
+      "fields": {
+        "address_line": {
+          "nullable": true,
+          "type": "string"
+        },
+        "city": {
+          "nullable": true,
+          "type": "string"
+        },
+        "country": {
+          "nullable": true,
+          "type": "string"
+        },
+        "display_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "external_profile_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "party_kind": {
+          "allowed_values": [
+            "ON_PLATFORM",
+            "OFF_PLATFORM"
+          ],
+          "nullable": false,
+          "type": "string"
+        },
+        "party_type": {
+          "allowed_values": [
+            "BENEFICIARY",
+            "PROVIDER",
+            "MERCHANT"
+          ],
+          "nullable": false,
+          "type": "string"
+        },
+        "phone": {
+          "nullable": true,
+          "type": "string"
+        },
+        "pricing_profile_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "registry_id": {
+          "nullable": true,
+          "type": "string"
+        },
+        "user_id": {
+          "nullable": true,
+          "type": "integer"
+        }
+      }
+    },
+    "PaymentRead": {
+      "fields": {
+        "amount": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "idempotency_key": {
+          "nullable": true,
+          "type": "string"
+        },
+        "milestone_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "psp_ref": {
+          "nullable": true,
+          "type": "string"
+        },
+        "sequence_index": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "PricingSummaryMilestoneRead": {
+      "fields": {
+        "amount": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "milestone_idx": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "pricing_flags": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "proof_kind": {
+          "nullable": true,
+          "type": "string"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "PricingSummaryRead": {
+      "fields": {
+        "amount_total": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "last_computed_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "milestones": {
+          "items": {
+            "schema": "PricingSummaryMilestoneRead",
+            "type": "object"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "pricing_flags": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": false,
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ProofDetailRead": {
+      "fields": {
+        "advisor_profile_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "ai_checked_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_explanation": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_flags": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": true,
+          "type": "array"
+        },
+        "ai_reviewed_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_reviewed_by": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_risk_level": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_risk_level_ml": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_score": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_score_ml": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_summary_text": {
+          "nullable": true,
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "invoice_currency": {
+          "nullable": true,
+          "type": "string"
+        },
+        "invoice_total_amount": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "metadata": {
+          "nullable": true,
+          "type": "object"
+        },
+        "milestone_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "payout_blocked_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": true,
+          "type": "array"
+        },
+        "payout_eligible": {
+          "nullable": true,
+          "type": "boolean"
+        },
+        "proof_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "review_mode": {
+          "nullable": true,
+          "type": "string"
+        },
+        "sha256": {
+          "nullable": false,
+          "type": "string"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        },
+        "storage_key": {
+          "nullable": true,
+          "type": "string"
+        },
+        "storage_url": {
+          "nullable": false,
+          "type": "string"
+        },
+        "type": {
+          "nullable": false,
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ProofExpectationsUpdate": {
+      "fields": {
+        "document_checks_expectations": {
+          "description": "Document checks expectations payload.",
+          "nullable": true,
+          "type": "object"
+        },
+        "fraud_context_expectations": {
+          "description": "Fraud context expectations payload.",
+          "nullable": true,
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "ProofRead": {
+      "fields": {
+        "advisor_profile_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "ai_checked_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_explanation": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_flags": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": true,
+          "type": "array"
+        },
+        "ai_reviewed_at": {
+          "format": "date-time",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_reviewed_by": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_risk_level": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_risk_level_ml": {
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_score": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_score_ml": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "ai_summary_text": {
+          "nullable": true,
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "invoice_currency": {
+          "nullable": true,
+          "type": "string"
+        },
+        "invoice_total_amount": {
+          "format": "decimal",
+          "nullable": true,
+          "type": "string"
+        },
+        "metadata": {
+          "nullable": true,
+          "type": "object"
+        },
+        "milestone_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "proof_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "review_mode": {
+          "nullable": true,
+          "type": "string"
+        },
+        "sha256": {
+          "nullable": false,
+          "type": "string"
+        },
+        "status": {
+          "nullable": false,
+          "type": "string"
+        },
+        "storage_key": {
+          "nullable": true,
+          "type": "string"
+        },
+        "storage_url": {
+          "nullable": false,
+          "type": "string"
+        },
+        "type": {
+          "nullable": false,
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ProofRiskSummaryRead": {
+      "fields": {
+        "block_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": true,
+          "type": "array"
+        },
+        "fraud_flags": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "fraud_risk_level": {
+          "allowed_values": [
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+          ],
+          "nullable": false,
+          "type": "string"
+        },
+        "proof_id": {
+          "nullable": false,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ProviderInboxItemRead": {
+      "fields": {
+        "amount_total": {
+          "format": "decimal",
+          "nullable": false,
+          "type": "string"
+        },
+        "currency": {
+          "nullable": false,
+          "type": "string"
+        },
+        "current_submittable_milestone_idx": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "deadline_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "escrow_id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "escrow_status": {
+          "nullable": false,
+          "type": "string"
+        },
+        "last_update_at": {
+          "format": "date-time",
+          "nullable": false,
+          "type": "string"
+        },
+        "required_proof_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "sender_display": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "SenderEscrowSummary": {
+      "fields": {
+        "current_submittable_milestone_id": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "current_submittable_milestone_idx": {
+          "nullable": true,
+          "type": "integer"
+        },
+        "escrow": {
+          "nullable": false,
+          "schema": "EscrowSummaryRead",
+          "type": "object"
+        },
+        "milestones": {
+          "items": {
+            "schema": "MilestoneProviderRead",
+            "type": "object"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "payments": {
+          "items": {
+            "schema": "PaymentRead",
+            "type": "object"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "pricing_summary": {
+          "nullable": false,
+          "schema": "PricingSummaryRead",
+          "type": "object"
+        },
+        "proofs": {
+          "items": {
+            "schema": "ProofRead",
+            "type": "object"
+          },
+          "nullable": false,
+          "type": "array"
+        },
+        "viewer_context": {
+          "nullable": false,
+          "schema": "EscrowViewerContextRead",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "UserPublicRead": {
+      "fields": {
+        "display_name": {
+          "nullable": true,
+          "type": "string"
+        },
+        "id": {
+          "nullable": false,
+          "type": "integer"
+        },
+        "username": {
+          "nullable": false,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  }
+}
